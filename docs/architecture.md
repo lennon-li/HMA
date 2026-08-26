@@ -14,7 +14,7 @@ It answers one question at each gate:
 
 > Has this stage produced sufficient, fresh, relevant evidence for a human to authorize the next stage?
 
-HMA is not an autonomous coding orchestrator. It may gather evidence, run approved deterministic checks, detect contradictions and drift, propose an agent/model route, and recommend one next action. It must not silently advance state, dispatch a worker, substitute a model, waive a rule, publish changes, or declare success.
+HMA is not an autonomous coding orchestrator. It may gather evidence, run approved deterministic checks, detect contradictions and drift, propose an agent/model route, and recommend one next action. HMA does not dispatch workers in v1; after approval it emits route and permission records, and a human or host starts execution. It must not silently advance state, substitute a model, waive a rule, publish changes, or declare success.
 
 The product has three explicitly separate layers:
 
@@ -55,13 +55,13 @@ V1 will not:
 
 ### 4.1 Human authority
 
-A human must approve every material stage transition. Humans also:
+A human must approve every stage transition. Humans also:
 
 - approve acceptance criteria and non-goals;
 - approve plans and individual implementation units;
 - confirm or raise risk classifications;
 - approve the proposed implementer and validator routes;
-- grant explicit waivers for waivable rules;
+- grant explicit waivers of `WAIVABLE` findings;
 - resolve disputed semantic findings;
 - authorize release or publication;
 - stop or abort a run at any time.
@@ -98,18 +98,20 @@ A run progresses through:
 8. Independent validation
 9. Release and closure
 
-### 5.2 Stage statuses
+### 5.2 Enumerated vocabularies
 
-Each stage may be:
+Stages are `GROUNDING`, `ACCEPTANCE_CRITERIA`, `PLANNING`, `ROUTE_SELECTION`,
+`IMPLEMENTATION_AUTHORIZATION`, `IMPLEMENTATION_REVIEW`, `VERIFICATION`,
+`INDEPENDENT_VALIDATION`, and `RELEASE_AND_CLOSURE`. Stage-control states are
+`DRAFT`, `READY_FOR_REVIEW`, and `APPROVED`; stages are never waived.
 
-- `DRAFT`
-- `READY_FOR_REVIEW`
-- `APPROVED`
-- `WAIVED`
-- `FAILED`
-- `BLOCKED`
-- `UNKNOWN`
-- `ABORTED`
+Criterion dispositions are `PENDING`, `PASSED`, `FAILED`, and `WAIVED`. Only
+criteria may be `WAIVED`.
+
+Validator finding dispositions are `BLOCK`, `WAIVABLE`, and `ADVISORY`.
+Advisory dispositions are `ACCEPT`, `PARK`, and `KILL`. `WAIVABLE` is not a
+criterion state or an automatic waiver; an unresolved `WAIVABLE` finding blocks
+closure until it is waived, withdrawn, or corrected.
 
 Terminal run outcomes are:
 
@@ -121,7 +123,13 @@ Terminal run outcomes are:
 - `UNKNOWN`
 - `ABORTED`
 
-Failure, uncertainty, and refusal to advance are valid product outcomes. HMA succeeds when it reports the state truthfully.
+`PARTIAL` is a terminal outcome, derived when the run stops with a truthful,
+bounded result that resolves some approved criteria but cannot satisfy all
+closure conditions; it is never a stage status. `VERIFIED_SUCCESS` requires
+every criterion `PASSED`; `VERIFIED_WITH_WAIVERS` requires every criterion
+`PASSED` or `WAIVED` and at least one active waiver. `FAILED`, `BLOCKED`,
+`UNKNOWN`, and `ABORTED` are derived from the corresponding terminal condition.
+HMA succeeds when it reports the state truthfully.
 
 ### 5.3 Transition rule
 
@@ -129,23 +137,51 @@ A machine may prepare a transition packet but cannot advance the state. Each tra
 
 No timeout, silence, earlier approval, agent confidence, or generic instruction such as `continue` counts as approval for a different transition.
 
+### 5.4 Legal transitions and invalidation
+
+All listed edges require human approval. Route selection is per implementation
+unit, never a run-wide selection.
+
+| From | Legal target | Invalidation or return effect |
+| --- | --- | --- |
+| Grounding | Acceptance criteria | changed grounding inputs invalidate downstream packets |
+| Acceptance criteria | Planning | criteria or non-goal change rewinds to Acceptance criteria and invalidates downstream packets |
+| Planning | Route selection | plan change rewinds to Planning and invalidates that unit's route and downstream packets |
+| Route selection | Implementation authorization | route, permission, or independence change rewinds to Route selection |
+| Implementation authorization, implementation review, verification, or independent validation | Route selection | human-confirmed escalation returns the affected unit to its approved route gate without inheriting broader permission |
+| Implementation authorization | Implementation review | each unit is separately authorized; implementation evidence invalidates that unit's downstream packets |
+| Implementation review | Verification | produced head/diff change returns to Implementation authorization or review, as applicable |
+| Verification | Independent validation | plan-declared required evidence, head, or diff change returns to the affected earlier unit gate |
+| Independent validation | Implementation authorization, Planning, or Release and closure | correction returns to implementation; criterion/plan correction rewinds to Planning; a passing result may request release |
+| Release and closure | Route selection for next unit, Acceptance criteria, Planning, or terminal outcome | next unit starts its own route loop; criteria/plan changes rewind as above; release request may terminate only after CI and human release approval |
+| Any nonterminal stage | Grounding, Planning, or terminal `BLOCKED`, `UNKNOWN`, `FAILED`, `ABORTED`, or `PARTIAL` | escalation, invalidated grounding, or the truthful stopping condition determines the target |
+
+No unlisted edge is legal. A waiver operation invalidates only approvals bound to
+the affected criterion, finding, or artifact; it never advances a stage.
+
 ## 6. Human approval contract
 
-Every approval is single-use and bound to:
+Every approval is single-use and universally bound to:
 
 - run identifier;
+- transition digest;
 - current stage;
 - proposed target stage;
-- repository identity;
-- exact base and head revisions;
+- repository-identity digest;
+- exact base-revision digest;
+- stage-time digest (predecessor chain head and monotonic sequence);
 - accepted plan digest;
-- evidence digest;
-- validator-report digest;
-- active waivers;
+- plan-declared required evidence digest set;
+- active waiver-operation digest set;
 - short-lived challenge nonce;
 - approving actor and timestamp.
 
-A relevant change to the revision, scope, plan, evidence, validator report, or waiver set invalidates the approval.
+Implementation review, verification, independent validation, and release and
+closure approvals additionally bind the produced head revision and diff digest.
+Other transitions do not bind a produced head or diff. A packet becomes stale
+only when a field it actually binds changes; CI applies the same rule.
+
+A change to any actually bound field invalidates the approval.
 
 The approval interface is challenge-bound rather than a simple `y/N` prompt. Exact CLI syntax remains an implementation decision and is intentionally not invented in this architecture document.
 
@@ -157,9 +193,11 @@ Policy is evaluated in this order:
 2. Organization policy
 3. Project policy
 4. Task policy
-5. Explicit human waivers for rules declared waivable
 
-A lower layer may tighten an upper layer but cannot weaken it.
+A lower layer may narrow an upper layer but cannot weaken or expand it. Waivers
+are run operations outside this hierarchy and remain constrained by `WAIVABLE`
+classes defined by kernel and organization policy; project and task policy may
+narrow those classes only. Any lower-layer expansion is a kernel violation.
 
 ### 7.1 Unwaivable kernel
 
@@ -169,6 +207,7 @@ The following are unwaivable:
 - valid authority and permission envelope;
 - authentic, current, revision-bound evidence;
 - proof that required commands were executed rather than described;
+- plan-declared commands execute only as explicit executable/argument vectors and never through a shell;
 - secret, destructive, infrastructure, publication, and external-effect boundaries;
 - separation between implementation and approval;
 - prohibition on concealed failures and altered acceptance criteria;
@@ -176,18 +215,20 @@ The following are unwaivable:
 
 ### 7.2 Waivable findings
 
-A policy may declare findings such as these waivable:
+A kernel or organization policy may declare finding classes such as these
+waivable:
 
-- advisory lint or style findings;
-- noncritical coverage targets;
-- optional documentation;
-- complexity warnings;
+- complexity-budget exceedance;
 - minor performance targets;
 - non-safety reviewer recommendations.
 
-A waiver records actor, rationale, scope, affected criteria, and expiry conditions. It remains visible downstream. A run with any active waiver cannot end as `VERIFIED_SUCCESS`; the appropriate successful outcome is `VERIFIED_WITH_WAIVERS`.
+Lesser minimality observations are `ADVISORY`.
 
-A waiver expires when its relevant revision, scope, plan, or evidence changes.
+A waiver is an explicit human operation on a `WAIVABLE` finding. It records
+actor, rationale, scope, affected criteria or artifacts, and expiry conditions,
+and remains visible downstream. It expires only when its scoped artifacts or
+criteria change. A run with any active waiver cannot end as `VERIFIED_SUCCESS`;
+the appropriate successful outcome is `VERIFIED_WITH_WAIVERS`.
 
 ## 8. Grounding contract
 
@@ -220,9 +261,10 @@ Acceptance criteria are co-authored:
 4. Require explicit human approval.
 5. Freeze the approved set for downstream stages.
 
-A material criteria change rewinds the run to the appropriate earlier stage and invalidates affected approvals.
+A criteria change rewinds the run to the appropriate earlier stage and
+invalidates affected approvals.
 
-A validator may report an out-of-criteria observation as `ADVISORY`, unless it exposes an unwaivable safety violation. It cannot silently create a new blocker.
+Out-of-criteria observations are `ADVISORY` unless they expose an unwaivable safety violation or identify measurable exceedance of the plan-declared complexity budget. That exceedance is `WAIVABLE` under §7.2 and does not create a new acceptance criterion. A validator cannot silently create a new blocker.
 
 ## 10. Plan-unit contract
 
@@ -250,7 +292,7 @@ Completion, budget exhaustion, repeated failure, scope drift, or a plan change r
 
 ## 11. Minimal-implementation discipline
 
-Minimal-implementation review is mandatory and inspired by the Ponytail approach.
+Minimal-implementation review is required.
 
 Before approving an implementation shape, the gate must ask:
 
@@ -267,7 +309,7 @@ Minimality must not remove contract-required validation, trust or security bound
 
 ## 12. Agent and model routing
 
-HMA proposes routes but does not silently dispatch them.
+HMA does not dispatch workers in v1; after approval it emits route and permission records, and a human or host starts execution.
 
 ### 12.1 Portable capability taxonomy
 
@@ -288,9 +330,17 @@ The portable core describes capabilities rather than vendors, including:
 
 ### 12.2 Host-local profiles
 
-Credential-free host-local profiles map verified agents, providers, models, effort settings, access services, runtimes, and trust boundaries onto the taxonomy.
+Credential-free host-local profiles map verified agents, providers, models,
+effort settings, access services, runtimes, and trust boundaries onto the
+taxonomy. A portable route attestation contains only an opaque profile digest,
+provider family, model family, capability classes, and permission classes; it
+contains no private paths, credentials, profile names, or provider-specific
+secrets.
 
-Safe live discovery may identify executable and model candidates. Availability is not proof of eligibility, isolation, quota, capability, or trustworthiness.
+Discovery is limited to allowlisted executable-presence, version, and model-list
+commands. It must not inspect or mutate credentials or configuration, and its
+output is untrusted availability metadata. Availability is not proof of
+eligibility, isolation, quota, capability, or trustworthiness.
 
 ### 12.3 Proposal shape
 
@@ -322,9 +372,13 @@ Independence scales with risk:
 - different provider/model family for high-risk, disputed, or final validation;
 - no silent validator substitution.
 
+If a required independent validator is unavailable, the result is `BLOCKED`
+pending an eligible independent model or human validator; HMA must not silently
+downgrade the independence requirement.
+
 ## 14. Evidence acquisition and record
 
-Agent-submitted evidence is admissible as a lead. Critical evidence must be freshly captured or independently reproduced by HMA. Trusted CI evidence may be imported only when bound to the exact revision.
+Agent-submitted evidence is admissible as a lead. Plan-declared required evidence must be freshly captured or independently reproduced by HMA. Trusted CI evidence may be imported only when bound to the exact revision.
 
 Agent prose is never proof.
 
@@ -343,13 +397,13 @@ An evidence record includes:
 - freshness and integrity result;
 - unavailable evidence, omissions, and deviations.
 
-Shell interpolation is not required for v1 evidence execution. The runner should prefer explicit executable/argument arrays.
+Evidence from a clean bound revision is revision-reproducible. Evidence captured from a dirty worktree is admissible only when the record includes the exact worktree-content digest; it is not revision-reproducible and may support only the explicitly approved dirty-worktree use. The evidence runner MUST execute an explicit executable and argument vector and MUST NOT invoke a shell. This is a kernel rule.
 
 ## 15. Persistence and portable bundles
 
-The canonical in-progress record lives in a host-managed append-only store outside the worker's writable project tree.
+The canonical in-progress record lives in a host-managed append-only store outside the worker's writable project tree. Each record carries the hash of its predecessor, a monotonically increasing per-run sequence, and the resulting per-run head anchor. Missing sequence continuity, a wrong predecessor hash, or a head-anchor mismatch detects truncation or rewrite.
 
-Each correction creates a new record and references the superseded record. History is not overwritten.
+Each correction creates a new record and references the superseded record. Append-only in v1 is detection-based, not an assertion of immutable storage. CI authenticates an exported run-head anchor against configured trust roots and rejects a failed authentication or chain check. The exact trust mechanism is an open implementation decision.
 
 Portable export consists of content-addressed JSON records conforming to published JSON Schema. A small repository or CI manifest may point to the required bundle and digests. The repository must not contain host-local credentials, model profiles, private paths, or secret endpoint details.
 
@@ -377,14 +431,14 @@ It may evaluate only:
 Each finding must cite the exact criterion or invariant, evidence, material impact, and one disposition:
 
 - `BLOCK`
-- `WAIVEABLE`
+- `WAIVABLE`
 - `ADVISORY`
 
 The validator may not edit code, evidence, or state; invent requirements; demand unrelated cleanup; redesign architecture; or continue auditing after every criterion is resolved.
 
 ## 17. Failure, retry, and escalation
 
-Failures are classified before deciding what to do:
+HMA applies deterministic rules to classify observed failure evidence, subject to human confirmation; it never accepts an agent's self-classification as the failure result. The per-unit retry budget caps all attempts, including retries, corrections, and re-routed attempts. Failures are classified before deciding what to do:
 
 - `TRANSIENT_RUNTIME_FAILURE`: one identical retry may be proposed if it cannot duplicate external effects.
 - `CORRECTABLE_EXECUTION_FAILURE`: one bounded correction by the same route may be proposed using the failure evidence.
@@ -393,7 +447,7 @@ Failures are classified before deciding what to do:
 - `PERMISSION_OR_SAFETY_BLOCK`: stop as `BLOCKED`; no route may bypass the boundary.
 - `UNKNOWN_FAILURE`: stop as `UNKNOWN` and ask for human judgment.
 
-The same material failure twice ends that route as `FAILED`. A third blind attempt is prohibited.
+The same material failure twice ends that route as `FAILED`. A third blind attempt is prohibited, and no proposed retry may exceed the per-unit budget.
 
 Escalation is a new human-approved transition and never inherits broader permission.
 
@@ -420,7 +474,7 @@ The concise decision surface contains:
 1. current state and requested transition;
 2. machine recommendation;
 3. acceptance-criteria coverage;
-4. material evidence and failures;
+4. plan-declared required evidence and failures;
 5. scope/diff and budget drift;
 6. validator findings;
 7. risk and active waivers;
@@ -435,8 +489,8 @@ Closure is allowed when:
 
 - every approved criterion is `PASSED` or explicitly `WAIVED`;
 - no unwaivable safety failure exists;
-- no unresolved `BLOCK` finding remains;
-- required evidence is fresh and revision-bound;
+- no unresolved `BLOCK` or `WAIVABLE` finding remains;
+- plan-declared required evidence is fresh and revision-bound;
 - required CI checks pass;
 - scope and diff are reconciled;
 - known limitations are represented honestly;
@@ -446,19 +500,20 @@ Once these conditions hold, auditing stops. Potential improvement alone is not a
 
 ## 21. CI release gate
 
-CI verifies both transition-chain integrity and fresh release-critical behavior against the exact proposed revision.
+CI verifies transition-chain integrity, plan-declared required evidence, independent validation, and the release request against the exact proposed revision. Human release approval follows passing CI.
 
 It must:
 
 - verify repository and revision identity;
-- verify every mandatory transition approval;
+- verify every stage-transition approval;
 - reject approvals made stale by later changes;
 - verify waiver validity and propagation;
 - verify implementer/validator independence requirements;
-- verify plan, diff, evidence, and validator digests;
-- reject missing, malformed, or rewritten records;
-- rerun release-critical tests and checks;
+- verify the bound plan, diff, plan-declared required evidence, validator, sequence, predecessor, and exported-anchor digests;
+- authenticate the exported anchor against configured trust roots and reject missing, malformed, truncated, or rewritten records;
+- rerun plan-declared required tests and checks;
 - map results to approved criteria;
+- require an independent-validation result and release request before reporting a passing release gate;
 - return a truthful outcome and exactly one next action.
 
 V1 does not require clean-room reproduction of every local action.
@@ -474,7 +529,6 @@ Assume these inputs may be adversarial:
 - submitted evidence bundles;
 - model capability claims;
 - runtime-discovery output;
-- external web content;
 - project-local attempts to weaken policy.
 
 The v1 trusted computing base is:
@@ -512,28 +566,38 @@ Exact package layout, command names, and schemas are deferred to the implementat
 
 MVP validation has two stages.
 
-### 24.1 Deterministic fixture suite
+### 24.1 Deterministic engine fixtures
 
-Fixtures must prove that HMA:
+Deterministic engine fixtures must prove that HMA:
 
 - rejects missing or stale repository grounding;
 - binds approvals to one challenge and digest set;
 - invalidates approvals after relevant changes;
 - proposes one primary and one escalation route;
-- catches unnecessary dependency or abstraction proposals;
 - limits implementation to one approved plan unit and budget;
 - detects scope and diff drift;
 - rejects agent success prose as evidence;
 - captures verification commands and outputs independently;
 - represents `FAILED`, `BLOCKED`, `UNKNOWN`, `PARTIAL`, and `ABORTED` honestly;
-- prevents validators from inventing requirements;
+- deterministically interprets recorded findings without semantic model judgment;
 - permits closure with dispositioned advisory findings;
 - propagates waivers into `VERIFIED_WITH_WAIVERS`;
 - rejects tampered bundles and stale approvals in CI mode;
-- reruns critical checks against the exact revision;
+- reruns plan-declared required checks against the exact revision;
 - always proposes one next action, owner, route, and required approval.
 
-### 24.2 Real-repository pilot
+### 24.2 Validator-contract fixtures
+
+Validator-contract fixtures use recorded or stubbed validator outputs and must
+prove that finding vocabulary, independence blocking, waiver operations,
+criterion traceability, closure behavior, unnecessary dependency or abstraction
+proposals, and prevention of validator-invented requirements are handled
+consistently without treating the validator as a deterministic engine fixture.
+Deterministic engine tests interpret those recorded findings; they do not make
+semantic model judgments. Any numeric drift threshold used by either suite is
+declared by policy, not invented by the fixture.
+
+### 24.3 Real-repository pilot
 
 After fixtures pass, run one small task in one separately named Git repository. The pilot must reach truthful closure without bypassing a gate. The pilot repository is not the HMA product repository.
 
@@ -548,6 +612,7 @@ Open decisions for the implementation-planning gate:
 - JSON Schema definitions;
 - local store location and retention policy;
 - challenge expiry duration and actor identity mechanism;
+- exported-anchor authentication mechanism and configured trust-root format;
 - CI platform adapter used for the pilot;
 - initial host-local runtime-profile schema;
 - fixture repository design;
