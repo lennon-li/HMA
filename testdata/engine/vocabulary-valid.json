@@ -1,0 +1,53 @@
+{
+  "kind": "stage_transition",
+  "version": 1,
+  "metadata": {
+    "run_id": "run-1",
+    "sequence": 1,
+    "predecessor_hash": "",
+    "head_anchor": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "timestamp": "2026-08-29T00:00:00Z",
+    "actor": "human-1"
+  },
+  "stage": "VERIFICATION",
+  "control": "APPROVED",
+  "criteria": [
+    {"id": "c1", "disposition": "PASSED"}
+  ],
+  "findings": [
+    {"id": "f1", "disposition": "ADVISORY", "advisory": "ACCEPT"}
+  ],
+  "approval": {
+    "run_id": "run-1",
+    "transition_digest": "sha256:transition-1",
+    "current_stage": "VERIFICATION",
+    "proposed_target_stage": "INDEPENDENT_VALIDATION",
+    "repository_identity_digest": "sha256:repo-identity",
+    "base_revision_digest": "sha256:base-rev",
+    "stage_time_digest": "sha256:stage-time",
+    "accepted_plan_digest": "sha256:plan",
+    "required_evidence_digests": ["sha256:evidence-1"],
+    "active_waivers": [],
+    "challenge_nonce": "nonce-1",
+    "approver": "human-1",
+    "timestamp": "2026-08-29T00:00:00Z",
+    "produced_head_digest": "sha256:produced-head",
+    "diff_digest": "sha256:diff"
+  },
+  "evidence": {
+    "executable": "/usr/local/go/bin/go",
+    "argv": ["test", "./..."],
+    "working_dir": "/repo",
+    "start_timestamp": "2026-08-29T00:00:00Z",
+    "end_timestamp": "2026-08-29T00:00:05Z",
+    "exit_code": 0,
+    "output_digest": "sha256:output",
+    "output_truncated": false,
+    "repository_identity": "sha256:repo-identity",
+    "base_revision": "sha256:base-rev",
+    "head_revision": "sha256:produced-head",
+    "changed_files": ["internal/model/validate.go"],
+    "diff_digest": "sha256:diff",
+    "capturing_actor": "hma-evidence-runner"
+  }
+}

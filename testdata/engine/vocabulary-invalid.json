@@ -1,0 +1,17 @@
+{
+  "kind": "waiver",
+  "version": 1,
+  "metadata": {
+    "run_id": "run-1",
+    "sequence": 1,
+    "predecessor_hash": "",
+    "head_anchor": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "timestamp": "2026-08-29T00:00:00Z",
+    "actor": "human-1"
+  },
+  "stage": "VERIFICATION",
+  "control": "APPROVED",
+  "waivers": [
+    {"id": "wbad", "scope": {"kind": "plan_unit", "target": "u1"}, "active": true, "actor": "human-1"}
+  ]
+}
