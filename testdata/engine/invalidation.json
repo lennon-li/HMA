@@ -1,0 +1,482 @@
+{
+  "rewinds": [
+    {
+      "name": "grounding_input_change_rewinds_whole_run_to_grounding",
+      "request": {
+        "trigger": "GROUNDING_INPUT_CHANGED",
+        "changed_inputs": ["grounding.base_revision"],
+        "approvals": [
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-ground", "stage": "GROUNDING", "bound_inputs": ["grounding.base_revision"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-route-U2", "unit_id": "U2", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U2"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "GROUNDING",
+        "scope": "WHOLE_RUN",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-crit", "A-ground", "A-plan-U1", "A-route-U2"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "criterion_or_non_goal_change_rewinds_whole_run_to_acceptance_criteria",
+      "request": {
+        "trigger": "CRITERION_OR_NON_GOAL_CHANGED",
+        "changed_inputs": ["criteria.set"],
+        "approvals": [
+          { "id": "A-ground", "stage": "GROUNDING", "bound_inputs": ["grounding.base_revision"] },
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "ACCEPTANCE_CRITERIA",
+        "scope": "WHOLE_RUN",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-crit", "A-plan-U1"],
+        "preserved_approval_ids": ["A-ground"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "plan_unit_change_rewinds_affected_unit_and_dependents_to_planning",
+      "request": {
+        "trigger": "PLAN_UNIT_CHANGED",
+        "affected_unit_id": "U1",
+        "dependent_unit_ids": ["U2"],
+        "changed_inputs": ["plan.U1"],
+        "approvals": [
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-ground", "stage": "GROUNDING", "bound_inputs": ["grounding.base_revision"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"] },
+          { "id": "A-plan-U2", "unit_id": "U2", "stage": "PLANNING", "bound_inputs": ["plan.U2"] },
+          { "id": "A-plan-U3", "unit_id": "U3", "stage": "PLANNING", "bound_inputs": ["plan.U3"] },
+          { "id": "A-route-U3", "unit_id": "U3", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U3"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "PLANNING",
+        "scope": "AFFECTED_UNIT_AND_DEPENDENT_UNITS",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-plan-U1", "A-plan-U2", "A-route-U1"],
+        "preserved_approval_ids": ["A-crit", "A-ground", "A-plan-U3", "A-route-U3"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "route_or_independence_change_rewinds_only_the_affected_unit_to_route_selection",
+      "request": {
+        "trigger": "ROUTE_OR_INDEPENDENCE_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["route.U1"],
+        "approvals": [
+          { "id": "A-ground", "stage": "GROUNDING", "bound_inputs": ["grounding.base_revision"] },
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"] },
+          { "id": "A-auth-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U1"] },
+          { "id": "A-route-U2", "unit_id": "U2", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U2"] },
+          { "id": "A-auth-U2", "unit_id": "U2", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U2"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "ROUTE_SELECTION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-auth-U1", "A-route-U1"],
+        "preserved_approval_ids": ["A-auth-U2", "A-crit", "A-ground", "A-plan-U1", "A-route-U2"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "produced_head_or_diff_change_rewinds_to_implementation_authorization",
+      "request": {
+        "trigger": "PRODUCED_HEAD_OR_DIFF_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["produced_head.U1"],
+        "approvals": [
+          { "id": "A-auth-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U1"] },
+          { "id": "A-review-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_REVIEW", "bound_inputs": ["produced_head.U1"] },
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"] },
+          { "id": "A-review-U2", "unit_id": "U2", "stage": "IMPLEMENTATION_REVIEW", "bound_inputs": ["produced_head.U2"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "IMPLEMENTATION_AUTHORIZATION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-auth-U1", "A-review-U1"],
+        "preserved_approval_ids": ["A-review-U2", "A-route-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "incomplete_out_of_scope_or_over_budget_review_evidence_rewinds_to_implementation_authorization",
+      "request": {
+        "trigger": "REVIEW_EVIDENCE_INCOMPLETE_OUT_OF_SCOPE_OR_OVER_BUDGET",
+        "affected_unit_id": "U1",
+        "approvals": [
+          { "id": "A-auth-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U1"] },
+          { "id": "A-review-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_REVIEW", "bound_inputs": ["produced_head.U1"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "IMPLEMENTATION_AUTHORIZATION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-auth-U1", "A-review-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "verification_evidence_or_command_input_change_rewinds_to_verification",
+      "request": {
+        "trigger": "VERIFICATION_EVIDENCE_OR_COMMAND_INPUT_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["evidence.go_test.tool_version"],
+        "approvals": [
+          { "id": "A-verify-U1", "unit_id": "U1", "stage": "VERIFICATION", "bound_inputs": ["evidence.go_test.tool_version"] },
+          { "id": "A-valid-U1", "unit_id": "U1", "stage": "INDEPENDENT_VALIDATION", "bound_inputs": ["validation.U1"] },
+          { "id": "A-review-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_REVIEW", "bound_inputs": ["produced_head.U1"] },
+          { "id": "A-verify-U2", "unit_id": "U2", "stage": "VERIFICATION", "bound_inputs": ["evidence.go_vet.tool_version"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "VERIFICATION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-valid-U1", "A-verify-U1"],
+        "preserved_approval_ids": ["A-review-U1", "A-verify-U2"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "independent_validation_correction_rewinds_to_implementation_authorization",
+      "request": {
+        "trigger": "INDEPENDENT_VALIDATION_CORRECTION_REQUIRED",
+        "affected_unit_id": "U1",
+        "approvals": [
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-auth-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U1"] },
+          { "id": "A-review-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_REVIEW", "bound_inputs": ["produced_head.U1"] },
+          { "id": "A-verify-U1", "unit_id": "U1", "stage": "VERIFICATION", "bound_inputs": ["evidence.U1"] },
+          { "id": "A-valid-U1", "unit_id": "U1", "stage": "INDEPENDENT_VALIDATION", "bound_inputs": ["validation.U1"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "IMPLEMENTATION_AUTHORIZATION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-auth-U1", "A-review-U1", "A-valid-U1", "A-verify-U1"],
+        "preserved_approval_ids": ["A-plan-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "independent_validation_plan_defect_rewinds_affected_unit_to_planning",
+      "request": {
+        "trigger": "INDEPENDENT_VALIDATION_PLAN_OR_CRITERION_DEFECT",
+        "affected_unit_id": "U1",
+        "approvals": [
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"] },
+          { "id": "A-plan-U2", "unit_id": "U2", "stage": "PLANNING", "bound_inputs": ["plan.U2"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "PLANNING",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-plan-U1", "A-route-U1"],
+        "preserved_approval_ids": ["A-crit", "A-plan-U2"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "independent_validation_criterion_defect_rewinds_whole_run_to_acceptance_criteria",
+      "request": {
+        "trigger": "INDEPENDENT_VALIDATION_PLAN_OR_CRITERION_DEFECT",
+        "criterion_changed": true,
+        "changed_inputs": ["criteria.set"],
+        "approvals": [
+          { "id": "A-ground", "stage": "GROUNDING", "bound_inputs": ["grounding.base_revision"] },
+          { "id": "A-crit", "stage": "ACCEPTANCE_CRITERIA", "bound_inputs": ["criteria.set"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] },
+          { "id": "A-plan-U2", "unit_id": "U2", "stage": "PLANNING", "bound_inputs": ["plan.U2"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "ACCEPTANCE_CRITERIA",
+        "scope": "WHOLE_RUN",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-crit", "A-plan-U1", "A-plan-U2"],
+        "preserved_approval_ids": ["A-ground"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "closure_ci_or_release_input_change_rewinds_whole_run_to_release_and_closure",
+      "request": {
+        "trigger": "CLOSURE_CI_OR_RELEASE_INPUT_CHANGED",
+        "changed_inputs": ["ci.required_result"],
+        "approvals": [
+          { "id": "A-release", "stage": "RELEASE_AND_CLOSURE", "bound_inputs": ["ci.required_result", "release.approval"] },
+          { "id": "A-valid-U1", "unit_id": "U1", "stage": "INDEPENDENT_VALIDATION", "bound_inputs": ["validation.U1"] },
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "RELEASE_AND_CLOSURE",
+        "scope": "WHOLE_RUN",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-release"],
+        "preserved_approval_ids": ["A-plan-U1", "A-valid-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "upstream_approval_invalidated_only_when_a_bound_input_changed",
+      "request": {
+        "trigger": "VERIFICATION_EVIDENCE_OR_COMMAND_INPUT_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["plan.U1.required_evidence"],
+        "approvals": [
+          { "id": "A-plan-U1", "unit_id": "U1", "stage": "PLANNING", "bound_inputs": ["plan.U1.required_evidence"] },
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"] },
+          { "id": "A-verify-U1", "unit_id": "U1", "stage": "VERIFICATION", "bound_inputs": ["evidence.digest"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "VERIFICATION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-plan-U1", "A-verify-U1"],
+        "preserved_approval_ids": ["A-route-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "already_invalidated_approval_is_never_restored",
+      "request": {
+        "trigger": "ROUTE_OR_INDEPENDENCE_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["route.U1"],
+        "approvals": [
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "bound_inputs": ["route.U1"], "invalidated": true },
+          { "id": "A-auth-U1", "unit_id": "U1", "stage": "IMPLEMENTATION_AUTHORIZATION", "bound_inputs": ["auth.U1"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "rewind_target": "ROUTE_SELECTION",
+        "scope": "AFFECTED_UNIT",
+        "control_state": "READY_FOR_REVIEW",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-auth-U1"],
+        "already_invalidated_approval_ids": ["A-route-U1"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_whole_run_trigger_narrowed_to_one_unit",
+      "request": {
+        "trigger": "GROUNDING_INPUT_CHANGED",
+        "affected_unit_id": "U1",
+        "changed_inputs": ["grounding.base_revision"]
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "UNIT_SCOPE_DECLARED_FOR_WHOLE_RUN_REWIND",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_unit_scoped_trigger_without_an_affected_unit",
+      "request": {
+        "trigger": "ROUTE_OR_INDEPENDENCE_CHANGED",
+        "changed_inputs": ["route.U1"]
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "MISSING_AFFECTED_UNIT",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_unlisted_rewind_trigger",
+      "request": { "trigger": "SCHEDULE_SLIPPED", "affected_unit_id": "U1" },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "UNKNOWN_REWIND_TRIGGER",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_reactivation_of_an_invalidated_approval",
+      "request": {
+        "trigger": "ROUTE_OR_INDEPENDENCE_CHANGED",
+        "affected_unit_id": "U1",
+        "request_reactivate_approval_ids": ["A-route-U1"],
+        "approvals": [
+          { "id": "A-route-U1", "unit_id": "U1", "stage": "ROUTE_SELECTION", "invalidated": true }
+        ]
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "INVALIDATED_APPROVAL_REACTIVATION_ATTEMPTED",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_machine_advancement_claim",
+      "request": {
+        "trigger": "GROUNDING_INPUT_CHANGED",
+        "claims_machine_advancement": true
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "MACHINE_ADVANCEMENT_ATTEMPTED",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    }
+  ],
+  "waiver_changes": [
+    {
+      "name": "unrelated_waiver_leaves_an_unrelated_approval_valid",
+      "request": {
+        "changed_waiver_ids": ["W-unit-B"],
+        "waivers": [
+          { "id": "W-unit-A", "kind": "criterion", "target": "C-1", "active": true },
+          { "id": "W-unit-B", "kind": "criterion", "target": "C-2", "active": true }
+        ],
+        "approvals": [
+          { "id": "A-review-UA", "unit_id": "UA", "stage": "IMPLEMENTATION_REVIEW", "waiver_ids": ["W-unit-A"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "scope": "BOUND_PACKETS_ONLY",
+        "preserved_approval_ids": ["A-review-UA"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "changed_waived_criterion_expires_its_waiver_and_invalidates_only_bound_packets",
+      "request": {
+        "changed_waived_targets": ["C-1"],
+        "waivers": [
+          { "id": "W-A", "kind": "criterion", "target": "C-1", "active": true },
+          { "id": "W-B", "kind": "criterion", "target": "C-2", "active": true }
+        ],
+        "approvals": [
+          { "id": "A-review-UA", "unit_id": "UA", "stage": "IMPLEMENTATION_REVIEW", "waiver_ids": ["W-A"] },
+          { "id": "A-verify-UA", "unit_id": "UA", "stage": "VERIFICATION", "bound_inputs": ["C-1"] },
+          { "id": "A-review-UB", "unit_id": "UB", "stage": "IMPLEMENTATION_REVIEW", "waiver_ids": ["W-B"] },
+          { "id": "A-plan-UA", "unit_id": "UA", "stage": "PLANNING", "bound_inputs": ["plan.UA"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "scope": "BOUND_PACKETS_ONLY",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-review-UA", "A-verify-UA"],
+        "preserved_approval_ids": ["A-plan-UA", "A-review-UB"],
+        "expired_waiver_ids": ["W-A"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "waiver_change_never_restores_an_already_invalidated_approval",
+      "request": {
+        "changed_waiver_ids": ["W-A"],
+        "approvals": [
+          { "id": "A-old", "unit_id": "UA", "stage": "IMPLEMENTATION_REVIEW", "waiver_ids": ["W-A"], "invalidated": true },
+          { "id": "A-new", "unit_id": "UA", "stage": "IMPLEMENTATION_REVIEW", "waiver_ids": ["W-A"] }
+        ]
+      },
+      "expect": {
+        "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+        "scope": "BOUND_PACKETS_ONLY",
+        "packet_control": "INVALIDATED",
+        "invalidated_approval_ids": ["A-new"],
+        "already_invalidated_approval_ids": ["A-old"],
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_reactivation_request_on_a_waiver_change",
+      "request": {
+        "changed_waiver_ids": ["W-A"],
+        "request_reactivate_approval_ids": ["A-old"]
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "INVALIDATED_APPROVAL_REACTIVATION_ATTEMPTED",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    },
+    {
+      "name": "reject_machine_advancement_claim_on_a_waiver_change",
+      "request": {
+        "changed_waiver_ids": ["W-A"],
+        "claims_machine_advancement": true
+      },
+      "expect": {
+        "decision": "REJECTED",
+        "reason": "MACHINE_ADVANCEMENT_ATTEMPTED",
+        "requires_fresh_human_approval": true,
+        "machine_advanced": false
+      }
+    }
+  ]
+}

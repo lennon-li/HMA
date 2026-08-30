@@ -1,0 +1,232 @@
+[
+  {
+    "name": "legal_grounding_to_acceptance_criteria",
+    "request": { "source": "GROUNDING", "target_stage": "ACCEPTANCE_CRITERIA" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_acceptance_criteria_to_planning",
+    "request": { "source": "ACCEPTANCE_CRITERIA", "target_stage": "PLANNING" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_planning_to_route_selection",
+    "request": { "source": "PLANNING", "target_stage": "ROUTE_SELECTION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_route_selection_to_implementation_authorization",
+    "request": { "source": "ROUTE_SELECTION", "target_stage": "IMPLEMENTATION_AUTHORIZATION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_implementation_authorization_to_review",
+    "request": { "source": "IMPLEMENTATION_AUTHORIZATION", "target_stage": "IMPLEMENTATION_REVIEW" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_review_to_verification",
+    "request": { "source": "IMPLEMENTATION_REVIEW", "target_stage": "VERIFICATION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_verification_to_independent_validation",
+    "request": { "source": "VERIFICATION", "target_stage": "INDEPENDENT_VALIDATION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_independent_validation_to_release_and_closure",
+    "request": { "source": "INDEPENDENT_VALIDATION", "target_stage": "RELEASE_AND_CLOSURE" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_human_confirmed_escalation_review_to_route_selection",
+    "request": { "source": "IMPLEMENTATION_REVIEW", "target_stage": "ROUTE_SELECTION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_release_and_closure_to_next_unit_route_selection",
+    "request": { "source": "RELEASE_AND_CLOSURE", "target_stage": "ROUTE_SELECTION" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_universal_escalation_verification_to_grounding",
+    "request": { "source": "VERIFICATION", "target_stage": "GROUNDING" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_truthful_stop_blocked_from_verification",
+    "request": { "source": "VERIFICATION", "target_outcome": "BLOCKED" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "legal_verified_success_only_from_release_and_closure",
+    "request": { "source": "RELEASE_AND_CLOSURE", "target_outcome": "VERIFIED_SUCCESS" },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "control_state": "READY_FOR_REVIEW",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_unlisted_edge_acceptance_criteria_to_verification",
+    "request": { "source": "ACCEPTANCE_CRITERIA", "target_stage": "VERIFICATION" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNLISTED_EDGE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_unlisted_edge_planning_to_implementation_authorization",
+    "request": { "source": "PLANNING", "target_stage": "IMPLEMENTATION_AUTHORIZATION" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNLISTED_EDGE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_unlisted_edge_grounding_to_release_and_closure",
+    "request": { "source": "GROUNDING", "target_stage": "RELEASE_AND_CLOSURE" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNLISTED_EDGE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_same_stage_is_not_a_transition",
+    "request": { "source": "PLANNING", "target_stage": "PLANNING" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "SOURCE_EQUALS_TARGET",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_unknown_source_stage",
+    "request": { "source": "REVIEW", "target_stage": "PLANNING" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_SOURCE_STAGE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_unknown_target_stage",
+    "request": { "source": "PLANNING", "target_stage": "DONE" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_TARGET",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_missing_target",
+    "request": { "source": "PLANNING" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "MISSING_TARGET",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_ambiguous_stage_and_outcome_target",
+    "request": { "source": "VERIFICATION", "target_stage": "INDEPENDENT_VALIDATION", "target_outcome": "BLOCKED" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "AMBIGUOUS_TARGET",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_verified_success_from_a_non_closure_stage",
+    "request": { "source": "VERIFICATION", "target_outcome": "VERIFIED_SUCCESS" },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "TERMINAL_OUTCOME_NOT_PERMITTED_FROM_STAGE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "reject_machine_advancement_claim_on_an_otherwise_legal_edge",
+    "request": { "source": "GROUNDING", "target_stage": "ACCEPTANCE_CRITERIA", "claims_machine_advancement": true },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "MACHINE_ADVANCEMENT_ATTEMPTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  }
+]
