@@ -1,0 +1,203 @@
+[
+  {
+    "name": "independent_route_block_tied_to_approved_criterion",
+    "rule": "V1",
+    "request": {
+      "approved_criterion_ids": ["C-1", "C-2"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-block-c1",
+          "disposition": "BLOCK",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-1"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "blocking_finding_ids": ["F-block-c1"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "waivable_budget_finding_is_neither_waived_nor_auto_resolved",
+    "rule": "V2",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-waivable-budget",
+          "disposition": "WAIVABLE",
+          "ref_kind": "declared_budget",
+          "ref_id": "B-diff-lines"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "unresolved_waivable_finding_ids": ["F-waivable-budget"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_out_of_criteria_accept_park_and_kill",
+    "rule": "V3",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-accept",
+          "disposition": "ADVISORY",
+          "advisory": "ACCEPT",
+          "ref_kind": "out_of_criteria_observation"
+        },
+        {
+          "id": "F-adv-park",
+          "disposition": "ADVISORY",
+          "advisory": "PARK",
+          "ref_kind": "out_of_criteria_observation"
+        },
+        {
+          "id": "F-adv-kill",
+          "disposition": "ADVISORY",
+          "advisory": "KILL",
+          "ref_kind": "out_of_criteria_observation"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "advisory_finding_ids": ["F-adv-accept", "F-adv-kill", "F-adv-park"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "kernel_rule_block_stays_outside_the_acceptance_criterion_set",
+    "rule": "V4",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-kernel-evidence",
+          "disposition": "BLOCK",
+          "ref_kind": "kernel_rule",
+          "ref_id": "K-evidence-authenticity"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "blocking_finding_ids": ["F-kernel-evidence"],
+      "kernel_violation_finding_ids": ["F-kernel-evidence"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "empty_recorded_finding_set_still_requires_fresh_human_approval",
+    "rule": "V5",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "mixed_finding_classes_never_report_machine_advancement",
+    "rule": "V5",
+    "request": {
+      "approved_criterion_ids": ["C-1", "C-2"],
+      "declared_budget_ids": ["B-diff-lines", "B-tool-steps"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-1",
+          "disposition": "ADVISORY",
+          "advisory": "PARK",
+          "ref_kind": "out_of_criteria_observation"
+        },
+        {
+          "id": "F-block-2",
+          "disposition": "BLOCK",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-2"
+        },
+        {
+          "id": "F-kernel-3",
+          "disposition": "BLOCK",
+          "ref_kind": "kernel_rule",
+          "ref_id": "K-separation-of-duties"
+        },
+        {
+          "id": "F-waivable-4",
+          "disposition": "WAIVABLE",
+          "ref_kind": "declared_budget",
+          "ref_id": "B-tool-steps"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "blocking_finding_ids": ["F-block-2", "F-kernel-3"],
+      "kernel_violation_finding_ids": ["F-kernel-3"],
+      "unresolved_waivable_finding_ids": ["F-waivable-4"],
+      "advisory_finding_ids": ["F-adv-1"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "approved_kernel_rule_in_allowlist_blocks_and_reports_kernel_violation",
+    "rule": "V6",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "approved_kernel_rule_ids": ["K-timing-bound"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-kernel-timing",
+          "disposition": "BLOCK",
+          "ref_kind": "kernel_rule",
+          "ref_id": "K-timing-bound"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+      "blocking_finding_ids": ["F-kernel-timing"],
+      "kernel_violation_finding_ids": ["F-kernel-timing"],
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  }
+]

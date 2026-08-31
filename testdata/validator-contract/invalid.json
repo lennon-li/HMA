@@ -1,0 +1,435 @@
+[
+  {
+    "name": "missing_validator_route_attestation_digest",
+    "rule": "I1",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "declared_independent": true
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "MISSING_ROUTE_ATTESTATION_DIGEST",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "missing_implementer_route_attestation_digest",
+    "rule": "I1",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "MISSING_ROUTE_ATTESTATION_DIGEST",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "identical_implementer_and_validator_route_attestation_digests",
+    "rule": "I2",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-same",
+      "validator_route_attestation_digest": "sha256:route-same",
+      "declared_independent": true
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_ROUTE_NOT_INDEPENDENT",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "declared_independence_is_false",
+    "rule": "I2",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": false
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_ROUTE_NOT_INDEPENDENT",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "duplicate_approved_criterion_reference",
+    "rule": "I3",
+    "request": {
+      "approved_criterion_ids": ["C-1", "C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "DUPLICATE_CRITERION_OR_BUDGET_REFERENCE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_finding_references_unknown_approved_criterion",
+    "rule": "I3",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-unknown",
+          "disposition": "ADVISORY",
+          "advisory": "ACCEPT",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-404"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_CRITERION_OR_BUDGET_REFERENCE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_finding_references_undeclared_budget",
+    "rule": "I3",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-budget-unknown",
+          "disposition": "ADVISORY",
+          "advisory": "PARK",
+          "ref_kind": "declared_budget",
+          "ref_id": "B-404"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_CRITERION_OR_BUDGET_REFERENCE",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "non_kernel_block_invents_an_acceptance_criterion",
+    "rule": "I4",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-block-invented",
+          "disposition": "BLOCK",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-999"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "out_of_criteria_observation_raised_as_block",
+    "rule": "I4",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-block-out-of-criteria",
+          "disposition": "BLOCK",
+          "ref_kind": "out_of_criteria_observation"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "out_of_criteria_observation_raised_as_waivable",
+    "rule": "I4",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-waivable-out-of-criteria",
+          "disposition": "WAIVABLE",
+          "ref_kind": "out_of_criteria_observation"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "waivable_finding_claims_it_is_already_waived",
+    "rule": "I5",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-auto-waived",
+          "disposition": "WAIVABLE",
+          "ref_kind": "declared_budget",
+          "ref_id": "B-diff-lines",
+          "claims_waived": true
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "AUTOMATIC_WAIVER_OR_APPROVAL_CLAIMED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "waivable_finding_claims_it_is_a_human_approval",
+    "rule": "I5",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "declared_budget_ids": ["B-diff-lines"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-claims-approval",
+          "disposition": "WAIVABLE",
+          "ref_kind": "declared_budget",
+          "ref_id": "B-diff-lines",
+          "claims_human_approval": true
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "AUTOMATIC_WAIVER_OR_APPROVAL_CLAIMED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_finding_missing_advisory_disposition",
+    "rule": "I6",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-missing",
+          "disposition": "ADVISORY",
+          "ref_kind": "out_of_criteria_observation"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "INVALID_ADVISORY_DISPOSITION_PAIRING",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_finding_uses_unknown_advisory_disposition",
+    "rule": "I6",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-adv-bogus",
+          "disposition": "ADVISORY",
+          "advisory": "DEFER",
+          "ref_kind": "out_of_criteria_observation"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "INVALID_ADVISORY_DISPOSITION_PAIRING",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "advisory_disposition_attached_to_a_blocking_finding",
+    "rule": "I6",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-block-with-advisory",
+          "disposition": "BLOCK",
+          "advisory": "ACCEPT",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-1"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "INVALID_ADVISORY_DISPOSITION_PAIRING",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "request_claims_it_machine_advances_the_run",
+    "rule": "I7",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "claims_machine_advancement": true
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "MACHINE_ADVANCEMENT_ATTEMPTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "request_asks_to_restore_an_invalidated_approval",
+    "rule": "I7",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "request_restore_approval_ids": ["A-approved-plan"]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "INVALIDATED_APPROVAL_REACTIVATION_ATTEMPTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "request_asks_to_change_a_waiver",
+    "rule": "I7",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "request_waiver_change_ids": ["W-budget"]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "WAIVER_MUTATION_ATTEMPTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "request_emits_a_terminal_outcome",
+    "rule": "I7",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "claimed_terminal_outcome": "VERIFIED_SUCCESS"
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "TERMINAL_OUTCOME_EMISSION_ATTEMPTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "request_supplies_a_rewind_target",
+    "rule": "I7",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "requested_rewind_target": "PLANNING"
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "REWIND_TARGET_NOT_PERMITTED",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "kernel_rule_not_in_approved_set",
+    "rule": "KR1",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "approved_kernel_rule_ids": [],
+      "implementer_route_attestation_digest": "sha256:route-implementer-a",
+      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-kernel-invented",
+          "disposition": "BLOCK",
+          "ref_kind": "kernel_rule",
+          "ref_id": "K-i-dislike-your-naming"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  }
+]
