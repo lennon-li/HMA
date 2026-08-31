@@ -12,7 +12,8 @@ import (
 func ValidRecordKind(k RecordKind) bool {
 	switch k {
 	case KindStageTransition, KindCriterion, KindFinding, KindWaiver,
-		KindEvidence, KindReleaseRequest, KindOutcome:
+		KindEvidence, KindReleaseRequest, KindOutcome,
+		KindWaiverOperation, KindFindingOverride:
 		return true
 	}
 	return false
@@ -330,6 +331,71 @@ func ValidateRecord(r *Record) error {
 	}
 	if err := validateEvidence(r.Evidence); err != nil {
 		return err
+	}
+	if err := validateWaiverOperation(r.WaiverOperation); err != nil {
+		return err
+	}
+	if err := validateFindingOverride(r.FindingOverride); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateWaiverOperation(w *WaiverOperation) error {
+	if w == nil {
+		return nil
+	}
+	if w.Operation != WaiverOperationGrant && w.Operation != WaiverOperationExpire && w.Operation != WaiverOperationWithdraw {
+		return fmt.Errorf("invalid waiver operation %q", w.Operation)
+	}
+	if !ValidScopeKind(w.Scope.Kind) {
+		return fmt.Errorf("invalid waiver scope kind %q", w.Scope.Kind)
+	}
+	if strings.EqualFold(string(w.Scope.Kind), "stage") {
+		return errors.New("waiver operation attempts to waive a stage; stages are never waived")
+	}
+	if w.Scope.Target == "" {
+		return errors.New("waiver operation missing scope target")
+	}
+	if w.Justification == "" {
+		return errors.New("waiver operation missing justification")
+	}
+	if w.Approver == "" {
+		return errors.New("waiver operation missing approver")
+	}
+	if w.Timestamp == "" {
+		return errors.New("waiver operation missing timestamp")
+	}
+	if w.ChallengeNonce == "" {
+		return errors.New("waiver operation missing challenge_nonce")
+	}
+	return nil
+}
+
+func validateFindingOverride(f *FindingDispositionOverride) error {
+	if f == nil {
+		return nil
+	}
+	if f.FindingID == "" {
+		return errors.New("finding override missing finding_id")
+	}
+	if !ValidFindingDisposition(f.Disposition) {
+		return fmt.Errorf("invalid finding override disposition %q", f.Disposition)
+	}
+	if f.Disposition == FindingBlock {
+		return errors.New("finding override cannot set BLOCK disposition")
+	}
+	if f.Justification == "" {
+		return errors.New("finding override missing justification")
+	}
+	if f.Approver == "" {
+		return errors.New("finding override missing approver")
+	}
+	if f.Timestamp == "" {
+		return errors.New("finding override missing timestamp")
+	}
+	if f.ChallengeNonce == "" {
+		return errors.New("finding override missing challenge_nonce")
 	}
 	return nil
 }

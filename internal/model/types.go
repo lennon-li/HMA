@@ -15,6 +15,8 @@ const (
 	KindEvidence        RecordKind = "evidence"
 	KindReleaseRequest  RecordKind = "release_request"
 	KindOutcome         RecordKind = "outcome"
+	KindWaiverOperation RecordKind = "waiver_operation"
+	KindFindingOverride RecordKind = "finding_override"
 )
 
 // Stage is a run stage. Stages are never waived.
@@ -211,6 +213,32 @@ func (m RecordMetadata) IsZero() bool {
 		m.HeadAnchor == "" && m.Timestamp == "" && m.Actor == ""
 }
 
+type WaiverOperationAction string
+
+const (
+	WaiverOperationGrant    WaiverOperationAction = "GRANT"
+	WaiverOperationExpire   WaiverOperationAction = "EXPIRE"
+	WaiverOperationWithdraw WaiverOperationAction = "WITHDRAW"
+)
+
+type WaiverOperation struct {
+	Operation      WaiverOperationAction `json:"operation"`
+	Scope          ScopeSelector         `json:"scope_selector"`
+	Justification  string                `json:"justification"`
+	Approver       string                `json:"approver"`
+	Timestamp      string                `json:"timestamp"`
+	ChallengeNonce string                `json:"challenge_nonce"`
+}
+
+type FindingDispositionOverride struct {
+	FindingID      string             `json:"finding_id"`
+	Disposition    FindingDisposition `json:"disposition"`
+	Justification  string             `json:"justification"`
+	Approver       string             `json:"approver"`
+	Timestamp      string             `json:"timestamp"`
+	ChallengeNonce string             `json:"challenge_nonce"`
+}
+
 // Record is a portable, chained HMA record.
 type Record struct {
 	Kind     RecordKind        `json:"kind"`
@@ -224,4 +252,7 @@ type Record struct {
 	Outcome  TerminalOutcome   `json:"outcome,omitempty"`
 	Approval *ApprovalBinding  `json:"approval,omitempty"`
 	Evidence *EvidenceRef      `json:"evidence,omitempty"`
+
+	WaiverOperation *WaiverOperation            `json:"waiver_operation,omitempty"`
+	FindingOverride *FindingDispositionOverride `json:"finding_override,omitempty"`
 }

@@ -13,9 +13,20 @@ import (
 )
 
 func run(args []string) error {
-	if len(args) == 0 || args[0] != "pilot" {
-		return errors.New("usage: hma pilot --input <file> --store <directory>")
+	if len(args) == 0 {
+		return errors.New("usage: hma [pilot|resolve] ...")
 	}
+	switch args[0] {
+	case "pilot":
+		return runPilot(args)
+	case "resolve":
+		return runResolve(args)
+	default:
+		return errors.New("usage: hma [pilot|resolve] ...")
+	}
+}
+
+func runPilot(args []string) error {
 	fs := flag.NewFlagSet("pilot", flag.ContinueOnError)
 	input := fs.String("input", "", "host input file")
 	store := fs.String("store", "", "host store directory")
