@@ -49,7 +49,7 @@ type RecordedFinding struct {
 type ValidatorContractRequest struct {
 	ApprovedCriterionIDs              []string              `json:"approved_criterion_ids,omitempty"`
 	DeclaredBudgetIDs                 []string              `json:"declared_budget_ids,omitempty"`
-	ApprovedKernelRuleIDs             []string              `json:"approved_kernel_rule_ids,omitempty"`
+	ApprovedKernelRuleIDs             []string              `json:"approved_kernel_rule_ids"`
 	ImplementerRouteAttestationDigest string                `json:"implementer_route_attestation_digest,omitempty"`
 	ValidatorRouteAttestationDigest   string                `json:"validator_route_attestation_digest,omitempty"`
 	DeclaredIndependent               bool                  `json:"declared_independent"`

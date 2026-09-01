@@ -21,7 +21,7 @@ type validatorContractCase struct {
 // matrix independently of the fixture files, so a dropped rule fails.
 var requiredValidRules = []string{"V1", "V2", "V3", "V4", "V5", "V6"}
 
-var requiredInvalidRules = []string{"I1", "I2", "I3", "I4", "I5", "I6", "I7", "KR1"}
+var requiredInvalidRules = []string{"I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "I10", "KR1"}
 
 // assertValidatorNeverAuthorizes proves the authority boundary structurally:
 // a recorded validator result never advances, never creates a criterion,
@@ -71,6 +71,61 @@ func assertRuleCoverage(t *testing.T, cases []validatorContractCase, required []
 
 // TestValidatorContractValidFixtures drives every recorded/stubbed valid
 // contract case through strict decoding.
+func TestValidatorContractAllowlistSemantics(t *testing.T) {
+	table := []struct {
+		name    string
+		req     ValidatorContractRequest
+		expectD Decision
+		expectR Reason
+	}{
+		{
+			name: "empty allowlist denies all (deny-all)",
+			req: ValidatorContractRequest{
+				ApprovedKernelRuleIDs:             []string{},
+				ImplementerRouteAttestationDigest: "dig1",
+				ValidatorRouteAttestationDigest:   "dig2",
+				DeclaredIndependent:               true,
+				Findings: []RecordedFinding{{ID: "1", RefKind: "kernel_rule", RefID: "K1", Disposition: model.FindingBlock}},
+			},
+			expectD: DecisionRejected,
+			expectR: ReasonInventedCriterion,
+		},
+		{
+			name: "nil allowlist restricts nothing (unrestricted)",
+			req: ValidatorContractRequest{
+				ApprovedKernelRuleIDs:             nil,
+				ImplementerRouteAttestationDigest: "dig1",
+				ValidatorRouteAttestationDigest:   "dig2",
+				DeclaredIndependent:               true,
+				Findings: []RecordedFinding{{ID: "1", RefKind: "kernel_rule", RefID: "K1", Disposition: model.FindingBlock}},
+			},
+			expectD: DecisionLegalPendingApproval,
+			expectR: Reason(""),
+		},
+		{
+			name: "non-empty absent allowlist denies",
+			req: ValidatorContractRequest{
+				ApprovedKernelRuleIDs:             []string{"K2"},
+				ImplementerRouteAttestationDigest: "dig1",
+				ValidatorRouteAttestationDigest:   "dig2",
+				DeclaredIndependent:               true,
+				Findings: []RecordedFinding{{ID: "1", RefKind: "kernel_rule", RefID: "K1", Disposition: model.FindingBlock}},
+			},
+			expectD: DecisionRejected,
+			expectR: ReasonInventedCriterion,
+		},
+	}
+
+	for _, tc := range table {
+		t.Run(tc.name, func(t *testing.T) {
+			got := EvaluateValidatorContract(tc.req)
+			if got.Decision != tc.expectD || got.Reason != tc.expectR {
+				t.Errorf("got %v / %v, want %v / %v", got.Decision, got.Reason, tc.expectD, tc.expectR)
+			}
+		})
+	}
+}
+
 func TestValidatorContractValidFixtures(t *testing.T) {
 	var cases []validatorContractCase
 	loadFixture(t, "../../testdata/validator-contract/valid.json", &cases)

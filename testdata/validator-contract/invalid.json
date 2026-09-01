@@ -413,21 +413,93 @@
     "request": {
       "approved_criterion_ids": ["C-1"],
       "approved_kernel_rule_ids": [],
-      "implementer_route_attestation_digest": "sha256:route-implementer-a",
-      "validator_route_attestation_digest": "sha256:route-validator-b",
+      "implementer_route_attestation_digest": "sha256:d1",
+      "validator_route_attestation_digest": "sha256:d2",
       "declared_independent": true,
       "findings": [
         {
-          "id": "F-kernel-invented",
-          "disposition": "BLOCK",
+          "id": "F-1",
           "ref_kind": "kernel_rule",
-          "ref_id": "K-i-dislike-your-naming"
+          "ref_id": "K-not-in-list",
+          "disposition": "BLOCK"
         }
       ]
     },
     "expect": {
       "decision": "REJECTED",
       "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "ref_out_of_criteria_without_advisory",
+    "rule": "I8",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:d1",
+      "validator_route_attestation_digest": "sha256:d2",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-1",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-unknown",
+          "disposition": "BLOCK"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "VALIDATOR_INVENTED_ACCEPTANCE_CRITERION",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "unknown_ref_kind",
+    "rule": "I9",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:d1",
+      "validator_route_attestation_digest": "sha256:d2",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-1",
+          "ref_kind": "UNKNOWN_KIND",
+          "ref_id": "C-1",
+          "disposition": "BLOCK"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_FINDING_REFERENCE_KIND",
+      "requires_fresh_human_approval": true,
+      "machine_advanced": false
+    }
+  },
+  {
+    "name": "unknown_disposition",
+    "rule": "I10",
+    "request": {
+      "approved_criterion_ids": ["C-1"],
+      "implementer_route_attestation_digest": "sha256:d1",
+      "validator_route_attestation_digest": "sha256:d2",
+      "declared_independent": true,
+      "findings": [
+        {
+          "id": "F-1",
+          "ref_kind": "approved_criterion",
+          "ref_id": "C-1",
+          "disposition": "UNKNOWN_DISPOSITION"
+        }
+      ]
+    },
+    "expect": {
+      "decision": "REJECTED",
+      "reason": "UNKNOWN_FINDING_DISPOSITION",
       "requires_fresh_human_approval": true,
       "machine_advanced": false
     }
