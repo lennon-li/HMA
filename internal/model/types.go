@@ -193,6 +193,11 @@ type EvidenceRef struct {
 	DiffDigest         string   `json:"diff_digest,omitempty"`
 	WorktreeDigest     string   `json:"worktree_digest,omitempty"`
 	CapturingActor     string   `json:"capturing_actor"`
+
+	// Route captures the portable attestation of what executed the model call that
+	// produced this evidence. Contains no credential, private path, or provider
+	// secret (architecture.md §12.2). Optional.
+	Route *RouteAttestation `json:"route,omitempty"`
 }
 
 // RecordMetadata is the append-only chain metadata for a record: the

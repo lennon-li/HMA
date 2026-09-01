@@ -188,6 +188,9 @@ func validateEvidence(e *EvidenceRef) error {
 	if e.Executable == "" {
 		return errors.New("evidence missing executable")
 	}
+	if err := validateRouteAttestation(e.Route); err != nil {
+		return err
+	}
 	if e.Argv == nil {
 		return errors.New("evidence missing argv vector")
 	}
