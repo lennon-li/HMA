@@ -14,15 +14,20 @@ import (
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hma [pilot|resolve] ...")
+		return errors.New("usage: hma [pilot|resolve|ci] ...")
 	}
 	switch args[0] {
 	case "pilot":
 		return runPilot(args)
 	case "resolve":
 		return runResolve(args)
+	case "ci":
+		if len(args) < 2 || args[1] != "github" {
+			return errors.New("usage: hma ci github ...")
+		}
+		return runCIGithub(args[2:])
 	default:
-		return errors.New("usage: hma [pilot|resolve] ...")
+		return errors.New("usage: hma [pilot|resolve|ci] ...")
 	}
 }
 

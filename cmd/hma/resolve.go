@@ -79,6 +79,13 @@ func runResolve(args []string) error {
 	var rec model.Record
 	rec.Version = 1
 	rec.Metadata.RunID = in.RunID
+	if len(records) > 0 {
+		lastRecord := records[len(records)-1]
+		rec.Metadata.Sequence = lastRecord.Metadata.Sequence + 1
+		rec.Metadata.PredecessorHash = lastRecord.Metadata.HeadAnchor
+	} else {
+		rec.Metadata.Sequence = 1
+	}
 	rec.Metadata.Timestamp = time.Now().UTC().Format(time.RFC3339)
 	// Not full metadata assembly here since we're mirroring the bounded pilot pattern for now,
 	// but assigning the Kind and specific fields.
