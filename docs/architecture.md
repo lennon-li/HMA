@@ -366,6 +366,13 @@ ordering does not. It contains capability, permission, risk, independence,
 preference, and forbidden-fallback rules only; host-local availability and
 eligibility evidence remain separate untrusted inputs.
 
+A deterministic route-coherence check validates a proposed primary route,
+escalation route, and independent validator against that policy, the approved
+permission envelope, and host-supplied profile snapshots. It may reject missing
+eligibility, capability or permission escalation, self-validation, forbidden
+fallbacks, and access-service substitution, but a coherent result remains
+pending human approval and does not select or dispatch a route.
+
 ## 13. Risk and validator independence
 
 HMA computes a deterministic minimum risk floor. Organization and project policy may raise it. The human confirms or raises it. A permitted downgrade must be an explicit waiver; safety-kernel failures remain unwaivable.

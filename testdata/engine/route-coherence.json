@@ -1,0 +1,60 @@
+[
+  {
+    "name": "valid_high_risk_three_role_proposal",
+    "request": {
+      "plan_unit_id": "U1",
+      "risk": "high",
+      "required_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"],
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["planning", "semantic_review"],
+        "permission_classes": ["read_only"],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [{"id": "independent-high", "minimum_risk": "high", "required_validator_capabilities": ["semantic_review"], "distinct_provider_family": true, "distinct_model_family": true}],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      },
+      "independence_rule_id": "independent-high",
+      "approved_access_service_digest": "sha256:access",
+      "profiles": [
+        {"profile_digest": "sha256:primary", "provider_family": "provider-a", "model_family": "model-a", "execution_context": "direct_api", "access_service_digest": "sha256:access", "capability_classes": ["planning", "semantic_review"], "permission_classes": ["read_only"], "eligible": true},
+        {"profile_digest": "sha256:escalation", "provider_family": "provider-b", "model_family": "model-b", "execution_context": "direct_api", "access_service_digest": "sha256:access", "capability_classes": ["planning", "semantic_review"], "permission_classes": ["read_only"], "eligible": true},
+        {"profile_digest": "sha256:validator", "provider_family": "provider-c", "model_family": "model-c", "execution_context": "direct_api", "access_service_digest": "sha256:access", "capability_classes": ["semantic_review"], "permission_classes": ["read_only"], "eligible": true}
+      ],
+      "primary_routes": [{"profile_digest": "sha256:primary", "provider_family": "provider-a", "model_family": "model-a", "execution_context": "direct_api", "capability_classes": ["planning", "semantic_review"], "permission_classes": ["read_only"]}],
+      "escalation_routes": [{"profile_digest": "sha256:escalation", "provider_family": "provider-b", "model_family": "model-b", "execution_context": "direct_api", "capability_classes": ["planning", "semantic_review"], "permission_classes": ["read_only"]}],
+      "validator_routes": [{"profile_digest": "sha256:validator", "provider_family": "provider-c", "model_family": "model-c", "execution_context": "direct_api", "capability_classes": ["semantic_review"], "permission_classes": ["read_only"]}]
+    },
+    "expect_decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+    "expect_reason": ""
+  },
+  {
+    "name": "no_eligible_route",
+    "request": {
+      "plan_unit_id": "U2",
+      "risk": "high",
+      "required_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"],
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["semantic_review"],
+        "permission_classes": ["read_only"],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [{"id": "independent-high", "minimum_risk": "high", "required_validator_capabilities": ["semantic_review"], "distinct_provider_family": true, "distinct_model_family": true}],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      },
+      "independence_rule_id": "independent-high",
+      "approved_access_service_digest": "sha256:access",
+      "profiles": [],
+      "primary_routes": [],
+      "escalation_routes": [],
+      "validator_routes": []
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_COHERENCE_NO_ELIGIBLE_ROUTE"
+  }
+]
