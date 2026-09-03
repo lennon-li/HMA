@@ -11,22 +11,22 @@ import (
 // under that profile. The manifest is part of the trusted computing base,
 // not the portable record stream (architecture.md §12.2, §22).
 type AllowedRouteEntry struct {
-	ProviderFamily    string
-	ModelFamily       string
-	ExecutionContext  model.ExecutionContext
-	CapabilityClasses []string
-	PermissionClasses []string
+	ProviderFamily    string                 `json:"provider_family"`
+	ModelFamily       string                 `json:"model_family"`
+	ExecutionContext  model.ExecutionContext `json:"execution_context"`
+	CapabilityClasses []string               `json:"capability_classes"`
+	PermissionClasses []string               `json:"permission_classes"`
 }
 
 // RouteAttestationRequest is one route attestation to verify against the
 // host-declared allowed-routes manifest and the plan unit's active Route
 // Selection approval.
 type RouteAttestationRequest struct {
-	Attestation                 model.RouteAttestation
-	AllowedRoutes               map[string]AllowedRouteEntry // keyed by profile_digest
-	ApprovedRouteApprovalDigest string
-	ApprovedCapabilityClasses   []string
-	ApprovedPermissionClasses   []string
+	Attestation                 model.RouteAttestation       `json:"attestation"`
+	AllowedRoutes               map[string]AllowedRouteEntry `json:"allowed_routes"` // keyed by profile_digest
+	ApprovedRouteApprovalDigest string                       `json:"approved_route_approval_digest"`
+	ApprovedCapabilityClasses   []string                     `json:"approved_capability_classes"`
+	ApprovedPermissionClasses   []string                     `json:"approved_permission_classes"`
 }
 
 // Route attestation rejection reasons (architecture.md Task 6 design §4).

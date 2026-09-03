@@ -359,6 +359,13 @@ For each unit, HMA presents:
 
 The human approves the plan unit and route together.
 
+Route selection policy is a versioned portable contract with one canonical
+normalized projection and content digest. That projection is the routing single
+source of truth: policy changes change its digest, while equivalent input
+ordering does not. It contains capability, permission, risk, independence,
+preference, and forbidden-fallback rules only; host-local availability and
+eligibility evidence remain separate untrusted inputs.
+
 ## 13. Risk and validator independence
 
 HMA computes a deterministic minimum risk floor. Organization and project policy may raise it. The human confirms or raises it. A permitted downgrade must be an explicit waiver; safety-kernel failures remain unwaivable.
@@ -615,6 +622,7 @@ Open decisions for the implementation-planning gate:
 - exported-anchor authentication mechanism and configured trust-root format;
 - CI platform adapter used for the pilot;
 - initial host-local runtime-profile schema;
+- versioned route-policy contract and canonical normalized projection;
 - fixture repository design;
 - first real pilot repository;
 - license and public-release posture.

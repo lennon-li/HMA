@@ -1,15 +1,14 @@
 package engine
 
 import (
-	"encoding/json"
 	"testing"
 )
 
 type routeVerificationCase struct {
-	Name    string                 `json:"name"`
-	Rule    string                 `json:"rule"`
-	Request RouteAttestation       `json:"request"`
-	Expect  RouteVerificationResult `json:"expect"`
+	Name           string                  `json:"name"`
+	Request        RouteAttestationRequest `json:"request"`
+	ExpectDecision Decision                `json:"expect_decision"`
+	ExpectReason   Reason                  `json:"expect_reason"`
 }
 
 var requiredRouteVerificationRules = []string{
@@ -27,7 +26,11 @@ func TestRouteVerificationReasonCoverage(t *testing.T) {
 
 	seen := make(map[string]bool)
 	for _, tc := range cases {
-		seen[tc.Expect.Reason] = true
+		decision, reason := EvaluateRouteAttestation(tc.Request)
+		if decision != tc.ExpectDecision || reason != tc.ExpectReason {
+			t.Errorf("%s: EvaluateRouteAttestation() = (%s, %s), want (%s, %s)", tc.Name, decision, reason, tc.ExpectDecision, tc.ExpectReason)
+		}
+		seen[string(reason)] = true
 	}
 	for _, rule := range requiredRouteVerificationRules {
 		if !seen[rule] {

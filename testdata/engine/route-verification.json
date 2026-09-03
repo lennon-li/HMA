@@ -1,0 +1,138 @@
+[
+  {
+    "name": "incomplete_attestation",
+    "request": {
+      "attestation": {},
+      "allowed_routes": {},
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_ATTESTATION_INCOMPLETE"
+  },
+  {
+    "name": "approval_mismatch",
+    "request": {
+      "attestation": {
+        "provider_family": "provider-a",
+        "model_family": "model-a",
+        "execution_context": "direct_api",
+        "profile_digest": "sha256:profile-a",
+        "capability_classes": ["semantic_review"],
+        "permission_classes": ["read_only"],
+        "route_approval_digest": "sha256:stale"
+      },
+      "allowed_routes": {},
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_APPROVAL_MISMATCH"
+  },
+  {
+    "name": "unknown_profile",
+    "request": {
+      "attestation": {
+        "provider_family": "provider-a",
+        "model_family": "model-a",
+        "execution_context": "direct_api",
+        "profile_digest": "sha256:profile-a",
+        "capability_classes": ["semantic_review"],
+        "permission_classes": ["read_only"],
+        "route_approval_digest": "sha256:approval"
+      },
+      "allowed_routes": {},
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_PROFILE_UNKNOWN"
+  },
+  {
+    "name": "manifest_mismatch",
+    "request": {
+      "attestation": {
+        "provider_family": "provider-a",
+        "model_family": "model-a",
+        "execution_context": "direct_api",
+        "profile_digest": "sha256:profile-a",
+        "capability_classes": ["semantic_review"],
+        "permission_classes": ["read_only"],
+        "route_approval_digest": "sha256:approval"
+      },
+      "allowed_routes": {
+        "sha256:profile-a": {
+          "provider_family": "provider-b",
+          "model_family": "model-a",
+          "execution_context": "direct_api",
+          "capability_classes": ["semantic_review"],
+          "permission_classes": ["read_only"]
+        }
+      },
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_MANIFEST_MISMATCH"
+  },
+  {
+    "name": "capability_escalation",
+    "request": {
+      "attestation": {
+        "provider_family": "provider-a",
+        "model_family": "model-a",
+        "execution_context": "direct_api",
+        "profile_digest": "sha256:profile-a",
+        "capability_classes": ["semantic_review", "bounded_implementation"],
+        "permission_classes": ["read_only"],
+        "route_approval_digest": "sha256:approval"
+      },
+      "allowed_routes": {
+        "sha256:profile-a": {
+          "provider_family": "provider-a",
+          "model_family": "model-a",
+          "execution_context": "direct_api",
+          "capability_classes": ["semantic_review"],
+          "permission_classes": ["read_only"]
+        }
+      },
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review", "bounded_implementation"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_CAPABILITY_ESCALATION"
+  },
+  {
+    "name": "permission_escalation",
+    "request": {
+      "attestation": {
+        "provider_family": "provider-a",
+        "model_family": "model-a",
+        "execution_context": "direct_api",
+        "profile_digest": "sha256:profile-a",
+        "capability_classes": ["semantic_review"],
+        "permission_classes": ["bounded_write"],
+        "route_approval_digest": "sha256:approval"
+      },
+      "allowed_routes": {
+        "sha256:profile-a": {
+          "provider_family": "provider-a",
+          "model_family": "model-a",
+          "execution_context": "direct_api",
+          "capability_classes": ["semantic_review"],
+          "permission_classes": ["bounded_write"]
+        }
+      },
+      "approved_route_approval_digest": "sha256:approval",
+      "approved_capability_classes": ["semantic_review"],
+      "approved_permission_classes": ["read_only"]
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_PERMISSION_ESCALATION"
+  }
+]

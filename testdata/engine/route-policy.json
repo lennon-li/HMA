@@ -1,0 +1,155 @@
+[
+  {
+    "name": "minimal_valid_policy",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["planning"],
+        "permission_classes": ["read_only"],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+    "expect_reason": ""
+  },
+  {
+    "name": "empty_no_route_policy",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": [],
+        "permission_classes": [],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "LEGAL_PENDING_HUMAN_APPROVAL",
+    "expect_reason": ""
+  },
+  {
+    "name": "unsupported_version",
+    "request": {
+      "policy": {
+        "version": "route-policy/v2",
+        "capability_classes": [],
+        "permission_classes": [],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_VERSION_UNSUPPORTED"
+  },
+  {
+    "name": "unknown_capability",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["provider_specific_client"],
+        "permission_classes": [],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_CAPABILITY_UNKNOWN"
+  },
+  {
+    "name": "unknown_permission",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": [],
+        "permission_classes": ["network_admin"],
+        "risk_rules": [],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_PERMISSION_UNKNOWN"
+  },
+  {
+    "name": "duplicate_rule_identifier",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["planning"],
+        "permission_classes": [],
+        "risk_rules": [{"id": "same", "minimum_risk": "low", "required_capability_classes": ["planning"]}],
+        "permission_rules": [],
+        "independence_rules": [{"id": "same", "minimum_risk": "high", "required_validator_capabilities": [], "distinct_provider_family": true, "distinct_model_family": false}],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_IDENTIFIER_DUPLICATE"
+  },
+  {
+    "name": "invalid_risk",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["planning"],
+        "permission_classes": [],
+        "risk_rules": [{"id": "risk", "minimum_risk": "extreme", "required_capability_classes": ["planning"]}],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_RISK_INVALID"
+  },
+  {
+    "name": "malformed_reference",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": ["planning"],
+        "permission_classes": [],
+        "risk_rules": [{"id": "risk", "minimum_risk": "low", "required_capability_classes": ["debugging"]}],
+        "permission_rules": [],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_REFERENCE_MALFORMED"
+  },
+  {
+    "name": "contradictory_permission_bounds",
+    "request": {
+      "policy": {
+        "version": "route-policy/v1",
+        "capability_classes": [],
+        "permission_classes": ["read_only"],
+        "risk_rules": [],
+        "permission_rules": [{"id": "bounds", "required_permission_classes": ["read_only"], "forbidden_permission_classes": ["read_only"]}],
+        "independence_rules": [],
+        "preference_rules": [],
+        "forbidden_fallbacks": []
+      }
+    },
+    "expect_decision": "REJECTED",
+    "expect_reason": "ROUTE_POLICY_BOUNDS_CONTRADICTORY"
+  }
+]
