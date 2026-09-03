@@ -7,10 +7,56 @@ import (
 )
 
 type routeCoherenceFixtureCase struct {
-	Name           string                `json:"name"`
-	Request        RouteCoherenceRequest `json:"request"`
-	ExpectDecision Decision              `json:"expect_decision"`
-	ExpectReason   Reason                `json:"expect_reason"`
+	Name    string                           `json:"name"`
+	Rule    string                           `json:"rule"`
+	Request RouteCoherenceRequest            `json:"request"`
+	Expect  routeCoherenceFixtureExpectation `json:"expect"`
+}
+
+type routeCoherenceFixtureExpectation struct {
+	Decision                Decision `json:"decision"`
+	Reason                  Reason   `json:"reason"`
+	PrimaryProfileDigest    string   `json:"primary_profile_digest,omitempty"`
+	EscalationProfileDigest string   `json:"escalation_profile_digest,omitempty"`
+	ValidatorProfileDigest  string   `json:"validator_profile_digest,omitempty"`
+}
+
+var requiredRouteCoherenceRules = []string{"V1", "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "I10", "I11"}
+
+func assertRouteCoherenceRuleCoverage(t *testing.T, cases []routeCoherenceFixtureCase) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, tc := range cases {
+		if tc.Rule == "" {
+			t.Fatalf("fixture case %q declares no rule", tc.Name)
+		}
+		if seen[tc.Rule] {
+			t.Fatalf("fixture rule %s is duplicated", tc.Rule)
+		}
+		seen[tc.Rule] = true
+	}
+	for _, rule := range requiredRouteCoherenceRules {
+		if !seen[rule] {
+			t.Errorf("fixture matrix rule %s has no case", rule)
+		}
+		delete(seen, rule)
+	}
+	for rule := range seen {
+		t.Errorf("fixture declares rule %s outside the approved matrix", rule)
+	}
+}
+
+func assertExpectedRouteProfile(t *testing.T, role string, routes []model.RouteProposal, expected string) {
+	t.Helper()
+	if expected == "" {
+		return
+	}
+	if len(routes) != 1 {
+		t.Fatalf("expected one %s route for profile %q, got %d", role, expected, len(routes))
+	}
+	if routes[0].ProfileDigest != expected {
+		t.Fatalf("%s route profile = %q, want %q", role, routes[0].ProfileDigest, expected)
+	}
 }
 
 func TestRouteCoherenceFixtures(t *testing.T) {
@@ -19,6 +65,7 @@ func TestRouteCoherenceFixtures(t *testing.T) {
 	if len(cases) == 0 {
 		t.Fatal("route coherence fixture is empty")
 	}
+	assertRouteCoherenceRuleCoverage(t, cases)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			req := tc.Request
@@ -26,9 +73,15 @@ func TestRouteCoherenceFixtures(t *testing.T) {
 				req.PolicyDigest = EvaluateRoutePolicy(RoutePolicyRequest{Policy: req.Policy}).Digest
 			}
 			got := EvaluateRouteCoherence(req)
-			if got.Decision != tc.ExpectDecision || got.Reason != tc.ExpectReason {
-				t.Fatalf("EvaluateRouteCoherence() = (%s, %s), want (%s, %s)", got.Decision, got.Reason, tc.ExpectDecision, tc.ExpectReason)
+			if got.Decision != tc.Expect.Decision || got.Reason != tc.Expect.Reason {
+				t.Fatalf("EvaluateRouteCoherence() = (%s, %s), want (%s, %s)", got.Decision, got.Reason, tc.Expect.Decision, tc.Expect.Reason)
 			}
+			if got.MachineAdvanced || !got.RequiresFreshHumanApproval {
+				t.Fatalf("authority flags = advanced:%v fresh:%v", got.MachineAdvanced, got.RequiresFreshHumanApproval)
+			}
+			assertExpectedRouteProfile(t, "primary", req.PrimaryRoutes, tc.Expect.PrimaryProfileDigest)
+			assertExpectedRouteProfile(t, "escalation", req.EscalationRoutes, tc.Expect.EscalationProfileDigest)
+			assertExpectedRouteProfile(t, "validator", req.ValidatorRoutes, tc.Expect.ValidatorProfileDigest)
 		})
 	}
 }
