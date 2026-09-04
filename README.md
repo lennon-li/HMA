@@ -9,9 +9,9 @@ binary that captures revision-bound evidence, verifies challenge-bound human
 approvals, records human resolutions, and verifies a CI runner against an
 approved revision.
 
-Read the boundaries below before relying on it. Every deterministic evaluator
-is now reachable from the CLI through the read-only `hma eval` family; see
-[Reachable surface](#reachable-surface).
+Read the boundaries below before relying on it. The six stage-control and
+route evaluators are now reachable from the CLI through the read-only
+`hma eval` family; see [Reachable surface](#reachable-surface).
 
 ## Purpose
 
@@ -96,10 +96,16 @@ Implemented and reachable from the CLI:
 - human resolution: waivers and finding-disposition overrides
 - GitHub Actions revision verification and CI evidence capture
 - the chained JSONL run store
-- read-only evaluation of every deterministic evaluator, via `hma eval`:
-  stage transitions, approval invalidation, validator contract, route
-  attestation, route coherence, and the versioned route-policy contract
+- read-only evaluation of six deterministic evaluators, via `hma eval`: stage
+  transitions, approval invalidation, validator contract, route attestation,
+  route coherence, and the versioned route-policy contract
 - the resolution projection of a chain, via `hma show`
+
+`hma eval` is not the whole evaluator surface. The remaining deterministic
+evaluators are reached through the command that owns their side effects, not
+through `eval`: approval binding and resolution through `hma pilot` and
+`hma resolve`, CI verification through `hma ci github`. `EvaluateWaiverChange`
+has no command of its own.
 
 Deliberately **not** reachable from any command, and not planned:
 

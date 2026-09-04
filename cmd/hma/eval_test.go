@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/lennon-li/HMA/internal/engine"
@@ -137,7 +139,9 @@ func captureStdout(t *testing.T, fn func() error) ([]byte, error) {
 }
 
 // decodeSingleDocument enforces the output contract: exactly one JSON
-// document on stdout per invocation, and nothing after it.
+// document on stdout per invocation, and nothing after it. The second decode
+// must reach io.EOF, not merely fail: any other error means stdout carried
+// trailing bytes, which is as much a contract violation as a second document.
 func decodeSingleDocument(t *testing.T, out []byte) map[string]any {
 	t.Helper()
 	dec := json.NewDecoder(bytes.NewReader(out))
@@ -146,8 +150,11 @@ func decodeSingleDocument(t *testing.T, out []byte) map[string]any {
 		t.Fatalf("stdout is not one JSON document: %v (%q)", err, out)
 	}
 	var extra any
-	if err := dec.Decode(&extra); err == nil {
-		t.Fatalf("stdout carried a second document: %q", out)
+	if err := dec.Decode(&extra); err != io.EOF {
+		if err == nil {
+			t.Fatalf("stdout carried a second document: %q", out)
+		}
+		t.Fatalf("stdout carried trailing bytes after its document: %v (%q)", err, out)
 	}
 	return doc
 }
@@ -196,7 +203,8 @@ func TestEvalFixtures(t *testing.T) {
 					t.Fatalf("reason = %q, want %q", gotReason, wantReason)
 				}
 
-				// Non-zero exit on REJECTED, zero otherwise.
+				// Zero exit only on LEGAL_PENDING_HUMAN_APPROVAL; any
+				// other decision, REJECTED included, exits non-zero.
 				if wantDecision == engine.DecisionRejected {
 					if err == nil {
 						t.Fatal("a rejection exited zero")
@@ -217,29 +225,47 @@ func TestEvalFixtures(t *testing.T) {
 	}
 }
 
+// snapshotDir records every entry in dir and the bytes of every regular file
+// under it, so a comparison catches an in-place modification or a
+// rename-and-replace, not only a change in the number of entries.
+func snapshotDir(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	snapshot := map[string]string{}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			snapshot[entry.Name()+"/"] = ""
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		snapshot[entry.Name()] = string(content)
+	}
+	return snapshot
+}
+
 // TestEvalWritesNothing is the regression test for decision 1: eval is
 // strictly read-only. It takes no store flag at all, and an invocation must
-// leave the filesystem exactly as it found it.
+// leave the filesystem exactly as it found it — the same entries, with the
+// same bytes.
 func TestEvalWritesNothing(t *testing.T) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "input.json")
 	writeJSON(t, input, map[string]any{"source": "GROUNDING", "target_stage": "ACCEPTANCE_CRITERIA"})
 
-	before, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	before := snapshotDir(t, dir)
 	if _, err := captureStdout(t, func() error {
 		return runEval([]string{"transition", "--input", input})
 	}); err != nil {
 		t.Fatal(err)
 	}
-	after, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(after) != len(before) {
-		t.Fatalf("eval created %d filesystem entries", len(after)-len(before))
+	if after := snapshotDir(t, dir); !reflect.DeepEqual(after, before) {
+		t.Fatalf("eval changed the filesystem:\nbefore: %v\n after: %v", before, after)
 	}
 }
 
@@ -341,13 +367,15 @@ func TestShowProjectsTheReplayedChain(t *testing.T) {
 		t.Fatalf("used nonces = %v", doc.UsedNonces)
 	}
 
-	// show is read-only: the chain it projected is unchanged.
+	// show is read-only: the chain it projected is unchanged. The records
+	// are compared in full, not merely counted — a mutation that preserves
+	// the record count is exactly the kind this test exists to catch.
 	after, err := store.New(dir).Load("run")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != len(before) {
-		t.Fatalf("show changed the chain from %d to %d records", len(before), len(after))
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("show changed the chain:\nbefore: %+v\n after: %+v", before, after)
 	}
 }
 

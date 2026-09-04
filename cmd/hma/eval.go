@@ -162,6 +162,12 @@ func runEval(args []string) error {
 	if err := json.NewEncoder(os.Stdout).Encode(outcome.Document); err != nil {
 		return err
 	}
+	// Only LEGAL_PENDING_HUMAN_APPROVAL exits zero. Testing for the success
+	// decision rather than for REJECTED is deliberate and fail-closed: were
+	// a third decision ever added, this exits non-zero rather than reporting
+	// success for a verdict it does not understand. A gatekeeper must not
+	// pass what it cannot classify. resolve and ci github decide the same
+	// way, for the same reason.
 	if outcome.Decision == engine.DecisionLegalPendingApproval {
 		return nil
 	}
