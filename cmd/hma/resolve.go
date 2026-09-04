@@ -16,6 +16,11 @@ type resolveInput struct {
 	RunID           string                            `json:"run_id"`
 	WaiverOperation *model.WaiverOperation            `json:"waiver_operation,omitempty"`
 	FindingOverride *model.FindingDispositionOverride `json:"finding_override,omitempty"`
+
+	// ExpectedPredecessorHead, when set, binds this operation to the exact
+	// chain tail the human approved against. It is host input and is not
+	// persisted in the record.
+	ExpectedPredecessorHead string `json:"expected_predecessor_head,omitempty"`
 }
 
 func runResolve(args []string) error {
@@ -52,43 +57,33 @@ func runResolve(args []string) error {
 		return err
 	}
 
-	// Project state
-	var criteria []model.Criterion
-	var findings []model.Finding
-	for _, r := range records {
-		if len(r.Criteria) > 0 {
-			criteria = r.Criteria // Latest criteria win in this simple projection
-		}
-		if len(r.Findings) > 0 {
-			findings = r.Findings
-		}
+	predecessorHead := ""
+	if len(records) > 0 {
+		predecessorHead = records[len(records)-1].Metadata.HeadAnchor
 	}
 
-	req := engine.ResolutionRequest{
-		WaiverOperation: in.WaiverOperation,
-		FindingOverride: in.FindingOverride,
-		CurrentCriteria: criteria,
-		CurrentFindings: findings,
-	}
+	// Evaluate against the replayed chain, so waivers and overrides already
+	// recorded are visible and their nonces cannot be replayed.
+	req := engine.NewResolutionRequest(engine.ProjectResolutionState(records))
+	req.WaiverOperation = in.WaiverOperation
+	req.FindingOverride = in.FindingOverride
+	req.ExpectedPredecessorHead = in.ExpectedPredecessorHead
+	req.PredecessorHead = predecessorHead
 
 	res := engine.EvaluateResolution(req)
 	if res.Decision != engine.DecisionLegalPendingApproval {
 		return errors.New(string(res.Reason))
 	}
 
-	var rec model.Record
-	rec.Version = 1
-	rec.Metadata.RunID = in.RunID
-	if len(records) > 0 {
-		lastRecord := records[len(records)-1]
-		rec.Metadata.Sequence = lastRecord.Metadata.Sequence + 1
-		rec.Metadata.PredecessorHash = lastRecord.Metadata.HeadAnchor
-	} else {
-		rec.Metadata.Sequence = 1
+	rec := model.Record{
+		Version: 1,
+		Metadata: model.RecordMetadata{
+			RunID:           in.RunID,
+			Sequence:        int64(len(records) + 1),
+			PredecessorHash: predecessorHead,
+			Timestamp:       time.Now().UTC().Format(time.RFC3339),
+		},
 	}
-	rec.Metadata.Timestamp = time.Now().UTC().Format(time.RFC3339)
-	// Not full metadata assembly here since we're mirroring the bounded pilot pattern for now,
-	// but assigning the Kind and specific fields.
 	if in.WaiverOperation != nil {
 		rec.Kind = model.KindWaiverOperation
 		rec.WaiverOperation = in.WaiverOperation
@@ -99,15 +94,10 @@ func runResolve(args []string) error {
 		rec.Metadata.Actor = in.FindingOverride.Approver
 	}
 
-	if err := model.ValidateRecord(&rec); err != nil {
-		// Just validation check, though Store.Append will do it again with proper sequence.
-		// Ignore the sequence/hash validation error for the dry run.
-	}
-
-	// In a real execution, we'd use s.Append(&rec).
-	// The pilot CLI demonstrates the pattern. For resolve, we just append it.
-	err = s.Append(&rec)
-	if err != nil {
+	// Store.Append computes the head anchor and then validates the complete
+	// record; a pre-append ValidateRecord call could never pass, because the
+	// anchor it requires does not exist yet.
+	if err := s.Append(&rec); err != nil {
 		return err
 	}
 
