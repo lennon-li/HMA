@@ -1,0 +1,60 @@
+# HMA's own verification gate. Every check here is one HMA requires of the
+# work it gates, so the repository is held to its own contract.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt reports unformatted files:"
+            echo "$unformatted"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test
+        run: go test -count=1 ./...
+
+      - name: go test -race
+        run: go test -count=1 -race ./...
+
+      - name: fixture determinism
+        # Deterministic fixtures must produce the same result on every run.
+        run: go test -count=3 ./internal/engine/ ./internal/model/
+
+      - name: git diff --check
+        run: git diff --check
+
+      - name: worktree is clean
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "verification modified the worktree:"
+            git status --porcelain
+            exit 1
+          fi
