@@ -2,6 +2,8 @@ package evidence
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -49,5 +51,78 @@ func TestCaptureRejectsInvalidBoundary(t *testing.T) {
 				t.Fatal("accepted")
 			}
 		})
+	}
+}
+
+func TestOutputDigestIsUnambiguous(t *testing.T) {
+	// ("ab", "c") and ("a", "bc") must not share a digest.
+	first := digestOf(t, "ab", "c")
+	second := digestOf(t, "a", "bc")
+	if first == second {
+		t.Fatal("stdout/stderr split is not framed: digests collide")
+	}
+	if first != digestOf(t, "ab", "c") {
+		t.Fatal("digest is not deterministic")
+	}
+}
+
+func digestOf(t *testing.T, stdout, stderr string) string {
+	t.Helper()
+	h := sha256.New()
+	writeDigestSection(h, "stdout", []byte(stdout))
+	writeDigestSection(h, "stderr", []byte(stderr))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func TestCaptureRecordsResolvedAbsoluteExecutable(t *testing.T) {
+	root := t.TempDir()
+	r, err := Capture(context.Background(), Request{
+		Executable: "true", WorkingDir: root, RepositoryRoot: root,
+		MaxOutputBytes: 4096, RepositoryIdentity: "repo", BaseRevision: "base",
+		HeadRevision: "head", CapturingActor: "host",
+	})
+	if err != nil {
+		t.Skipf("no 'true' on PATH: %v", err)
+	}
+	if !filepath.IsAbs(r.Evidence.Executable) {
+		t.Fatalf("recorded executable %q is not absolute", r.Evidence.Executable)
+	}
+}
+
+func TestCaptureEnforcesAllowlist(t *testing.T) {
+	root := t.TempDir()
+	base := Request{
+		Executable: os.Args[0], Argv: []string{"-test.run=TestHelperProcess"},
+		WorkingDir: root, RepositoryRoot: root, Environment: []string{"HMA_HELPER=1"},
+		MaxOutputBytes: 4096, RepositoryIdentity: "repo", BaseRevision: "base",
+		HeadRevision: "head", CapturingActor: "host",
+	}
+
+	denied := base
+	denied.AllowedExecutables = []string{"/nonexistent/binary"}
+	if _, err := Capture(context.Background(), denied); err == nil {
+		t.Fatal("non-allowlisted executable accepted")
+	}
+
+	permitted := base
+	self, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	permitted.AllowedExecutables = []string{self}
+	if _, err := Capture(context.Background(), permitted); err != nil {
+		t.Fatalf("allowlisted executable rejected: %v", err)
+	}
+}
+
+func TestCaptureRejectsRelativeExecutablePath(t *testing.T) {
+	root := t.TempDir()
+	_, err := Capture(context.Background(), Request{
+		Executable: "./helper", WorkingDir: root, RepositoryRoot: root,
+		RepositoryIdentity: "repo", BaseRevision: "base", HeadRevision: "head",
+		CapturingActor: "host",
+	})
+	if err == nil {
+		t.Fatal("relative executable path accepted")
 	}
 }
