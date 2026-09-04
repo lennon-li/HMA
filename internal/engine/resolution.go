@@ -15,6 +15,8 @@ const (
 	ReasonResolutionReusedNonce        Reason = "REUSED_RESOLUTION_NONCE"
 	ReasonResolutionStalePosition      Reason = "STALE_CHAIN_POSITION"
 	ReasonResolutionInvalidOperation   Reason = "INVALID_WAIVER_OPERATION"
+	ReasonResolutionStaleRepository    Reason = "STALE_REPOSITORY_BINDING"
+	ReasonResolutionStaleRevision      Reason = "STALE_REVISION_BINDING"
 )
 
 // ResolutionState is the projection of a run's committed chain that human
@@ -103,6 +105,13 @@ type ResolutionRequest struct {
 	// exact chain position. PredecessorHead is the live chain tail.
 	ExpectedPredecessorHead string
 	PredecessorHead         string
+
+	// RepositoryIdentity and BaseRevision are the live values the host
+	// observes. They are compared against whatever the operation itself
+	// declares; an operation that declares neither is not revision-bound,
+	// which the architecture permits.
+	RepositoryIdentity string
+	BaseRevision       string
 }
 
 // NewResolutionRequest builds a request from a projected chain state.
@@ -144,11 +153,21 @@ func EvaluateResolution(req ResolutionRequest) ResolutionResult {
 		return rejectResolution(ReasonResolutionStalePosition)
 	}
 
-	nonce := ""
+	var nonce, boundRepository, boundRevision string
 	if req.WaiverOperation != nil {
 		nonce = req.WaiverOperation.ChallengeNonce
+		boundRepository = req.WaiverOperation.RepositoryIdentity
+		boundRevision = req.WaiverOperation.BaseRevision
 	} else {
 		nonce = req.FindingOverride.ChallengeNonce
+		boundRepository = req.FindingOverride.RepositoryIdentity
+		boundRevision = req.FindingOverride.BaseRevision
+	}
+	if boundRepository != "" && boundRepository != req.RepositoryIdentity {
+		return rejectResolution(ReasonResolutionStaleRepository)
+	}
+	if boundRevision != "" && boundRevision != req.BaseRevision {
+		return rejectResolution(ReasonResolutionStaleRevision)
 	}
 	if nonce != "" && req.UsedNonces[nonce] {
 		return rejectResolution(ReasonResolutionReusedNonce)

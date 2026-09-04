@@ -21,6 +21,11 @@ type resolveInput struct {
 	// chain tail the human approved against. It is host input and is not
 	// persisted in the record.
 	ExpectedPredecessorHead string `json:"expected_predecessor_head,omitempty"`
+
+	// RepositoryIdentity and BaseRevision are the live repository values the
+	// host observes now. An operation that declares either must match them.
+	RepositoryIdentity string `json:"repository_identity,omitempty"`
+	BaseRevision       string `json:"base_revision,omitempty"`
 }
 
 func runResolve(args []string) error {
@@ -69,6 +74,8 @@ func runResolve(args []string) error {
 	req.FindingOverride = in.FindingOverride
 	req.ExpectedPredecessorHead = in.ExpectedPredecessorHead
 	req.PredecessorHead = predecessorHead
+	req.RepositoryIdentity = in.RepositoryIdentity
+	req.BaseRevision = in.BaseRevision
 
 	res := engine.EvaluateResolution(req)
 	if res.Decision != engine.DecisionLegalPendingApproval {

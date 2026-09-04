@@ -214,3 +214,61 @@ func TestEvaluateResolutionRejectsUnknownOperation(t *testing.T) {
 		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionInvalidOperation)
 	}
 }
+
+func TestEvaluateResolutionEnforcesDeclaredRepositoryBinding(t *testing.T) {
+	scope := model.ScopeSelector{Kind: model.ScopeCriterion, Target: "C1"}
+	state := ProjectResolutionState([]model.Record{
+		{Version: 1, Criteria: []model.Criterion{{ID: "C1", Disposition: model.CriterionPending}}},
+	})
+
+	base := func() ResolutionRequest {
+		req := NewResolutionRequest(state)
+		req.RepositoryIdentity = "identity-now"
+		req.BaseRevision = "revision-now"
+		req.WaiverOperation = &model.WaiverOperation{
+			Operation: model.WaiverOperationGrant, Scope: scope, ChallengeNonce: "n1",
+			RepositoryIdentity: "identity-now", BaseRevision: "revision-now",
+		}
+		return req
+	}
+
+	if got := EvaluateResolution(base()); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("matching binding rejected: %v", got.Reason)
+	}
+
+	staleRepo := base()
+	staleRepo.WaiverOperation.RepositoryIdentity = "identity-the-human-saw"
+	if got := EvaluateResolution(staleRepo); got.Reason != ReasonResolutionStaleRepository {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleRepository)
+	}
+
+	staleRevision := base()
+	staleRevision.WaiverOperation.BaseRevision = "revision-the-human-saw"
+	if got := EvaluateResolution(staleRevision); got.Reason != ReasonResolutionStaleRevision {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleRevision)
+	}
+
+	// An operation that declares no binding stays valid: the architecture
+	// requires actor, rationale, scope and expiry on a waiver, not a revision.
+	unbound := base()
+	unbound.WaiverOperation.RepositoryIdentity = ""
+	unbound.WaiverOperation.BaseRevision = ""
+	if got := EvaluateResolution(unbound); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("unbound operation rejected: %v", got.Reason)
+	}
+}
+
+func TestEvaluateResolutionEnforcesOverrideBinding(t *testing.T) {
+	state := ProjectResolutionState([]model.Record{
+		{Version: 1, Findings: []model.Finding{{ID: "F1", Disposition: model.FindingWaivable}}},
+	})
+	req := NewResolutionRequest(state)
+	req.RepositoryIdentity = "identity-now"
+	req.FindingOverride = &model.FindingDispositionOverride{
+		FindingID: "F1", Disposition: model.FindingAdvisory, ChallengeNonce: "n1",
+		RepositoryIdentity: "identity-the-human-saw",
+	}
+	if got := EvaluateResolution(req); got.Reason != ReasonResolutionStaleRepository {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleRepository)
+	}
+}

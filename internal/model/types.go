@@ -226,22 +226,37 @@ const (
 	WaiverOperationWithdraw WaiverOperationAction = "WITHDRAW"
 )
 
+// WaiverOperation is one human resolution operation on a criterion, finding,
+// or artifact.
+//
+// RepositoryIdentity and BaseRevision are optional. The architecture requires
+// a waiver to record actor, rationale, scope and expiry, not a revision, so
+// they are not mandatory here. When a host does set them the evaluator
+// enforces them, which lets an operation be pinned to the repository state the
+// human was looking at instead of applying to whatever the run later became.
 type WaiverOperation struct {
-	Operation      WaiverOperationAction `json:"operation"`
-	Scope          ScopeSelector         `json:"scope_selector"`
-	Justification  string                `json:"justification"`
-	Approver       string                `json:"approver"`
-	Timestamp      string                `json:"timestamp"`
-	ChallengeNonce string                `json:"challenge_nonce"`
+	Operation          WaiverOperationAction `json:"operation"`
+	Scope              ScopeSelector         `json:"scope_selector"`
+	Justification      string                `json:"justification"`
+	Approver           string                `json:"approver"`
+	Timestamp          string                `json:"timestamp"`
+	ChallengeNonce     string                `json:"challenge_nonce"`
+	RepositoryIdentity string                `json:"repository_identity,omitempty"`
+	BaseRevision       string                `json:"base_revision,omitempty"`
 }
 
+// FindingDispositionOverride re-dispositions one finding. RepositoryIdentity
+// and BaseRevision are optional and enforced when present, exactly as on
+// WaiverOperation.
 type FindingDispositionOverride struct {
-	FindingID      string             `json:"finding_id"`
-	Disposition    FindingDisposition `json:"disposition"`
-	Justification  string             `json:"justification"`
-	Approver       string             `json:"approver"`
-	Timestamp      string             `json:"timestamp"`
-	ChallengeNonce string             `json:"challenge_nonce"`
+	FindingID          string             `json:"finding_id"`
+	Disposition        FindingDisposition `json:"disposition"`
+	Justification      string             `json:"justification"`
+	Approver           string             `json:"approver"`
+	Timestamp          string             `json:"timestamp"`
+	ChallengeNonce     string             `json:"challenge_nonce"`
+	RepositoryIdentity string             `json:"repository_identity,omitempty"`
+	BaseRevision       string             `json:"base_revision,omitempty"`
 }
 
 // Record is a portable, chained HMA record.
