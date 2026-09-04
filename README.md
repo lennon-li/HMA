@@ -4,7 +4,14 @@ Human-gated evidence and stage control for coding agents.
 
 ## Status
 
-HMA is in architecture bootstrap. This repository currently defines the product contract and MVP boundaries; it does not yet ship a runnable CLI.
+HMA v1 is released and tagged `v1.0.0`. It ships one standard-library-only Go
+binary that captures revision-bound evidence, verifies challenge-bound human
+approvals, records human resolutions, and verifies a CI runner against an
+approved revision.
+
+Read the boundaries below before relying on it. In particular, most of HMA's
+deterministic evaluators are reachable today only as Go packages, not from the
+CLI; see [Reachable surface](#reachable-surface).
 
 ## Purpose
 
@@ -25,17 +32,89 @@ HMA is a standalone, vendor-neutral gatekeeper for Git repository coding tasks. 
 - Auditing stops when approved criteria are resolved and no closure-blocking finding remains.
 - Project policy may tighten the safety kernel but cannot weaken it.
 
-## Planned shape
+## Install
+
+```
+go build -o hma ./cmd/hma
+```
+
+Requires the Go toolchain version in `go.mod`. There are no module dependencies.
+
+## Commands
+
+```
+hma pilot  --input <file> --store <directory>
+hma resolve --input <file> --store <directory>
+hma ci github --store <directory> --run_id <id>
+              [--verify-only | --repo-root <dir> --exec <prog> [--arg <a>]...]
+```
+
+`hma pilot` runs the host-trusted local pilot boundary: it verifies that the
+repository is on the approved revision with a clean worktree, checks a
+single-use challenge-bound approval against the live chain position, runs one
+explicit evidence command with no shell, confirms the repository did not change
+during capture, and appends the approval and evidence records.
+
+`hma resolve` records one human resolution — a waiver grant, expiry, or
+withdrawal, or a finding-disposition override. It replays the committed chain
+first, so an already-granted waiver cannot be granted again, a withdrawal with
+no active waiver is refused, a `BLOCK` finding cannot be waived or overridden,
+and a challenge nonce already used in the run is rejected as a replay. Setting
+`expected_predecessor_head` binds the operation to the exact chain tail the
+human approved against.
+
+`hma ci github` verifies that the GitHub Actions runner is on the approved
+repository and revision. It writes an evidence record only when `--exec`
+actually runs a command and produces an exit code and an output digest; it
+never manufactures evidence from environment variables. Use `--verify-only` to
+check the revision without recording anything. The host must bind the
+approval's repository identity to the `owner/repo` slug for this adapter,
+because that is the only identity the runner can derive independently.
+
+## Reachable surface
+
+Implemented and reachable from the CLI:
+
+- host-trusted local pilot with approval binding and evidence capture
+- human resolution: waivers and finding-disposition overrides
+- GitHub Actions revision verification and CI evidence capture
+- the chained JSONL run store
+
+Implemented as Go packages but **not yet reachable from the CLI**:
+
+- deterministic stage-transition and invalidation evaluation
+- semantic validator-contract checking
+- route attestation, route coherence, and the versioned route-policy contract
+
+Exposing those through the CLI is post-v1 work that requires a separately
+approved proposal; do not assume the binary can gate a stage transition today.
+
+## Shape
 
 - One standalone Go binary
-- Standard-library-first implementation
+- Standard-library-first implementation, no module dependencies
 - Content-addressed JSON records and portable JSON Schema
-- Host-managed, detection-based append-only run store with chained records and a per-run head anchor
-- Fresh command/evidence capture bound to exact Git revisions
+- Host-managed, detection-based run store: an append-only JSONL chain with a
+  per-run head anchor, an exclusive per-run lock, and a two-phase commit that
+  recovers an interrupted write instead of leaving the run unreadable
+- Fresh command/evidence capture bound to exact Git revisions, with the
+  executable pinned to a resolved absolute path and no shell
 - Human challenge-bound, single-use approvals
 - Primary agent/model route plus one explicit escalation route
 - Independent semantic validation
 - Local gating plus CI verification through independent validation and a release request; human release approval follows passing CI
+
+## Trust boundary
+
+The run store is **host-trusted**. Its head anchor and predecessor chain detect
+accidental truncation, rollback, and corruption, and the per-run lock prevents
+concurrent writers from losing each other's records. None of this is a
+tamper-resistance claim against an adversary running as the same user, who can
+rewrite the store and its anchors together. Approval nonces, revision binding,
+and evidence freshness are enforced within that boundary, not against it.
+
+The GitHub Actions actor is unauthenticated environment data and is recorded
+with a `github-actions:` provenance prefix rather than as a human identity.
 
 ## Documentation
 
@@ -48,8 +127,7 @@ HMA is a standalone, vendor-neutral gatekeeper for Git repository coding tasks. 
 - Provider-specific model SDKs
 - Generic support for non-Git tasks
 - Silent model fallback, automatic publication, or self-approval
-- A claim of product readiness before fixture and real-repository pilots pass
 
-## Current milestone
+## License
 
-This bootstrap commit records the architecture agreed during the design interview. Implementation, packaging, installation, and live-agent integration remain unstarted and unverified.
+MIT. See [LICENSE](LICENSE).
