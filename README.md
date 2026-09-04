@@ -58,13 +58,21 @@ single-use challenge-bound approval against the live chain position, runs one
 explicit evidence command with no shell, confirms the repository did not change
 during capture, and appends the approval and evidence records.
 
+A dirty worktree is refused unless the host sets both `dirty_worktree_approved`
+and `expected_worktree_digest` and HMA's recomputed digest matches, so
+approving a dirty capture approves one exact worktree state rather than
+whatever is on disk at capture time. Such evidence records a `worktree_digest`
+and is not revision-reproducible; see
+[docs/task10-deferred-schema-decisions.md](docs/task10-deferred-schema-decisions.md).
+
 `hma resolve` records one human resolution — a waiver grant, expiry, or
 withdrawal, or a finding-disposition override. It replays the committed chain
 first, so an already-granted waiver cannot be granted again, a withdrawal with
 no active waiver is refused, a `BLOCK` finding cannot be waived or overridden,
 and a challenge nonce already used in the run is rejected as a replay. Setting
 `expected_predecessor_head` binds the operation to the exact chain tail the
-human approved against.
+human approved against, and an operation may optionally declare
+`repository_identity` and `base_revision`, which are enforced when present.
 
 `hma eval` calls exactly one deterministic evaluator on one host input
 document and prints its result. It is strictly read-only: it takes no store
