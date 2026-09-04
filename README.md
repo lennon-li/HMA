@@ -9,9 +9,9 @@ binary that captures revision-bound evidence, verifies challenge-bound human
 approvals, records human resolutions, and verifies a CI runner against an
 approved revision.
 
-Read the boundaries below before relying on it. In particular, most of HMA's
-deterministic evaluators are reachable today only as Go packages, not from the
-CLI; see [Reachable surface](#reachable-surface).
+Read the boundaries below before relying on it. Every deterministic evaluator
+is now reachable from the CLI through the read-only `hma eval` family; see
+[Reachable surface](#reachable-surface).
 
 ## Purpose
 
@@ -45,6 +45,9 @@ Requires the Go toolchain version in `go.mod`. There are no module dependencies.
 ```
 hma pilot  --input <file> --store <directory>
 hma resolve --input <file> --store <directory>
+hma eval [transition|invalidation|validator-contract
+         |route-verification|route-coherence|route-policy] --input <file>
+hma show --store <directory> --run_id <id>
 hma ci github --store <directory> --run_id <id>
               [--verify-only | --repo-root <dir> --exec <prog> [--arg <a>]...]
 ```
@@ -63,6 +66,20 @@ and a challenge nonce already used in the run is rejected as a replay. Setting
 `expected_predecessor_head` binds the operation to the exact chain tail the
 human approved against.
 
+`hma eval` calls exactly one deterministic evaluator on one host input
+document and prints its result. It is strictly read-only: it takes no store
+argument, appends no record, advances no stage, grants no approval, selects no
+route, and dispatches nothing. A `LEGAL_PENDING_HUMAN_APPROVAL` result is a
+statement that a proposal *may be shown to a human* — never that anything
+advanced. Any resulting record is the host's to write. Input is decoded
+strictly: an unknown field or a second document in the file is refused.
+
+`hma show` prints the resolution projection of a committed chain — the
+criteria, findings, active waiver scopes, and spent challenge nonces the chain
+already says. It replays the chain and writes nothing. Waiver scopes and
+nonces are sorted, so repeated invocations over an unchanged chain are
+byte-identical.
+
 `hma ci github` verifies that the GitHub Actions runner is on the approved
 repository and revision. It writes an evidence record only when `--exec`
 actually runs a command and produces an exit code and an output digest; it
@@ -79,15 +96,20 @@ Implemented and reachable from the CLI:
 - human resolution: waivers and finding-disposition overrides
 - GitHub Actions revision verification and CI evidence capture
 - the chained JSONL run store
+- read-only evaluation of every deterministic evaluator, via `hma eval`:
+  stage transitions, approval invalidation, validator contract, route
+  attestation, route coherence, and the versioned route-policy contract
+- the resolution projection of a chain, via `hma show`
 
-Implemented as Go packages but **not yet reachable from the CLI**:
+Deliberately **not** reachable from any command, and not planned:
 
-- deterministic stage-transition and invalidation evaluation
-- semantic validator-contract checking
-- route attestation, route coherence, and the versioned route-policy contract
+- stage advancement, approval granting, route selection, or worker dispatch —
+  a human performs every stage transition, and no HMA command advances state
+  on its own
 
-Exposing those through the CLI is post-v1 work that requires a separately
-approved proposal; do not assume the binary can gate a stage transition today.
+`hma eval` closes the gap where the binary could not express a stage
+transition at all. It still does not perform one: it classifies a proposal and
+prints the classification.
 
 ## Shape
 

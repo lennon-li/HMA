@@ -1,8 +1,10 @@
 # Task 9 — Evaluator CLI Surface Proposal
 
-Status: **proposal only, not implemented.** Adding a CLI command is an explicit
-stop condition in the Task 8 packet, so this document requests approval; it
-does not authorize the work it describes.
+Status: **approved and implemented.** Adding a CLI command is an explicit stop
+condition in the Task 8 packet, so this document requested approval before the
+work. Lennon approved it and settled the four open decisions in §3; the
+implementation follows them exactly. §3 is kept as the record of what was
+decided, with each decision's resolution noted inline.
 
 ## 1. Problem
 
@@ -47,17 +49,35 @@ Out of scope:
 - stage advancement, dispatch, publication, release, or route selection;
 - new dependencies or a non-standard-library runtime.
 
-## 3. Open decisions requiring approval
+## 3. Decisions (settled at approval)
 
 1. Whether `hma eval` may append a record for a proposed transition, or must
    remain strictly read-only with the host doing any writing. Read-only is the
    safer default and is what this proposal recommends.
+   **Decided: strictly read-only.** `hma eval` takes no `--store` argument at
+   all, so writing is not expressible, and the host performs any recording.
 2. Whether a `hma init` command should exist to bootstrap a run store, or
    whether `pilot` remains the only entry point.
+   **Decided: no `hma init`.** `hma pilot` remains the only store bootstrap.
 3. Whether `hma show` prints the resolution projection only, or a fuller run
    summary including terminal-outcome derivation.
+   **Decided: the projection only** (`engine.ProjectResolutionState`). No
+   terminal outcome is derived. The projection keys active waivers by a struct
+   selector, which JSON cannot use as an object key, so the command renders
+   the selector and nonce sets as sorted lists — a rendering, not a second
+   projection.
 4. Output contract: one JSON document per invocation on stdout, non-zero exit
    on `REJECTED`, matching the existing commands' behaviour.
+   **Decided as stated.** A rejected evaluation still prints its result
+   document — the reason is the answer a host needs — and exits non-zero with
+   the reason on stderr.
+
+Two naming notes for implementers. The route-verification evaluator is
+`engine.EvaluateRouteAttestation`, exposed as `hma eval route-verification`; it
+returns `(Decision, Reason)` rather than a result struct, so the command wraps
+those two values in the `{decision, reason}` shape the other evaluators print,
+adding no field. `engine.EvaluateWaiverChange` is not part of this command
+family: it is not one of the six evaluators this task exposes.
 
 ## 4. Verification gates
 
