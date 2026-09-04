@@ -260,3 +260,53 @@ func TestJSONLDetectsHistoricalRewrite(t *testing.T) {
 		t.Fatal("rewrite accepted")
 	}
 }
+
+// TestLoadCreatesNothing pins the read-only guarantee that hma show depends
+// on: loading a run that does not exist must not conjure a store directory,
+// a lock file, or anything else. A mistyped --store path is a typo, not an
+// instruction to create a directory tree.
+func TestLoadCreatesNothing(t *testing.T) {
+	parent := t.TempDir()
+	missing := filepath.Join(parent, "not-a-store")
+
+	records, err := New(missing).Load("run")
+	if err != nil {
+		t.Fatalf("loading an absent store errored: %v", err)
+	}
+	if records != nil {
+		t.Fatalf("loaded %d records from an absent store", len(records))
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Fatal("loading created the store directory")
+	}
+
+	// An existing store directory with no files for this run must also stay
+	// untouched: no lock file for a run that was never written.
+	empty := t.TempDir()
+	if _, err := New(empty).Load("run"); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("loading created %v", names)
+	}
+}
+
+// TestLoadStillDetectsHeadWithoutStream proves the no-create fast path did
+// not swallow the corruption case it sits in front of.
+func TestLoadStillDetectsHeadWithoutStream(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "run.head"), []byte("orphan\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(dir).Load("run"); err == nil {
+		t.Fatal("a head anchor with no record stream was accepted")
+	}
+}

@@ -49,16 +49,33 @@ func digestRecord(r model.Record) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // Load returns the committed chain for runID, completing or discarding an
 // interrupted commit first.
+//
+// Loading creates nothing. A run with no files on disk reads as an empty
+// chain without a store directory or a lock file appearing, so a mistyped
+// store path stays a typo instead of becoming a directory tree. Only Append
+// creates state, because only Append is a write.
+//
+// The existence check is deliberately outside the lock, which it must be:
+// taking the lock is itself what would create the file. A run created
+// between the check and the return therefore reads as empty here. That is
+// safe, because Append reloads under the lock and enforces the chain, so a
+// stale empty read costs a rejected append, never a lost or forked record.
 func (s *Store) Load(runID string) ([]model.Record, error) {
 	if !safeRunID(runID) {
 		return nil, errors.New("invalid run id")
 	}
-	if err := os.MkdirAll(s.dir, 0700); err != nil {
-		return nil, err
+	p := s.paths(runID)
+	if !exists(p.stream) && !exists(p.head) && !exists(p.pending) {
+		return nil, nil
 	}
-	lock, err := lockRun(s.paths(runID).lock)
+	lock, err := lockRun(p.lock)
 	if err != nil {
 		return nil, err
 	}
