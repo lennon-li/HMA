@@ -152,3 +152,71 @@ func VerifyBase(ctx context.Context, root, baseRevision string) error {
 	}
 	return nil
 }
+
+// resolveExisting returns the absolute form of path with every symlink along
+// it followed, walking down one component at a time.
+//
+// filepath.EvalSymlinks is not enough here: it fails outright on a path whose
+// target does not exist yet, which is exactly the case that matters -- a store
+// directory before its first write, reached through a link. Walking the
+// components lets a dangling link still be followed to where it points.
+func resolveExisting(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	current := string(filepath.Separator)
+	for _, part := range strings.Split(abs, string(filepath.Separator)) {
+		if part == "" {
+			continue
+		}
+		current = filepath.Join(current, part)
+		// A bounded walk, so a symlink cycle cannot spin here.
+		for depth := 0; depth < 40; depth++ {
+			info, err := os.Lstat(current)
+			if err != nil || info.Mode()&os.ModeSymlink == 0 {
+				break
+			}
+			target, err := os.Readlink(current)
+			if err != nil {
+				break
+			}
+			if filepath.IsAbs(target) {
+				current = filepath.Clean(target)
+			} else {
+				current = filepath.Join(filepath.Dir(current), target)
+			}
+		}
+	}
+	return current, nil
+}
+
+// StoreOutsideRepository reports an error when storeDir resolves to a path
+// inside root.
+//
+// The store must not be part of the repository whose state is being verified,
+// or the act of recording would change what a head, diff, or worktree digest
+// describes. Symlinks are resolved first: a store that reaches into the
+// repository through a link is inside it just as much as a subdirectory is,
+// and comparing unresolved paths would miss that.
+func StoreOutsideRepository(root, storeDir string) error {
+	if strings.TrimSpace(root) == "" {
+		return errors.New("repository root is required")
+	}
+	if strings.TrimSpace(storeDir) == "" {
+		return errors.New("store directory is required")
+	}
+	r, err := resolveExisting(root)
+	if err != nil {
+		return err
+	}
+	s, err := resolveExisting(storeDir)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(r, s)
+	if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return errors.New("store must be outside target repository")
+	}
+	return nil
+}

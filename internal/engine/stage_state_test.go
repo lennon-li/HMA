@@ -206,3 +206,40 @@ func TestEvaluateStageTransitionEnforcesRequiredEvidence(t *testing.T) {
 		})
 	}
 }
+
+// TestEvaluateStageTransitionEnforcesEveryRequiredDigest: a plan may declare
+// several required evidence digests, and satisfying the first must not excuse
+// the rest.
+func TestEvaluateStageTransitionEnforcesEveryRequiredDigest(t *testing.T) {
+	state := ProjectStageState(nil)
+	state.Evidence = []model.EvidenceRef{
+		{OutputDigest: "digest-1", BaseRevision: "base"},
+		{OutputDigest: "digest-2", BaseRevision: "an-older-base"},
+	}
+	cases := []struct {
+		name     string
+		required []string
+		want     Reason
+	}{
+		{"all satisfied", []string{"digest-1"}, ReasonNone},
+		{"second never captured", []string{"digest-1", "digest-3"}, ReasonMissingRequiredEvidence},
+		{"second captured at another revision", []string{"digest-1", "digest-2"}, ReasonStaleRequiredEvidence},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := stageTransitionFixture(state, model.StageGrounding, model.StageAcceptanceCriteria)
+			req.Expected.RequiredEvidenceDigests = tc.required
+			req.Presented.RequiredEvidenceDigests = tc.required
+			res := EvaluateStageTransition(req)
+			if tc.want == ReasonNone {
+				if res.Decision != DecisionLegalPendingApproval {
+					t.Fatalf("res = %+v, want legal", res)
+				}
+				return
+			}
+			if res.Decision != DecisionRejected || res.Reason != tc.want {
+				t.Fatalf("res = %+v, want rejection %s", res, tc.want)
+			}
+		})
+	}
+}

@@ -115,3 +115,48 @@ func TestStatusPathsKeepsRenameSource(t *testing.T) {
 		}
 	}
 }
+
+// TestStoreOutsideRepositoryRejectsSymlinkedStore is the point of resolving
+// symlinks: a store that reaches into the repository through a link is inside
+// it, and a path comparison that never resolves would let it through.
+func TestStoreOutsideRepositoryRejectsSymlinkedStore(t *testing.T) {
+	repo, _ := newRepo(t)
+	outside := t.TempDir()
+
+	link := filepath.Join(outside, "store-link")
+	if err := os.Symlink(filepath.Join(repo, "hidden-store"), link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := StoreOutsideRepository(repo, link); err == nil {
+		t.Fatal("a store symlinked into the repository was accepted")
+	}
+}
+
+func TestStoreOutsideRepositoryBoundary(t *testing.T) {
+	repo, _ := newRepo(t)
+	outside := t.TempDir()
+
+	cases := []struct {
+		name           string
+		root, storeDir string
+		wantErr        bool
+	}{
+		{"store beside the repository", repo, outside, false},
+		{"store inside the repository", repo, filepath.Join(repo, ".hma"), true},
+		{"store is the repository", repo, repo, true},
+		// A store directory that does not exist yet is the ordinary first
+		// run; it must still be judged by where it would be created.
+		{"uncreated store inside the repository", repo, filepath.Join(repo, "a", "b", "c"), true},
+		{"uncreated store outside the repository", repo, filepath.Join(outside, "a", "b"), false},
+		{"empty repository root", "", outside, true},
+		{"empty store directory", repo, "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := StoreOutsideRepository(tc.root, tc.storeDir)
+			if tc.wantErr != (err != nil) {
+				t.Fatalf("StoreOutsideRepository(%q, %q) = %v, wantErr %v", tc.root, tc.storeDir, err, tc.wantErr)
+			}
+		})
+	}
+}

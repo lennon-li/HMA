@@ -118,7 +118,7 @@ func requiredEvidenceReason(state StageState, a model.ApprovalBinding) Reason {
 		if want == "" {
 			return ReasonMalformedApproval
 		}
-		present := false
+		present, satisfied := false, false
 		for _, e := range state.Evidence {
 			if e.OutputDigest != want {
 				continue
@@ -130,12 +130,19 @@ func requiredEvidenceReason(state StageState, a model.ApprovalBinding) Reason {
 			if a.ProducedHeadDigest != "" && e.HeadRevision != a.ProducedHeadDigest {
 				continue
 			}
-			return ReasonNone
+			satisfied = true
+			break
 		}
-		if present {
+		// Every declared digest must be satisfied. Returning on the first
+		// match would enforce only the first requirement of a multi-evidence
+		// plan and silently ignore the rest.
+		switch {
+		case satisfied:
+		case present:
 			return ReasonStaleRequiredEvidence
+		default:
+			return ReasonMissingRequiredEvidence
 		}
-		return ReasonMissingRequiredEvidence
 	}
 	return ReasonNone
 }

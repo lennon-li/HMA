@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/lennon-li/HMA/internal/engine"
@@ -55,15 +54,16 @@ type Result struct {
 	MachineAdvanced            bool            `json:"machine_advanced"`
 }
 
-func inside(parent, child string) bool {
-	rel, err := filepath.Rel(parent, child)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
 // Apply verifies and records one approved stage transition.
 func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	if in.RunID == "" || in.RepositoryIdentity == "" || in.BaseRevision == "" {
 		return Result{}, errors.New("missing host input")
+	}
+	// An empty repository root or store path would silently resolve to the
+	// process working directory, applying this to whatever repository the
+	// caller happens to be standing in.
+	if err := repostate.StoreOutsideRepository(in.RepositoryRoot, storeDir); err != nil {
+		return Result{}, err
 	}
 	root, err := filepath.Abs(in.RepositoryRoot)
 	if err != nil {
@@ -72,9 +72,6 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	sd, err := filepath.Abs(storeDir)
 	if err != nil {
 		return Result{}, err
-	}
-	if inside(root, sd) {
-		return Result{}, errors.New("store must be outside target repository")
 	}
 	if in.DirtyWorktreeApproved && in.ExpectedWorktreeDigest == "" {
 		return Result{}, errors.New("dirty worktree approval requires an expected worktree digest")
