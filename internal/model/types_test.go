@@ -217,6 +217,10 @@ func TestValidateRecordAcceptsValid(t *testing.T) {
 
 func TestValidateRecordAcceptsVerifiedSuccess(t *testing.T) {
 	r := baseRecord()
+	// A record carrying a terminal outcome is an outcome record, not an
+	// approved stage transition; the latter must carry the approval that
+	// proves it.
+	r.Kind = KindOutcome
 	r.Criteria = []Criterion{{ID: "c1", Disposition: CriterionPassed}}
 	r.Outcome = OutcomeVerifiedSuccess
 	if err := ValidateRecord(r); err != nil {
@@ -240,6 +244,7 @@ func TestValidateRecordAcceptsApprovalWithoutHeadDiff(t *testing.T) {
 	a.ProposedTargetStage = StageAcceptanceCriteria
 	a.ProducedHeadDigest = ""
 	a.DiffDigest = ""
+	r.Stage = StageGrounding
 	r.Approval = a
 	if err := ValidateRecord(r); err != nil {
 		t.Fatalf("ValidateRecord(approval grounding without head/diff) = %v, want nil", err)
@@ -454,4 +459,45 @@ func loadFixture(name string) (*Record, error) {
 		return nil, err
 	}
 	return &rec, nil
+}
+
+// TestValidateRecordRejectsApprovedTransitionWithoutApproval: an APPROVED
+// stage_transition asserts a human approved leaving that stage. Without the
+// binding there is nothing that proves it, and the chain would replay a stage
+// change no approval backs.
+func TestValidateRecordRejectsApprovedTransitionWithoutApproval(t *testing.T) {
+	r := baseRecord()
+	r.Approval = nil
+	if err := ValidateRecord(r); err == nil {
+		t.Fatal("approved stage_transition accepted with no approval binding")
+	}
+}
+
+// TestValidateRecordRejectsTransitionFiledUnderAnotherStage: the record must
+// be filed under the stage its approval was raised from. Otherwise a record
+// could carry an approval for one transition while filing itself under
+// another stage, and the projection would move the run somewhere no human
+// approved.
+func TestValidateRecordRejectsTransitionFiledUnderAnotherStage(t *testing.T) {
+	for _, control := range []StageControlState{ControlApproved, ControlReadyForReview} {
+		r := baseRecord()
+		r.Control = control
+		r.Approval = validApproval()
+		r.Stage = StagePlanning // the approval is raised from VERIFICATION
+		if err := ValidateRecord(r); err == nil {
+			t.Fatalf("%s stage_transition accepted while filed under the wrong stage", control)
+		}
+	}
+}
+
+func TestValidateRecordAcceptsMatchingTransition(t *testing.T) {
+	for _, control := range []StageControlState{ControlApproved, ControlReadyForReview} {
+		r := baseRecord()
+		r.Control = control
+		r.Approval = validApproval()
+		r.Stage = r.Approval.CurrentStage
+		if err := ValidateRecord(r); err != nil {
+			t.Fatalf("%s stage_transition rejected while correctly filed: %v", control, err)
+		}
+	}
 }

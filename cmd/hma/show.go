@@ -23,18 +23,31 @@ import (
 // This is a rendering of the projection, not a second projection. It derives
 // no terminal outcome and adds no field the engine did not compute.
 type showDocument struct {
-	Criteria      []model.Criterion     `json:"criteria"`
-	Findings      []model.Finding       `json:"findings"`
-	ActiveWaivers []model.ScopeSelector `json:"active_waivers"`
-	UsedNonces    []string              `json:"used_nonces"`
+	// CurrentStage is where the chain replays to. It is the first thing a
+	// human needs before deciding anything, because an approval is bound to
+	// the stage the run is actually in.
+	CurrentStage    model.Stage           `json:"current_stage"`
+	Terminal        bool                  `json:"terminal"`
+	Outcome         model.TerminalOutcome `json:"outcome,omitempty"`
+	Sequence        int64                 `json:"sequence"`
+	PredecessorHead string                `json:"predecessor_head,omitempty"`
+	Criteria        []model.Criterion     `json:"criteria"`
+	Findings        []model.Finding       `json:"findings"`
+	ActiveWaivers   []model.ScopeSelector `json:"active_waivers"`
+	UsedNonces      []string              `json:"used_nonces"`
 }
 
-func newShowDocument(state engine.ResolutionState) showDocument {
+func newShowDocument(state engine.ResolutionState, stage engine.StageState) showDocument {
 	doc := showDocument{
-		Criteria:      state.Criteria,
-		Findings:      state.Findings,
-		ActiveWaivers: make([]model.ScopeSelector, 0, len(state.ActiveWaivers)),
-		UsedNonces:    make([]string, 0, len(state.UsedNonces)),
+		CurrentStage:    stage.CurrentStage,
+		Terminal:        stage.Terminal,
+		Outcome:         stage.Outcome,
+		Sequence:        stage.Sequence,
+		PredecessorHead: stage.PredecessorHead,
+		Criteria:        state.Criteria,
+		Findings:        state.Findings,
+		ActiveWaivers:   make([]model.ScopeSelector, 0, len(state.ActiveWaivers)),
+		UsedNonces:      make([]string, 0, len(state.UsedNonces)),
 	}
 	if doc.Criteria == nil {
 		doc.Criteria = []model.Criterion{}
@@ -79,5 +92,5 @@ func runShow(args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(newShowDocument(engine.ProjectResolutionState(records)))
+	return json.NewEncoder(os.Stdout).Encode(newShowDocument(engine.ProjectResolutionState(records), engine.ProjectStageState(records)))
 }

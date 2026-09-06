@@ -12,7 +12,7 @@ import (
 	"github.com/lennon-li/HMA/internal/pilot"
 )
 
-const usage = "usage: hma [pilot|resolve|eval|show|ci] ..."
+const usage = "usage: hma [pilot|transition|resolve|eval|show|ci] ..."
 
 func run(args []string) error {
 	if len(args) == 0 {
@@ -21,6 +21,8 @@ func run(args []string) error {
 	switch args[0] {
 	case "pilot":
 		return runPilot(args)
+	case "transition":
+		return runTransition(args[1:])
 	case "resolve":
 		return runResolve(args)
 	case "eval":
