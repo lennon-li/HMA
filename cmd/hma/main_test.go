@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/model"
 	"github.com/lennon-li/HMA/internal/store"
 )
@@ -241,5 +242,77 @@ func TestRunRejectsUnknownCommand(t *testing.T) {
 		if err := run(args); err == nil {
 			t.Fatalf("accepted %v", args)
 		}
+	}
+}
+
+func TestTransitionUsage(t *testing.T) {
+	cases := [][]string{
+		{"transition"},
+		{"transition", "--input", "x.json"},
+		{"transition", "--store", "dir"},
+		{"transition", "--input", "x.json", "--store", "dir", "extra"},
+	}
+	for _, args := range cases {
+		if err := run(args); err == nil {
+			t.Fatalf("run(%v) = nil, want a usage error", args)
+		}
+	}
+}
+
+// TestTransitionRejectsUnknownInputFields: an input the host did not mean to
+// give must not be silently ignored, or a field a human thought bound the
+// approval would quietly bind nothing.
+func TestTransitionRejectsUnknownInputFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "in.json")
+	writeJSON(t, path, map[string]any{"run_id": "run", "not_a_field": true})
+	if err := run([]string{"transition", "--input", path, "--store", filepath.Join(dir, "store")}); err == nil {
+		t.Fatal("unknown input field accepted")
+	}
+}
+
+func TestTransitionRejectsMultipleInputDocuments(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "in.json")
+	if err := os.WriteFile(path, []byte(`{"run_id":"a"}{"run_id":"b"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	err := run([]string{"transition", "--input", path, "--store", filepath.Join(dir, "store")})
+	if err == nil || err.Error() != "multiple input documents" {
+		t.Fatalf("err = %v, want multiple input documents", err)
+	}
+}
+
+// TestShowReportsTheRunStage: show is what a human reads before approving, so
+// it must say where the run actually is.
+func TestShowReportsTheRunStage(t *testing.T) {
+	dir := t.TempDir()
+	s := store.New(dir)
+	rec := model.Record{
+		Kind:     model.KindStageTransition,
+		Version:  1,
+		Metadata: model.RecordMetadata{RunID: "run", Sequence: 1, Timestamp: "2026-09-05T00:00:00Z", Actor: "operator-confirmed:lennon"},
+		Stage:    model.StageGrounding,
+		Control:  model.ControlApproved,
+		Approval: &model.ApprovalBinding{
+			RunID: "run", TransitionDigest: "t", CurrentStage: model.StageGrounding,
+			ProposedTargetStage: model.StageAcceptanceCriteria, RepositoryIdentityDigest: "id",
+			BaseRevisionDigest: "base", StageTimeDigest: ":1", AcceptedPlanDigest: "plan",
+			ChallengeNonce: "n1", Approver: "operator-confirmed:lennon", Timestamp: "2026-09-05T00:00:00Z",
+		},
+	}
+	if err := s.Append(&rec); err != nil {
+		t.Fatal(err)
+	}
+	records, err := s.Load("run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := newShowDocument(engine.ProjectResolutionState(records), engine.ProjectStageState(records))
+	if doc.CurrentStage != model.StageAcceptanceCriteria {
+		t.Fatalf("show reports stage %q, want ACCEPTANCE_CRITERIA", doc.CurrentStage)
+	}
+	if doc.Sequence != 1 || doc.Terminal {
+		t.Fatalf("doc = %+v", doc)
 	}
 }
