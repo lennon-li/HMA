@@ -11,8 +11,11 @@ import (
 
 	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 )
+
+func trim(s string) string { return strings.TrimSpace(s) }
 
 func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
@@ -43,12 +46,12 @@ func newRepo(t *testing.T) (string, string) {
 // dirty-worktree policy under test.
 func pilotInput(t *testing.T, repo, base, identity, nonce, stageTime string, now time.Time) Input {
 	t.Helper()
-	snap, err := snapshotRepo(context.Background(), repo, base, true)
+	snap, err := repostate.Snapshot(context.Background(), repo, base, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := model.ApprovalBinding{RunID: "run", TransitionDigest: "transition", CurrentStage: model.StageImplementationReview, ProposedTargetStage: model.StageVerification, RepositoryIdentityDigest: identity, BaseRevisionDigest: base, StageTimeDigest: stageTime, AcceptedPlanDigest: "plan", ChallengeNonce: nonce, Approver: "operator-confirmed:lennon", Timestamp: now.Format(time.RFC3339), ProducedHeadDigest: snap.head, DiffDigest: snap.diff}
-	return Input{RunID: "run", RepositoryRoot: repo, RepositoryIdentity: identity, BaseRevision: base, ExpectedHeadRevision: snap.head, ExpectedDiffDigest: snap.diff, Actor: "host", ExpectedApproval: a, Approval: a, ApprovalNow: now, ApprovalMaxAgeSeconds: 300, EvidenceCommands: []Command{{Executable: "git", Argv: []string{"status", "--porcelain"}}}}
+	a := model.ApprovalBinding{RunID: "run", TransitionDigest: "transition", CurrentStage: model.StageImplementationReview, ProposedTargetStage: model.StageVerification, RepositoryIdentityDigest: identity, BaseRevisionDigest: base, StageTimeDigest: stageTime, AcceptedPlanDigest: "plan", ChallengeNonce: nonce, Approver: "operator-confirmed:lennon", Timestamp: now.Format(time.RFC3339), ProducedHeadDigest: snap.Head, DiffDigest: snap.Diff}
+	return Input{RunID: "run", RepositoryRoot: repo, RepositoryIdentity: identity, BaseRevision: base, ExpectedHeadRevision: snap.Head, ExpectedDiffDigest: snap.Diff, Actor: "host", ExpectedApproval: a, Approval: a, ApprovalNow: now, ApprovalMaxAgeSeconds: 300, EvidenceCommands: []Command{{Executable: "git", Argv: []string{"status", "--porcelain"}}}}
 }
 
 func TestRunAcceptsOpaqueIdentityAndPersistsItInEvidence(t *testing.T) {
@@ -127,15 +130,15 @@ func TestRunCommittedDeltaChangesDiffAndRejectsStaleBinding(t *testing.T) {
 	}
 	git(t, repo, "add", "x")
 	git(t, repo, "commit", "-qm", "two")
-	current, err := snapshotRepo(context.Background(), repo, base, false)
+	current, err := repostate.Snapshot(context.Background(), repo, base, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if current.diff == oldDiff {
+	if current.Diff == oldDiff {
 		t.Fatal("committed repository delta did not change relevant diff digest")
 	}
-	stale.ExpectedHeadRevision = current.head
-	stale.ExpectedDiffDigest = current.diff
+	stale.ExpectedHeadRevision = current.Head
+	stale.ExpectedDiffDigest = current.Diff
 	if _, err := Run(context.Background(), stale, t.TempDir()); err == nil || !strings.Contains(err.Error(), "expected approval binding is stale") {
 		t.Fatalf("stale binding error = %v, want expected approval binding path", err)
 	}
@@ -145,16 +148,16 @@ func TestRunCommittedDeltaChangesDiffAndRejectsStaleBinding(t *testing.T) {
 // binding the worktree digest the human approved.
 func dirtyPilotInput(t *testing.T, repo, base string, now time.Time) Input {
 	t.Helper()
-	snap, err := snapshotRepo(context.Background(), repo, base, true)
+	snap, err := repostate.Snapshot(context.Background(), repo, base, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.worktree == "" {
+	if snap.Worktree == "" {
 		t.Fatal("worktree digest empty for a dirty worktree")
 	}
 	in := pilotInput(t, repo, base, "identity", "nonce-dirty", ":1", now)
 	in.DirtyWorktreeApproved = true
-	in.ExpectedWorktreeDigest = snap.worktree
+	in.ExpectedWorktreeDigest = snap.Worktree
 	return in
 }
 
@@ -227,42 +230,5 @@ func TestRunRejectsIncompleteDirtyApproval(t *testing.T) {
 	digestWithoutApproval.ExpectedWorktreeDigest = "some-digest"
 	if _, err := Run(context.Background(), digestWithoutApproval, t.TempDir()); err == nil {
 		t.Fatal("worktree digest accepted without dirty approval")
-	}
-}
-
-// TestWorktreeDigestDistinguishesContent guards the framing: two different
-// worktrees must not collide, and the digest must be stable for one state.
-func TestWorktreeDigestDistinguishesContent(t *testing.T) {
-	repo, base := newRepo(t)
-
-	write := func(content string) string {
-		t.Helper()
-		if err := os.WriteFile(filepath.Join(repo, "x"), []byte(content), 0600); err != nil {
-			t.Fatal(err)
-		}
-		snap, err := snapshotRepo(context.Background(), repo, base, true)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return snap.worktree
-	}
-
-	first := write("ab")
-	if first != write("ab") {
-		t.Fatal("worktree digest is not stable for one worktree state")
-	}
-	if first == write("ba") {
-		t.Fatal("different worktree content produced the same digest")
-	}
-}
-
-func TestSnapshotLeavesCleanWorktreeDigestEmpty(t *testing.T) {
-	repo, base := newRepo(t)
-	snap, err := snapshotRepo(context.Background(), repo, base, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if snap.worktree != "" {
-		t.Fatal("clean worktree produced a worktree digest; it is revision-reproducible")
 	}
 }

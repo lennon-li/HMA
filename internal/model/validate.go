@@ -99,10 +99,13 @@ func ValidScopeKind(k ScopeKind) bool {
 	return false
 }
 
-// requiresHeadDiff reports whether an approval at stage s must additionally
-// bind the produced head revision and diff digest, per the human-approval
-// contract.
-func requiresHeadDiff(s Stage) bool {
+// ApprovalBindsHeadDiff reports whether an approval at stage s must
+// additionally bind the produced head revision and diff digest, per the
+// human-approval contract (architecture section 6). A packet becomes stale
+// only when a field it actually binds changes, so callers verifying a
+// repository against an approval must ask this before comparing a head or
+// diff.
+func ApprovalBindsHeadDiff(s Stage) bool {
 	switch s {
 	case StageImplementationReview, StageVerification,
 		StageIndependentValidation, StageReleaseAndClosure:
@@ -110,6 +113,8 @@ func requiresHeadDiff(s Stage) bool {
 	}
 	return false
 }
+
+func requiresHeadDiff(s Stage) bool { return ApprovalBindsHeadDiff(s) }
 
 func criterionExists(criteria []Criterion, id string) bool {
 	for _, c := range criteria {
@@ -332,6 +337,9 @@ func ValidateRecord(r *Record) error {
 	if err := validateApproval(r.Approval); err != nil {
 		return err
 	}
+	if err := validateStageTransition(r); err != nil {
+		return err
+	}
 	if err := validateEvidence(r.Evidence); err != nil {
 		return err
 	}
@@ -399,6 +407,33 @@ func validateFindingOverride(f *FindingDispositionOverride) error {
 	}
 	if f.ChallengeNonce == "" {
 		return errors.New("finding override missing challenge_nonce")
+	}
+	return nil
+}
+
+// validateStageTransition enforces that a stage_transition record is filed
+// under the stage its approval was raised from, and that a record claiming
+// APPROVED carries the approval that proves it.
+//
+// Control is a stage-control state: it describes the stage the record is
+// filed under, not a destination. An APPROVED record therefore says "this
+// stage is approved, and the approved next step is the approval's proposed
+// target"; a READY_FOR_REVIEW record says "this stage awaits a decision".
+// Both are filed under the approval's current stage. Without this a record
+// could carry an approval for one transition while filing itself under
+// another stage, and the chain would replay to a stage no human approved.
+func validateStageTransition(r *Record) error {
+	if r.Kind != KindStageTransition {
+		return nil
+	}
+	if r.Control == ControlApproved && r.Approval == nil {
+		return errors.New("approved stage_transition carries no approval binding")
+	}
+	if r.Approval == nil {
+		return nil
+	}
+	if r.Stage != r.Approval.CurrentStage {
+		return fmt.Errorf("stage_transition records stage %q but its approval is raised from %q", r.Stage, r.Approval.CurrentStage)
 	}
 	return nil
 }
