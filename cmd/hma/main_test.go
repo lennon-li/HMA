@@ -117,7 +117,7 @@ func TestResolveRecordsAreReplayable(t *testing.T) {
 	input := filepath.Join(dir, "waiver.json")
 	writeJSON(t, input, waiverInput("run", "nonce-1"))
 	if err := runResolve([]string{"--input", input, "--store", dir}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("chain unreadable after resolve: %v", err)
 	}
 	records, err := s.Load("run")
 	if err != nil {
@@ -128,6 +128,56 @@ func TestResolveRecordsAreReplayable(t *testing.T) {
 	}
 	if records[1].Kind != model.KindWaiverOperation {
 		t.Fatalf("record kind = %q", records[1].Kind)
+	}
+}
+
+// TestResolveSurfacesStaleHeadAndDiffBindings is the section 7 amendment on
+// the CLI surface: a waiver bound to the head or diff digest it was granted
+// against is refused, with the binding's reason and a non-zero exit, when the
+// live repository state the host reports no longer matches.
+func TestResolveSurfacesStaleHeadAndDiffBindings(t *testing.T) {
+	dir := t.TempDir()
+	seedCriteria(t, dir, "run", "C1", "C2", "C3")
+	input := filepath.Join(dir, "waiver.json")
+
+	op := func(nonce, target, head, diff string) map[string]any {
+		m := waiverInput("run", nonce)
+		w := m["waiver_operation"].(map[string]any)
+		w["scope_selector"] = map[string]any{"kind": string(model.ScopeCriterion), "target": target}
+		w["head"] = head
+		w["diff_digest"] = diff
+		m["head"] = "head-now"
+		m["diff_digest"] = "diff-now"
+		return m
+	}
+
+	// A waiver bound to the live head and diff is recorded, and the record
+	// carries the binding downstream.
+	writeJSON(t, input, op("nonce-1", "C1", "head-now", "diff-now"))
+	if err := runResolve([]string{"--input", input, "--store", dir}); err != nil {
+		t.Fatalf("waiver bound to the live head and diff rejected: %v", err)
+	}
+	records, err := store.New(dir).Load("run")
+	if err != nil || len(records) != 2 {
+		t.Fatalf("records = %d, %v", len(records), err)
+	}
+	if w := records[1].WaiverOperation; w == nil || w.Head != "head-now" || w.DiffDigest != "diff-now" {
+		t.Fatalf("record waiver operation = %+v, want the head and diff binding persisted", records[1].WaiverOperation)
+	}
+
+	// A mismatched head or diff digest invalidates the waiver: the command
+	// refuses it, names the binding that failed, and writes nothing.
+	writeJSON(t, input, op("nonce-2", "C2", "head-the-human-waived-against", "diff-now"))
+	if err := runResolve([]string{"--input", input, "--store", dir}); err == nil || err.Error() != "STALE_HEAD_BINDING" {
+		t.Fatalf("err = %v, want STALE_HEAD_BINDING", err)
+	}
+	writeJSON(t, input, op("nonce-3", "C3", "head-now", "diff-the-human-waived-against"))
+	if err := runResolve([]string{"--input", input, "--store", dir}); err == nil || err.Error() != "STALE_DIFF_BINDING" {
+		t.Fatalf("err = %v, want STALE_DIFF_BINDING", err)
+	}
+	records, err = store.New(dir).Load("run")
+	if err != nil || len(records) != 2 {
+		t.Fatalf("a refused resolution wrote records: %d, %v", len(records), err)
 	}
 }
 

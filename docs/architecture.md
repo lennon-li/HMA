@@ -181,6 +181,14 @@ closure approvals additionally bind the produced head revision and diff digest.
 Other transitions do not bind a produced head or diff. A packet becomes stale
 only when a field it actually binds changes; CI applies the same rule.
 
+An approval may additionally bind the exact worktree-content digest of an
+approved dirty worktree (amendment, 2026-09-08). The binding is optional at
+every stage. When it is populated, the transition is refused if the current
+worktree digest differs from the approved digest — including when the worktree
+is now clean, since a bound digest is never empty. When it is absent, a dirty
+worktree remains governed by the explicit dirty-worktree approval of the exact
+content, exactly as before; the amendment adds a binding, never a requirement.
+
 A change to any actually bound field invalidates the approval.
 
 The approval interface is challenge-bound rather than a simple `y/N` prompt. Exact CLI syntax remains an implementation decision and is intentionally not invented in this architecture document.
@@ -229,6 +237,12 @@ actor, rationale, scope, affected criteria or artifacts, and expiry conditions,
 and remains visible downstream. It expires only when its scoped artifacts or
 criteria change. A run with any active waiver cannot end as `VERIFIED_SUCCESS`;
 the appropriate successful outcome is `VERIFIED_WITH_WAIVERS`.
+
+A waiver operation may additionally bind the produced head revision or diff
+digest it was granted against (amendment, 2026-09-08). When such a binding is
+populated, the operation is rejected if the repository's current state no
+longer matches it. A waiver that binds neither remains valid, exactly as
+before: the binding is optional, not a new requirement.
 
 ## 8. Grounding contract
 
@@ -287,6 +301,11 @@ Each plan unit records:
 - dependencies on prior units;
 - stop, rollback, and escalation conditions;
 - explicit non-goals.
+
+A unit's implementation-authorization approval may bind the exact
+worktree-content digest when the human authorizes work against uncommitted
+content (amendment, 2026-09-08); the authorization is refused if the worktree
+later differs from the approved digest.
 
 Completion, budget exhaustion, repeated failure, scope drift, or a plan change returns control to a human gate.
 

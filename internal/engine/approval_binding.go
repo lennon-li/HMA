@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	ReasonMalformedApproval Reason = "MALFORMED_APPROVAL_BINDING"
-	ReasonStaleApproval     Reason = "STALE_APPROVAL_BINDING"
-	ReasonReusedNonce       Reason = "REUSED_APPROVAL_NONCE"
+	ReasonMalformedApproval    Reason = "MALFORMED_APPROVAL_BINDING"
+	ReasonStaleApproval        Reason = "STALE_APPROVAL_BINDING"
+	ReasonReusedNonce          Reason = "REUSED_APPROVAL_NONCE"
+	ReasonStaleWorktreeBinding Reason = "STALE_WORKTREE_BINDING"
 )
 
 type ApprovalBindingRequest struct {
@@ -22,6 +23,10 @@ type ApprovalBindingRequest struct {
 	UsedNonces      map[string]bool
 	Now             time.Time
 	MaxAge          time.Duration
+	// WorktreeDigest is the live worktree-content digest the host observes,
+	// empty for a clean worktree. An approval that binds a worktree digest
+	// (the section 6 amendment) must match it.
+	WorktreeDigest string
 }
 
 type ApprovalBindingResult struct {
@@ -46,6 +51,16 @@ func EvaluateApprovalBinding(req ApprovalBindingRequest) ApprovalBindingResult {
 	}
 	if a.StageTimeDigest != fmt.Sprintf("%s:%d", req.PredecessorHead, req.Sequence) || !reflect.DeepEqual(a, req.Expected) {
 		return reject(ReasonStaleApproval)
+	}
+	// An approval that binds a worktree digest names the exact uncommitted
+	// content the human approved (the section 6 amendment). The transition
+	// is refused when the current worktree digest differs -- including when
+	// the worktree is now clean, because a bound digest is never empty. An
+	// approval that binds none is unaffected: a dirty worktree it never
+	// bound is the host-level dirty-worktree approval's business, not this
+	// evaluator's.
+	if a.WorktreeDigest != "" && a.WorktreeDigest != req.WorktreeDigest {
+		return reject(ReasonStaleWorktreeBinding)
 	}
 	ts, err := time.Parse(time.RFC3339, a.Timestamp)
 	if err != nil || req.MaxAge <= 0 || req.Now.Before(ts) || req.Now.Sub(ts) > req.MaxAge {

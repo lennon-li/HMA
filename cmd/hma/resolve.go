@@ -22,10 +22,14 @@ type resolveInput struct {
 	// persisted in the record.
 	ExpectedPredecessorHead string `json:"expected_predecessor_head,omitempty"`
 
-	// RepositoryIdentity and BaseRevision are the live repository values the
-	// host observes now. An operation that declares either must match them.
+	// RepositoryIdentity, BaseRevision, Head and DiffDigest are the live
+	// repository values the host observes now. An operation that declares
+	// any of them must match, so a waiver bound to the head or diff it was
+	// granted against is refused once the repository moved on.
 	RepositoryIdentity string `json:"repository_identity,omitempty"`
 	BaseRevision       string `json:"base_revision,omitempty"`
+	Head               string `json:"head,omitempty"`
+	DiffDigest         string `json:"diff_digest,omitempty"`
 }
 
 func runResolve(args []string) error {
@@ -76,6 +80,8 @@ func runResolve(args []string) error {
 	req.PredecessorHead = predecessorHead
 	req.RepositoryIdentity = in.RepositoryIdentity
 	req.BaseRevision = in.BaseRevision
+	req.Head = in.Head
+	req.DiffDigest = in.DiffDigest
 
 	res := engine.EvaluateResolution(req)
 	if res.Decision != engine.DecisionLegalPendingApproval {

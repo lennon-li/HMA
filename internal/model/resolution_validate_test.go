@@ -44,6 +44,20 @@ func TestValidateWaiverOperation(t *testing.T) {
 
 func ptrWaiver(w WaiverOperation) *WaiverOperation { return &w }
 
+// TestValidateWaiverOperationAcceptsOptionalBindings: the repository,
+// head and diff bindings are optional fields, not new requirements, so a
+// fully bound operation is as valid as an unbound one.
+func TestValidateWaiverOperationAcceptsOptionalBindings(t *testing.T) {
+	w := validWaiverOperation()
+	w.RepositoryIdentity = "identity-the-human-saw"
+	w.BaseRevision = "base-the-human-saw"
+	w.Head = "head-the-human-waived-against"
+	w.DiffDigest = "diff-the-human-waived-against"
+	if err := validateWaiverOperation(&w); err != nil {
+		t.Fatalf("fully bound operation rejected: %v", err)
+	}
+}
+
 func validFindingOverride() FindingDispositionOverride {
 	return FindingDispositionOverride{
 		FindingID:      "F1",

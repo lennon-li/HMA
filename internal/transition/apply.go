@@ -86,6 +86,15 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	// An approval that binds a worktree digest (the section 6 amendment)
+	// carries the human's decision about exactly which uncommitted content
+	// the transition covers, so it is compared against the live worktree
+	// before the host-level declaration and the refusal names the binding
+	// that failed. A dirty worktree whose approval record binds no digest
+	// of its own is still governed by the host-level declaration below.
+	if in.ExpectedApproval.WorktreeDigest != "" && in.ExpectedApproval.WorktreeDigest != snap.Worktree {
+		return Result{}, fmt.Errorf("transition rejected: %s", engine.ReasonStaleWorktreeBinding)
+	}
 	if snap.Worktree != in.ExpectedWorktreeDigest {
 		return Result{}, errors.New("repository identity is stale")
 	}
@@ -116,11 +125,12 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	state := engine.ProjectStageState(records)
 
 	res := engine.EvaluateStageTransition(engine.StageTransitionRequest{
-		State:     state,
-		Expected:  expected,
-		Presented: in.Approval,
-		Now:       in.ApprovalNow,
-		MaxAge:    time.Duration(in.ApprovalMaxAgeSeconds) * time.Second,
+		State:          state,
+		Expected:       expected,
+		Presented:      in.Approval,
+		Now:            in.ApprovalNow,
+		MaxAge:         time.Duration(in.ApprovalMaxAgeSeconds) * time.Second,
+		WorktreeDigest: snap.Worktree,
 	})
 	if res.Decision != engine.DecisionLegalPendingApproval {
 		return Result{}, fmt.Errorf("transition rejected: %s", res.Reason)

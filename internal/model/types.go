@@ -155,6 +155,10 @@ type Finding struct {
 // ApprovalBinding binds a single-use, challenge-bound human approval to its
 // exact transition inputs. ProducedHeadDigest and DiffDigest are bound only
 // for review, verification, independent validation, and release transitions.
+// WorktreeDigest is optional at every stage (the section 6 amendment): when
+// populated, the transition is refused if the current worktree digest differs,
+// so approving work against uncommitted content approves one exact worktree
+// state, never whatever happens to be on disk later.
 type ApprovalBinding struct {
 	RunID                    string                 `json:"run_id"`
 	TransitionDigest         string                 `json:"transition_digest"`
@@ -171,6 +175,7 @@ type ApprovalBinding struct {
 	Timestamp                string                 `json:"timestamp"`
 	ProducedHeadDigest       string                 `json:"produced_head_digest,omitempty"`
 	DiffDigest               string                 `json:"diff_digest,omitempty"`
+	WorktreeDigest           string                 `json:"worktree_digest,omitempty"`
 }
 
 // EvidenceRef references freshly captured, revision-bound evidence. The
@@ -234,6 +239,12 @@ const (
 // they are not mandatory here. When a host does set them the evaluator
 // enforces them, which lets an operation be pinned to the repository state the
 // human was looking at instead of applying to whatever the run later became.
+//
+// Head and DiffDigest are likewise optional (the section 7 amendment): they
+// bind the produced head commit and the diff digest against the approved base
+// that the human waived against, and the evaluator rejects the operation when
+// the repository's current state no longer matches. A waiver that binds none
+// of these fields remains valid, exactly as before.
 type WaiverOperation struct {
 	Operation          WaiverOperationAction `json:"operation"`
 	Scope              ScopeSelector         `json:"scope_selector"`
@@ -243,6 +254,8 @@ type WaiverOperation struct {
 	ChallengeNonce     string                `json:"challenge_nonce"`
 	RepositoryIdentity string                `json:"repository_identity,omitempty"`
 	BaseRevision       string                `json:"base_revision,omitempty"`
+	Head               string                `json:"head,omitempty"`
+	DiffDigest         string                `json:"diff_digest,omitempty"`
 }
 
 // FindingDispositionOverride re-dispositions one finding. RepositoryIdentity

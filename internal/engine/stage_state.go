@@ -91,6 +91,10 @@ type StageTransitionRequest struct {
 	Presented model.ApprovalBinding
 	Now       time.Time
 	MaxAge    time.Duration
+	// WorktreeDigest is the live worktree-content digest the host observes,
+	// empty for a clean worktree. It is enforced only against an approval
+	// that itself binds a worktree digest.
+	WorktreeDigest string
 }
 
 // StageTransitionResult is the deterministic evaluation of a proposed
@@ -183,6 +187,7 @@ func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 		UsedNonces:      req.State.UsedNonces,
 		Now:             req.Now,
 		MaxAge:          req.MaxAge,
+		WorktreeDigest:  req.WorktreeDigest,
 	})
 	if ar.Decision != DecisionLegalPendingApproval {
 		return reject(ar.Reason)

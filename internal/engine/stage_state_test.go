@@ -148,6 +148,16 @@ func TestEvaluateStageTransitionRejects(t *testing.T) {
 		{"presented differs from expected", func(r *StageTransitionRequest) {
 			r.Presented.AcceptedPlanDigest = "a different plan"
 		}, ReasonStaleApproval},
+		{"approval bound to another worktree", func(r *StageTransitionRequest) {
+			r.Expected.WorktreeDigest = "worktree-the-human-approved"
+			r.Presented.WorktreeDigest = "worktree-the-human-approved"
+			r.WorktreeDigest = "worktree-now"
+		}, ReasonStaleWorktreeBinding},
+		{"approval bound to a clean worktree", func(r *StageTransitionRequest) {
+			r.Expected.WorktreeDigest = "worktree-the-human-approved"
+			r.Presented.WorktreeDigest = "worktree-the-human-approved"
+			r.WorktreeDigest = ""
+		}, ReasonStaleWorktreeBinding},
 		{"expired approval", func(r *StageTransitionRequest) {
 			r.Now = r.Now.Add(time.Hour)
 		}, ReasonStaleApproval},
@@ -164,6 +174,21 @@ func TestEvaluateStageTransitionRejects(t *testing.T) {
 				t.Fatalf("res = %+v, want rejection %s", res, tc.want)
 			}
 		})
+	}
+}
+
+// TestEvaluateStageTransitionAcceptsWorktreeBoundApproval is the other half
+// of the section 6 amendment: a worktree-bound approval whose digest matches
+// the live worktree is legal, so the binding is enforced exactly when
+// populated and never otherwise.
+func TestEvaluateStageTransitionAcceptsWorktreeBoundApproval(t *testing.T) {
+	state := ProjectStageState(nil)
+	req := stageTransitionFixture(state, model.StageGrounding, model.StageAcceptanceCriteria)
+	req.Expected.WorktreeDigest = "worktree-now"
+	req.Presented.WorktreeDigest = "worktree-now"
+	req.WorktreeDigest = "worktree-now"
+	if res := EvaluateStageTransition(req); res.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("res = %+v, want legal", res)
 	}
 }
 

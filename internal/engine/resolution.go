@@ -17,6 +17,8 @@ const (
 	ReasonResolutionInvalidOperation   Reason = "INVALID_WAIVER_OPERATION"
 	ReasonResolutionStaleRepository    Reason = "STALE_REPOSITORY_BINDING"
 	ReasonResolutionStaleRevision      Reason = "STALE_REVISION_BINDING"
+	ReasonResolutionStaleHead          Reason = "STALE_HEAD_BINDING"
+	ReasonResolutionStaleDiff          Reason = "STALE_DIFF_BINDING"
 )
 
 // ResolutionState is the projection of a run's committed chain that human
@@ -106,12 +108,14 @@ type ResolutionRequest struct {
 	ExpectedPredecessorHead string
 	PredecessorHead         string
 
-	// RepositoryIdentity and BaseRevision are the live values the host
-	// observes. They are compared against whatever the operation itself
-	// declares; an operation that declares neither is not revision-bound,
-	// which the architecture permits.
+	// RepositoryIdentity, BaseRevision, Head and DiffDigest are the live
+	// repository values the host observes. They are compared against
+	// whatever the operation itself declares; an operation that declares
+	// none of them is not revision-bound, which the architecture permits.
 	RepositoryIdentity string
 	BaseRevision       string
+	Head               string
+	DiffDigest         string
 }
 
 // NewResolutionRequest builds a request from a projected chain state.
@@ -153,11 +157,13 @@ func EvaluateResolution(req ResolutionRequest) ResolutionResult {
 		return rejectResolution(ReasonResolutionStalePosition)
 	}
 
-	var nonce, boundRepository, boundRevision string
+	var nonce, boundRepository, boundRevision, boundHead, boundDiff string
 	if req.WaiverOperation != nil {
 		nonce = req.WaiverOperation.ChallengeNonce
 		boundRepository = req.WaiverOperation.RepositoryIdentity
 		boundRevision = req.WaiverOperation.BaseRevision
+		boundHead = req.WaiverOperation.Head
+		boundDiff = req.WaiverOperation.DiffDigest
 	} else {
 		nonce = req.FindingOverride.ChallengeNonce
 		boundRepository = req.FindingOverride.RepositoryIdentity
@@ -168,6 +174,16 @@ func EvaluateResolution(req ResolutionRequest) ResolutionResult {
 	}
 	if boundRevision != "" && boundRevision != req.BaseRevision {
 		return rejectResolution(ReasonResolutionStaleRevision)
+	}
+	// A waiver operation may additionally bind the produced head and diff
+	// it was granted against (the section 7 amendment). Only a waiver
+	// operation can carry these fields; a finding override cannot, so live
+	// head and diff values never invalidate one.
+	if boundHead != "" && boundHead != req.Head {
+		return rejectResolution(ReasonResolutionStaleHead)
+	}
+	if boundDiff != "" && boundDiff != req.DiffDigest {
+		return rejectResolution(ReasonResolutionStaleDiff)
 	}
 	if nonce != "" && req.UsedNonces[nonce] {
 		return rejectResolution(ReasonResolutionReusedNonce)

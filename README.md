@@ -65,6 +65,10 @@ approving a dirty capture approves one exact worktree state rather than
 whatever is on disk at capture time. Such evidence records a `worktree_digest`
 and is not revision-reproducible; see
 [docs/task10-deferred-schema-decisions.md](docs/task10-deferred-schema-decisions.md).
+An approval may also bind the worktree digest itself (`worktree_digest`,
+optional at any stage); a transition or capture presenting such an approval is
+refused with `STALE_WORKTREE_BINDING` when the current worktree differs from
+the approved digest, including when the worktree is now clean.
 
 `hma transition` records one human-approved stage transition. It is the only
 command that changes a run's stage, and it changes one only because a human
@@ -82,7 +86,9 @@ implementation review, verification, independent validation, and release and
 closure — are checked against the live head and diff. A packet is stale only
 when a field it actually binds changes, so a commit landing after a grounding
 approval does not invalidate it, and a commit landing after a review approval
-does.
+does. A `worktree_digest` an approval itself binds is checked against the live
+worktree at every stage; see
+[docs/task12-schema-amendments.md](docs/task12-schema-amendments.md).
 
 A run whose chain is empty is in `GROUNDING`, so `hma transition` is also how
 a run starts; there is no separate `init`. A run that has recorded a terminal
@@ -103,7 +109,10 @@ no active waiver is refused, a `BLOCK` finding cannot be waived or overridden,
 and a challenge nonce already used in the run is rejected as a replay. Setting
 `expected_predecessor_head` binds the operation to the exact chain tail the
 human approved against, and an operation may optionally declare
-`repository_identity` and `base_revision`, which are enforced when present.
+`repository_identity`, `base_revision`, `head`, and `diff_digest`, each
+enforced against the live value the host reports when present: a waiver bound
+to the produced head or diff it was granted against is refused with
+`STALE_HEAD_BINDING` or `STALE_DIFF_BINDING` once the repository has moved on.
 
 `hma eval` calls exactly one deterministic evaluator on one host input
 document and prints its result. It is strictly read-only: it takes no store
@@ -198,6 +207,7 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 - [Task 9 — CLI surface](docs/task9-cli-surface-proposal.md)
 - [Task 10 — deferred schema decisions](docs/task10-deferred-schema-decisions.md)
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)
+- [Task 12 — schema amendments: waiver and worktree binding](docs/task12-schema-amendments.md)
 
 ## Deliberate non-goals for v1
 

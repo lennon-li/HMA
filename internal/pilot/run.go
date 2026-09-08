@@ -78,6 +78,12 @@ func Run(ctx context.Context, in Input, storeDir string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	// An approval that binds a worktree digest (the section 6 amendment)
+	// names the exact uncommitted content the human approved; the live
+	// worktree must still match it, and the refusal names the binding.
+	if in.ExpectedApproval.WorktreeDigest != "" && in.ExpectedApproval.WorktreeDigest != before.Worktree {
+		return Result{}, fmt.Errorf("approval rejected: %s", engine.ReasonStaleWorktreeBinding)
+	}
 	if before.Worktree != in.ExpectedWorktreeDigest {
 		return Result{}, errors.New("repository identity is stale")
 	}
@@ -99,7 +105,7 @@ func Run(ctx context.Context, in Input, storeDir string) (Result, error) {
 	state := engine.ProjectStageState(records)
 	predecessorHead := state.PredecessorHead
 	nextSequence := state.Sequence + 1
-	ar := engine.EvaluateApprovalBinding(engine.ApprovalBindingRequest{Expected: expected, Presented: in.Approval, PredecessorHead: predecessorHead, Sequence: nextSequence, UsedNonces: state.UsedNonces, Now: in.ApprovalNow, MaxAge: time.Duration(in.ApprovalMaxAgeSeconds) * time.Second})
+	ar := engine.EvaluateApprovalBinding(engine.ApprovalBindingRequest{Expected: expected, Presented: in.Approval, PredecessorHead: predecessorHead, Sequence: nextSequence, UsedNonces: state.UsedNonces, Now: in.ApprovalNow, MaxAge: time.Duration(in.ApprovalMaxAgeSeconds) * time.Second, WorktreeDigest: before.Worktree})
 	if ar.Decision != engine.DecisionLegalPendingApproval {
 		return Result{}, fmt.Errorf("approval rejected: %s", ar.Reason)
 	}

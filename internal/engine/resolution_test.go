@@ -272,3 +272,72 @@ func TestEvaluateResolutionEnforcesOverrideBinding(t *testing.T) {
 		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleRepository)
 	}
 }
+
+// TestEvaluateResolutionEnforcesDeclaredHeadDiffBinding is the section 7
+// amendment made concrete: a waiver operation may bind the produced head and
+// diff it was granted against, and it is rejected when the repository's
+// current state no longer matches.
+func TestEvaluateResolutionEnforcesDeclaredHeadDiffBinding(t *testing.T) {
+	scope := model.ScopeSelector{Kind: model.ScopeCriterion, Target: "C1"}
+	state := ProjectResolutionState([]model.Record{
+		{Version: 1, Criteria: []model.Criterion{{ID: "C1", Disposition: model.CriterionPending}},
+			Findings: []model.Finding{{ID: "F1", Disposition: model.FindingWaivable}}},
+	})
+
+	base := func() ResolutionRequest {
+		req := NewResolutionRequest(state)
+		req.Head = "head-now"
+		req.DiffDigest = "diff-now"
+		req.WaiverOperation = &model.WaiverOperation{
+			Operation: model.WaiverOperationGrant, Scope: scope, ChallengeNonce: "n1",
+			Head: "head-now", DiffDigest: "diff-now",
+		}
+		return req
+	}
+
+	if got := EvaluateResolution(base()); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("matching binding rejected: %v", got.Reason)
+	}
+
+	staleHead := base()
+	staleHead.WaiverOperation.Head = "head-the-human-waived-against"
+	if got := EvaluateResolution(staleHead); got.Reason != ReasonResolutionStaleHead {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleHead)
+	}
+
+	staleDiff := base()
+	staleDiff.WaiverOperation.DiffDigest = "diff-the-human-waived-against"
+	if got := EvaluateResolution(staleDiff); got.Reason != ReasonResolutionStaleDiff {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleDiff)
+	}
+
+	// A host that cannot observe the live head cannot prove a bound waiver
+	// fresh; the operation is refused rather than accepted on missing
+	// evidence.
+	unobserved := base()
+	unobserved.Head = ""
+	if got := EvaluateResolution(unobserved); got.Reason != ReasonResolutionStaleHead {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonResolutionStaleHead)
+	}
+
+	// The binding is optional, not a new requirement: a waiver that binds
+	// neither stays valid even though the host reports live values.
+	unbound := base()
+	unbound.WaiverOperation.Head = ""
+	unbound.WaiverOperation.DiffDigest = ""
+	if got := EvaluateResolution(unbound); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("unbound operation rejected: %v", got.Reason)
+	}
+
+	// Only a waiver operation carries these fields: live head and diff
+	// values must never invalidate a finding override.
+	override := NewResolutionRequest(state)
+	override.Head = "head-now"
+	override.DiffDigest = "diff-now"
+	override.FindingOverride = &model.FindingDispositionOverride{
+		FindingID: "F1", Disposition: model.FindingAdvisory, ChallengeNonce: "n1",
+	}
+	if got := EvaluateResolution(override); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("override rejected by values it cannot bind: %v", got.Reason)
+	}
+}

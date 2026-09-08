@@ -501,3 +501,76 @@ func TestValidateRecordAcceptsMatchingTransition(t *testing.T) {
 		}
 	}
 }
+
+// TestApprovalWorktreeDigestJSONRoundTrip: the section 6 amendment's optional
+// worktree binding round-trips under its contract name and stays absent when
+// unbound, so existing approval records are unaffected.
+func TestApprovalWorktreeDigestJSONRoundTrip(t *testing.T) {
+	a := validApproval()
+	a.WorktreeDigest = "sha256:worktree-content"
+	b, err := json.Marshal(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"worktree_digest":"sha256:worktree-content"`) {
+		t.Fatalf("marshalled approval omits the worktree binding: %s", b)
+	}
+	var back ApprovalBinding
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatal(err)
+	}
+	if back.WorktreeDigest != a.WorktreeDigest {
+		t.Fatalf("round trip lost the worktree binding: %+v", back)
+	}
+
+	unbound := validApproval()
+	b2, err := json.Marshal(unbound)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b2), "worktree_digest") {
+		t.Fatalf("unbound approval marshalled a worktree digest: %s", b2)
+	}
+}
+
+// TestWaiverOperationHeadDiffJSONRoundTrip: the section 7 amendment's
+// optional head and diff bindings round-trip under their contract names and
+// stay absent when unbound.
+func TestWaiverOperationHeadDiffJSONRoundTrip(t *testing.T) {
+	w := WaiverOperation{
+		Operation:      WaiverOperationGrant,
+		Scope:          ScopeSelector{Kind: ScopeCriterion, Target: "C1"},
+		Justification:  "accepted risk",
+		Approver:       "lennon",
+		Timestamp:      "2026-09-03T00:00:00Z",
+		ChallengeNonce: "nonce-1",
+		Head:           "head-the-human-waived-against",
+		DiffDigest:     "diff-the-human-waived-against",
+	}
+	b, err := json.Marshal(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"head":"head-the-human-waived-against"`, `"diff_digest":"diff-the-human-waived-against"`} {
+		if !strings.Contains(string(b), want) {
+			t.Fatalf("marshalled waiver operation omits a binding (%s): %s", want, b)
+		}
+	}
+	var back WaiverOperation
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatal(err)
+	}
+	if back.Head != w.Head || back.DiffDigest != w.DiffDigest {
+		t.Fatalf("round trip lost a binding: %+v", back)
+	}
+
+	w.Head = ""
+	w.DiffDigest = ""
+	b2, err := json.Marshal(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b2), "head") || strings.Contains(string(b2), "diff_digest") {
+		t.Fatalf("unbound waiver operation marshalled a binding: %s", b2)
+	}
+}

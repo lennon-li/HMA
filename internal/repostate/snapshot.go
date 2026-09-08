@@ -160,11 +160,32 @@ func VerifyBase(ctx context.Context, root, baseRevision string) error {
 // target does not exist yet, which is exactly the case that matters -- a store
 // directory before its first write, reached through a link. Walking the
 // components lets a dangling link still be followed to where it points.
+//
+// The walk is repeated to a bounded fixpoint because following one link can
+// produce a path whose own components are links again -- on macOS a link
+// target written through /var names the same directory as /private/var, and
+// stopping after one pass would leave that unexpanded, letting a store that
+// reaches into the repository compare as outside it.
 func resolveExisting(path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
 	}
+	resolved := abs
+	for i := 0; i < 40; i++ {
+		next, err := resolveOnce(resolved)
+		if err != nil {
+			return "", err
+		}
+		if next == resolved {
+			return next, nil
+		}
+		resolved = next
+	}
+	return resolved, nil
+}
+
+func resolveOnce(abs string) (string, error) {
 	current := string(filepath.Separator)
 	for _, part := range strings.Split(abs, string(filepath.Separator)) {
 		if part == "" {

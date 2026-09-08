@@ -45,3 +45,44 @@ func TestEvaluateApprovalBinding(t *testing.T) {
 		})
 	}
 }
+
+// TestEvaluateApprovalBindingEnforcesWorktreeBinding is the section 6
+// amendment made concrete: an approval that binds a worktree digest is
+// refused when the current worktree digest differs from the approved one.
+func TestEvaluateApprovalBindingEnforcesWorktreeBinding(t *testing.T) {
+	bound := func() ApprovalBindingRequest {
+		r, a := validApproval()
+		a.WorktreeDigest = "worktree-now"
+		r.Expected = a
+		r.Presented = a
+		r.WorktreeDigest = "worktree-now"
+		return r
+	}
+
+	if got := EvaluateApprovalBinding(bound()); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("matching worktree binding rejected: %+v", got)
+	}
+
+	stale := bound()
+	stale.WorktreeDigest = "worktree-the-human-approved"
+	if got := EvaluateApprovalBinding(stale); got.Decision != DecisionRejected || got.Reason != ReasonStaleWorktreeBinding {
+		t.Fatalf("got %+v, want rejection %s", got, ReasonStaleWorktreeBinding)
+	}
+
+	// A clean worktree has an empty digest, so an approval that binds a
+	// worktree digest can never match one.
+	clean := bound()
+	clean.WorktreeDigest = ""
+	if got := EvaluateApprovalBinding(clean); got.Reason != ReasonStaleWorktreeBinding {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonStaleWorktreeBinding)
+	}
+
+	// The binding is optional: an approval that binds no worktree digest is
+	// not newly invalidated by a dirty worktree, which it never bound. That
+	// case belongs to the host-level dirty-worktree approval.
+	unbound, _ := validApproval()
+	unbound.WorktreeDigest = "worktree-now"
+	if got := EvaluateApprovalBinding(unbound); got.Decision != DecisionLegalPendingApproval {
+		t.Fatalf("unbound approval rejected: %+v", got)
+	}
+}

@@ -46,12 +46,26 @@ func newRepo(t *testing.T) (string, string) {
 // currently stands, binding whatever the stage's approval is required to bind.
 func approvedInput(t *testing.T, repo, base, storeDir string, from, to model.Stage, nonce string, now time.Time) Input {
 	t.Helper()
+	return approvedInputAt(t, repo, base, storeDir, from, to, nonce, now, false)
+}
+
+// approvedDirtyInput builds the input for one transition against the dirty
+// worktree the human approved exactly: the snapshot admits the dirty state,
+// and both the host declaration and the approval itself bind the worktree
+// digest of the content on disk.
+func approvedDirtyInput(t *testing.T, repo, base, storeDir string, from, to model.Stage, nonce string, now time.Time) Input {
+	t.Helper()
+	return approvedInputAt(t, repo, base, storeDir, from, to, nonce, now, true)
+}
+
+func approvedInputAt(t *testing.T, repo, base, storeDir string, from, to model.Stage, nonce string, now time.Time, dirtyApproved bool) Input {
+	t.Helper()
 	records, err := store.New(storeDir).Load("run")
 	if err != nil {
 		t.Fatal(err)
 	}
 	state := engine.ProjectStageState(records)
-	snap, err := repostate.Snapshot(context.Background(), repo, base, false)
+	snap, err := repostate.Snapshot(context.Background(), repo, base, dirtyApproved)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +86,7 @@ func approvedInput(t *testing.T, repo, base, storeDir string, from, to model.Sta
 		a.ProducedHeadDigest = snap.Head
 		a.DiffDigest = snap.Diff
 	}
-	return Input{
+	in := Input{
 		RunID:                 "run",
 		RepositoryRoot:        repo,
 		RepositoryIdentity:    identity,
@@ -82,6 +96,16 @@ func approvedInput(t *testing.T, repo, base, storeDir string, from, to model.Sta
 		ApprovalNow:           now,
 		ApprovalMaxAgeSeconds: 300,
 	}
+	if dirtyApproved {
+		// The section 6 amendment: the approval record itself binds the
+		// exact worktree content, alongside the host-level declaration.
+		in.DirtyWorktreeApproved = true
+		in.ExpectedWorktreeDigest = snap.Worktree
+		a.WorktreeDigest = snap.Worktree
+		in.ExpectedApproval = a
+		in.Approval = a
+	}
+	return in
 }
 
 // walk is the architecture's ordinary path from GROUNDING to
@@ -265,6 +289,49 @@ func TestApplyRefusesDirtyWorktreeWithoutApproval(t *testing.T) {
 	}
 	if _, err := Apply(context.Background(), in, storeDir); err == nil || !strings.Contains(err.Error(), "dirty worktree") {
 		t.Fatalf("err = %v, want a dirty worktree refusal", err)
+	}
+}
+
+// TestApplyBindsApprovalToApprovedWorktreeContent is the section 6 amendment
+// end to end: a worktree-bound approval records against the exact uncommitted
+// content the human approved, and once the worktree drifts underneath it the
+// transition is refused and the refusal names the binding that failed.
+func TestApplyBindsApprovalToApprovedWorktreeContent(t *testing.T) {
+	repo, base := newRepo(t)
+	storeDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+
+	if err := os.WriteFile(filepath.Join(repo, "x"), []byte("uncommitted"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	in := approvedDirtyInput(t, repo, base, storeDir, model.StageGrounding, model.StageAcceptanceCriteria, "nonce-1", now)
+	if _, err := Apply(context.Background(), in, storeDir); err != nil {
+		t.Fatalf("worktree-bound approval refused against the approved content: %v", err)
+	}
+	records, err := store.New(storeDir).Load("run")
+	if err != nil || len(records) != 1 {
+		t.Fatalf("records = %d, %v", len(records), err)
+	}
+	if got := records[0].Approval.WorktreeDigest; got == "" || got != in.ExpectedWorktreeDigest {
+		t.Fatalf("record worktree binding = %q, want the approved digest", got)
+	}
+
+	// The worktree changes after the human approved. The host still
+	// declares the digest the human approved; the approval's own binding is
+	// what the refusal must name.
+	if err := os.WriteFile(filepath.Join(repo, "x"), []byte("different uncommitted"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	drifted := approvedDirtyInput(t, repo, base, storeDir, model.StageAcceptanceCriteria, model.StagePlanning, "nonce-2", now)
+	drifted.ExpectedWorktreeDigest = in.ExpectedWorktreeDigest
+	drifted.ExpectedApproval.WorktreeDigest = in.ExpectedWorktreeDigest
+	drifted.Approval.WorktreeDigest = in.ExpectedWorktreeDigest
+	if _, err := Apply(context.Background(), drifted, storeDir); err == nil ||
+		!strings.Contains(err.Error(), string(engine.ReasonStaleWorktreeBinding)) {
+		t.Fatalf("err = %v, want %s", err, engine.ReasonStaleWorktreeBinding)
+	}
+	if records, _ := store.New(storeDir).Load("run"); len(records) != 1 {
+		t.Fatalf("a refused transition wrote %d records, want the 1 already committed", len(records))
 	}
 }
 
