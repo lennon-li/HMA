@@ -392,6 +392,53 @@ eligibility, capability or permission escalation, self-validation, forbidden
 fallbacks, and access-service substitution, but a coherent result remains
 pending human approval and does not select or dispatch a route.
 
+### 12.4 Interactive host orchestration
+
+HMA core does not dispatch workers in v1. When an interactive CLI agent or host
+adapter performs the dispatch after human authorization, that interactive agent
+is an **orchestrator by default**. It retains the user-facing context, grounds
+and decomposes the work, proposes routes and permissions, dispatches bounded
+jobs, collects implementation artifacts and evidence, and presents the result
+for review. It does not perform coding work itself by default.
+
+Direct coding by the interactive agent is permitted only as a recorded cost
+exception when all of the following hold:
+
+- the job is small, bounded, and within the approved permission envelope;
+- the estimated total cost of delegation, including dispatch setup, duplicated
+  context, expected execution, and review coordination, is greater than direct
+  execution;
+- the comparison and direct-execution rationale are recorded before work starts;
+- the direct route is eligible for the task and does not widen permissions; and
+- the resulting coding work still receives independent review.
+
+Convenience, agent confidence, or failure to check an available route does not
+establish the cost exception.
+
+Before every worker dispatch, the host performs a minimal route-availability
+handshake: it sends `hi` to the exact approved agent/model profile through the
+approved access service and verifies that the route responds without reporting
+an exhausted quota or rate limit. The preflight record binds the profile,
+provider and model families, access service, timestamp, and result. A successful
+greeting proves only current reachability; it does not prove eligibility,
+capability, trust, or future quota. A failed or indeterminate preflight blocks
+dispatch to that route and returns to the approved escalation route or a human
+decision. Silent substitution is prohibited.
+
+Before dispatch, the host also reports and records the worker identity,
+provider, model, reasoning or effort level, access service, runtime, bounded
+task, and permission envelope.
+
+Every change to source code, tests, executable configuration, build logic, or
+CI behavior requires independent review before it may satisfy a coding
+criterion or support closure. The reviewer must be distinct from the
+implementer and operate in a separate review context over a fixed, read-only
+packet. Normal work requires a different model; high-risk, disputed, and final
+validation additionally follow the provider/model-family separation rules in
+§13. When the interactive orchestrator uses the direct-execution exception, it
+is the implementer for independence purposes and therefore cannot review or
+validate that work itself.
+
 ## 13. Risk and validator independence
 
 HMA computes a deterministic minimum risk floor. Organization and project policy may raise it. The human confirms or raises it. A permitted downgrade must be an explicit waiver; safety-kernel failures remain unwaivable.

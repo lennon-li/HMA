@@ -2,6 +2,51 @@
 
 This file tracks implementation work that has not yet been folded into the normative architecture contract. `docs/architecture.md` remains the product-contract source of truth.
 
+## Interactive orchestration and independent review
+
+These tasks implement `docs/architecture.md` §12.4. They belong to the host
+integration layer; HMA core remains non-dispatching in v1.
+
+### P1 — before an interactive CLI host is HMA-conforming
+
+- [ ] **Add a versioned orchestration-decision record.** Record `DELEGATE` or
+  `DIRECT_COST_EXCEPTION`, the bounded job, estimated direct and delegated total
+  costs, comparison basis, approved permission envelope, decision timestamp,
+  and actor. Reject an unrecorded direct-coding path.
+- [ ] **Define and record the route preflight handshake.** Before each dispatch,
+  send `hi` to the exact approved profile through the approved access service
+  and bind the response to profile/provider/model/access-service digests and a
+  freshness timestamp.
+- [ ] **Fail closed on unavailable or indeterminate routes.** An absent response,
+  route mismatch, rate limit, or exhausted quota must prevent dispatch and
+  return exactly one next action: use the already-approved escalation route or
+  request a new human route decision. Never substitute silently.
+- [ ] **Emit dispatch telemetry before work starts.** Report worker identity,
+  provider, model, reasoning/effort level, access service, runtime, bounded
+  task, and permission envelope.
+- [ ] **Add a mandatory independent-review binding for coding work.** Source,
+  test, executable-configuration, build, and CI changes cannot satisfy a coding
+  criterion or support closure without a reviewer record from a distinct agent
+  and separate review context. Treat direct work by the orchestrator as
+  implementation for this rule.
+- [ ] **Enforce independence by risk.** Require a different model for normal
+  coding work and the §13 provider/model-family separation for high-risk,
+  disputed, and final validation; prohibit self-review and silent reviewer
+  substitution.
+- [ ] **Add conformance fixtures.** Cover delegated work, a valid direct-cost
+  exception, an unjustified direct path, successful and failed `hi` preflights,
+  quota exhaustion, route mismatch, escalation, orchestrator self-review, same
+  model review, and valid independent review.
+
+### P2 — host adapters
+
+- [ ] **Implement client-neutral adapter hooks** for orchestration decision,
+  preflight, dispatch reporting, artifact return, and independent-review return.
+  Codex, Claude Code, OpenCode, Cursor, and other clients may translate these
+  hooks but may not change their semantics.
+- [ ] **Measure estimated versus observed dispatch cost** so the direct-cost
+  exception can be calibrated without becoming a convenience bypass.
+
 ## Reverse-skill-inspired routing hardening
 
 Reference reviewed: `zhaoxuya520/reverse-skill` (`AGENTS.md`, 2026-08-30 review). Useful patterns are its routing single source of truth, routing regression benchmark, routing-coherence checks, generated tool inventory, and client-neutral adapters. HMA should adopt the patterns, not the security-specific skill framework or bootstrap behavior.

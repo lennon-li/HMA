@@ -25,9 +25,18 @@ HMA is a standalone, vendor-neutral gatekeeper for Git repository coding tasks. 
 
 - Humans approve every stage transition.
 - HMA does not dispatch workers in v1; after approval it emits route and permission records, and a human or host starts execution.
+- An interactive CLI agent is orchestration-first: it delegates coding unless
+  direct execution is demonstrably cheaper for the bounded job and records
+  that rationale before acting.
+- Before dispatch, the host sends the approved route a minimal `hi` preflight
+  and confirms that the exact route is reachable and not reporting an exhausted
+  quota or rate limit; failure returns to the approved escalation route or a
+  human gate, never a silent substitute.
 - Machines gather evidence, enforce unwaivable rules, detect drift, and propose one next action.
 - Agent prose is not proof.
-- The implementing agent cannot approve or validate its own work.
+- Every coding change receives independent review. The implementing agent,
+  including an orchestrator using the direct-execution exception, cannot
+  approve or validate its own work.
 - `FAILED`, `BLOCKED`, `UNKNOWN`, `PARTIAL`, and `ABORTED` are honest supported outcomes.
 - Auditing stops when approved criteria are resolved and no closure-blocking finding remains.
 - Project policy may tighten the safety kernel but cannot weaken it.
