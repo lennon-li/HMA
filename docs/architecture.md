@@ -361,6 +361,21 @@ commands. It must not inspect or mutate credentials or configuration, and its
 output is untrusted availability metadata. Availability is not proof of
 eligibility, isolation, quota, capability, or trustworthiness.
 
+The host-local machine-truth inventory runs only exact commands supplied by the
+host allowlist, each named by a clean absolute executable path, without a shell,
+under a per-command timeout, and with only the environment the host explicitly
+supplies; nothing is inherited from the ambient environment. It records a
+per-command status (absent, present, completed, exited non-zero, timed out, or
+start failed), exit code, bounded parsed version or model-availability
+metadata, capture time, freshness expiry, and a length-framed output digest.
+Raw command output is not retained; parsed fields that are oversized,
+unprintable, or taken from truncated output are dropped and marked unparsed.
+Inventory records remain host-local and are never portable route-policy
+artifacts. Any status other than completed is unavailable evidence, and no
+status can be converted by this component into eligibility, trust, or a route
+choice. Cancellation by the caller aborts discovery rather than producing a
+record.
+
 ### 12.3 Proposal shape
 
 For each unit, HMA presents:
