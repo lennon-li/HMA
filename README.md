@@ -60,6 +60,7 @@ hma eval [transition|invalidation|validator-contract
 hma show --store <directory> --run_id <id>
 hma ci github --store <directory> --run_id <id>
               [--verify-only | --repo-root <dir> --exec <prog> [--arg <a>]...]
+hma inventory --allowlist <file> --repo-root <dir> --out <file>
 ```
 
 `hma pilot` runs the host-trusted local pilot boundary: it verifies that the
@@ -145,6 +146,14 @@ check the revision without recording anything. The host must bind the
 approval's repository identity to the `owner/repo` slug for this adapter,
 because that is the only identity the runner can derive independently.
 
+`hma inventory` captures host-local machine truth: it runs only the commands
+named in a strict `machine-truth-allowlist/v1` file, each by absolute path,
+with no shell, a per-command timeout, and only the environment the allowlist
+supplies. It writes the digested, freshness-bounded inventory to `--out` and
+prints a summary. The allowlist and the output must both resolve outside
+`--repo-root`, through symlinks too. An inventory is availability evidence
+only; nothing consumes it for route selection or eligibility.
+
 ## Reachable surface
 
 Implemented and reachable from the CLI:
@@ -158,6 +167,7 @@ Implemented and reachable from the CLI:
   transitions, approval invalidation, validator contract, route attestation,
   route coherence, and the versioned route-policy contract
 - the stage and resolution projection of a chain, via `hma show`
+- host-local machine-truth inventory from an allowlist, via `hma inventory`
 
 `hma eval` is not the whole evaluator surface. The remaining deterministic
 evaluators are reached through the command that owns their side effects, not

@@ -374,7 +374,11 @@ Inventory records remain host-local and are never portable route-policy
 artifacts. Any status other than completed is unavailable evidence, and no
 status can be converted by this component into eligibility, trust, or a route
 choice. Cancellation by the caller aborts discovery rather than producing a
-record.
+record. `hma inventory` loads the allowlist strictly (a versioned document,
+unknown fields and duplicate command IDs refused, every command validated
+before any runs) and refuses an allowlist or output path that resolves inside
+the repository under inspection, because host configuration and host evidence
+placed there would become part of the state HMA verifies.
 
 ### 12.3 Proposal shape
 
