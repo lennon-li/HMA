@@ -160,3 +160,116 @@ func TestStoreOutsideRepositoryBoundary(t *testing.T) {
 		})
 	}
 }
+
+// TestHasAncestorComparesIdentityNotSpelling uses an unresolved symlink as a
+// second spelling of the repository, standing in for a case alias or bind
+// mount that string comparison cannot see.
+func TestHasAncestorComparesIdentityNotSpelling(t *testing.T) {
+	repo, _ := newRepo(t)
+	outside := t.TempDir()
+	alias := filepath.Join(outside, "repo-alias")
+	if err := os.Symlink(repo, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	root, err := os.Stat(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inside, err := hasAncestor(filepath.Join(alias, "not", "created"), root); err != nil || !inside {
+		t.Fatalf("a second spelling of the repository was not recognised: %v, %v", inside, err)
+	}
+	if inside, err := hasAncestor(filepath.Join(outside, "store"), root); err != nil || inside {
+		t.Fatalf("a store beside the repository was treated as inside it: %v, %v", inside, err)
+	}
+}
+
+func TestHasAncestorFailsClosedOnUnreadableComponent(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory permissions")
+	}
+	repo, _ := newRepo(t)
+	root, err := os.Stat(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	locked := filepath.Join(t.TempDir(), "locked")
+	if err := os.Mkdir(locked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o700) })
+	if _, err := hasAncestor(filepath.Join(locked, "inner", "store"), root); err == nil {
+		t.Fatal("an unreadable path component was skipped instead of refused")
+	}
+}
+
+// TestRepositorySelectingEnvMatchesGit fails when the installed git reports a
+// repository-selecting variable the list does not remove, so a git upgrade
+// cannot silently reopen the redirect.
+func TestRepositorySelectingEnvMatchesGit(t *testing.T) {
+	out, err := exec.Command("git", "rev-parse", "--local-env-vars").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed := map[string]bool{}
+	for _, name := range repositorySelectingEnv {
+		listed[name] = true
+	}
+	for _, name := range strings.Fields(string(out)) {
+		if strings.HasPrefix(name, "GIT_CONFIG") {
+			continue
+		}
+		if !listed[name] {
+			t.Errorf("git reports repository-selecting variable %s, which Output does not remove", name)
+		}
+	}
+}
+
+func TestStoreOutsideRepositoryRequiresExistingRoot(t *testing.T) {
+	outside := t.TempDir()
+	if err := StoreOutsideRepository(filepath.Join(outside, "missing-repo"), filepath.Join(outside, "store")); err == nil {
+		t.Fatal("a nonexistent repository root passed the containment check")
+	}
+}
+
+func TestOutputIgnoresRepositorySelectingEnvironment(t *testing.T) {
+	repo, _ := newRepo(t)
+	other, _ := newRepo(t)
+	t.Setenv("GIT_DIR", filepath.Join(other, ".git"))
+	t.Setenv("GIT_WORK_TREE", other)
+	t.Setenv("GIT_INDEX_FILE", filepath.Join(other, ".git", "index"))
+	// Injected configuration is how hosts set safe.directory; it must survive.
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "hma.probe")
+	t.Setenv("GIT_CONFIG_VALUE_0", "kept")
+
+	top, err := Output(context.Background(), repo, "rev-parse", "--show-toplevel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := filepath.EvalSymlinks(Trim(top)); got != want {
+		t.Fatalf("inherited GIT_DIR/GIT_WORK_TREE redirected git: top level %q, want %q", got, want)
+	}
+	value, err := Output(context.Background(), repo, "config", "--get", "hma.probe")
+	if err != nil || Trim(value) != "kept" {
+		t.Fatalf("GIT_CONFIG_* injection was dropped: %q, %v", value, err)
+	}
+
+	// The kept channel must not redirect the work tree either: an injected
+	// core.worktree pointing at a dirty repository leaves dir's status clean.
+	if err := os.WriteFile(filepath.Join(other, "dirt"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_KEY_0", "core.worktree")
+	t.Setenv("GIT_CONFIG_VALUE_0", other)
+	status, err := Output(context.Background(), repo, "status", "--porcelain")
+	if err != nil || Trim(status) != "" {
+		t.Fatalf("injected core.worktree changed the status of dir: %q, %v", status, err)
+	}
+}

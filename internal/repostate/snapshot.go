@@ -15,11 +15,13 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 )
 
 // State is the exact repository state evidence or an approval is bound to.
@@ -31,10 +33,52 @@ type State struct{ Head, Diff, Worktree string }
 // Trim removes the trailing newline git appends to single-value output.
 func Trim(s string) string { return strings.TrimSpace(s) }
 
-// Output runs a read-only git command in dir and returns its stdout.
+// repositorySelectingEnv lists the variables git reports from
+// `git rev-parse --local-env-vars` that choose which repository, work tree,
+// index, or object store a command reads. Inherited, they would let the
+// caller's environment point a read at a different repository than dir.
+// The GIT_CONFIG* variables from that list are deliberately kept: hosts and CI
+// use them to inject settings such as safe.directory.
+var repositorySelectingEnv = []string{
+	"GIT_ALTERNATE_OBJECT_DIRECTORIES",
+	"GIT_COMMON_DIR",
+	"GIT_DIR",
+	"GIT_GRAFT_FILE",
+	"GIT_IMPLICIT_WORK_TREE",
+	"GIT_INDEX_FILE",
+	"GIT_NO_REPLACE_OBJECTS",
+	"GIT_OBJECT_DIRECTORY",
+	"GIT_PREFIX",
+	"GIT_REPLACE_REF_BASE",
+	"GIT_SHALLOW_FILE",
+	"GIT_WORK_TREE",
+}
+
+// gitEnv returns environ without the repository-selecting variables.
+func gitEnv(environ []string) []string {
+	env := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		name, _, _ := strings.Cut(entry, "=")
+		selecting := false
+		for _, v := range repositorySelectingEnv {
+			if name == v {
+				selecting = true
+				break
+			}
+		}
+		if !selecting {
+			env = append(env, entry)
+		}
+	}
+	return env
+}
+
+// Output runs a read-only git command in dir and returns its stdout. The
+// repository is chosen by dir alone, never by inherited GIT_DIR-style variables.
 func Output(ctx context.Context, dir string, args ...string) (string, error) {
 	c := exec.CommandContext(ctx, "git", args...)
 	c.Dir = dir
+	c.Env = gitEnv(os.Environ())
 	b, err := c.Output()
 	if err != nil {
 		return "", fmt.Errorf("git %v: %w", args, err)
@@ -239,5 +283,43 @@ func StoreOutsideRepository(root, storeDir string) error {
 	if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return errors.New("store must be outside target repository")
 	}
+	rootInfo, err := os.Stat(r)
+	if err != nil {
+		return fmt.Errorf("repository root: %w", err)
+	}
+	inside, err := hasAncestor(s, rootInfo)
+	if err != nil {
+		return err
+	}
+	if inside {
+		return errors.New("store must be outside target repository")
+	}
 	return nil
+}
+
+// hasAncestor reports whether path, or any existing directory above it, is the
+// same file as root. Comparing resolved strings misses a second spelling of the
+// same directory -- a case alias on a case-insensitive file system, or a bind
+// mount -- so identity is checked as well. Components that do not exist yet
+// are skipped: an uncreated store is judged by where it would be created. Any
+// other stat failure is returned, because an unreadable component could hide
+// a repository alias and skipping it would let the check fail open.
+func hasAncestor(path string, root os.FileInfo) (bool, error) {
+	for current := path; ; {
+		info, err := os.Stat(current)
+		switch {
+		case err == nil:
+			if os.SameFile(info, root) {
+				return true, nil
+			}
+		case errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR):
+		default:
+			return false, fmt.Errorf("store path: %w", err)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return false, nil
+		}
+		current = parent
+	}
 }
