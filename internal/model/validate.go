@@ -5,7 +5,9 @@ package model
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+	"time"
 )
 
 // ValidRecordKind reports whether k is an approved record family.
@@ -13,7 +15,7 @@ func ValidRecordKind(k RecordKind) bool {
 	switch k {
 	case KindStageTransition, KindCriterion, KindFinding, KindWaiver,
 		KindEvidence, KindReleaseRequest, KindOutcome,
-		KindWaiverOperation, KindFindingOverride:
+		KindWaiverOperation, KindFindingOverride, KindClassification:
 		return true
 	}
 	return false
@@ -343,9 +345,15 @@ func ValidateRecord(r *Record) error {
 		return err
 	}
 	if a := r.Approval; a != nil && a.ProposedTargetOutcome != "" {
-		if r.Kind != KindOutcome || r.Outcome != a.ProposedTargetOutcome || r.Stage != a.CurrentStage || r.Control != ControlApproved {
+		if (r.Kind != KindOutcome && r.Kind != KindClassification) || (r.Kind == KindOutcome && r.Outcome != a.ProposedTargetOutcome) || r.Stage != a.CurrentStage || r.Control != ControlApproved {
 			return errors.New("outcome approval requires a matching approved outcome record at its current stage")
 		}
+	}
+	if err := ValidateClassification(r); err != nil {
+		return err
+	}
+	if r.Approval != nil && r.UnitID != r.Approval.UnitID {
+		return errors.New("record unit_id differs from approval")
 	}
 	if err := validateStageTransition(r); err != nil {
 		return err
@@ -355,6 +363,12 @@ func ValidateRecord(r *Record) error {
 	}
 	if err := validateWaiverOperation(r.WaiverOperation); err != nil {
 		return err
+	}
+	if r.WaiverOperation != nil && r.UnitID != r.WaiverOperation.UnitID {
+		return errors.New("record unit_id differs from waiver operation")
+	}
+	if r.FindingOverride != nil && r.UnitID != r.FindingOverride.UnitID {
+		return errors.New("record unit_id differs from finding override")
 	}
 	if err := validateFindingOverride(r.FindingOverride); err != nil {
 		return err
@@ -446,4 +460,49 @@ func validateStageTransition(r *Record) error {
 		return fmt.Errorf("stage_transition records stage %q but its approval is raised from %q", r.Stage, r.Approval.CurrentStage)
 	}
 	return nil
+}
+
+// ValidFailureOutcome reports the closed classification vocabulary.
+func ValidFailureOutcome(o TerminalOutcome) bool {
+	return o == OutcomeBlocked || o == OutcomeUnknown || o == OutcomeFailed
+}
+
+// ValidateClassification checks the payload and its exact human approval binding.
+func ValidateClassification(r *Record) error {
+	if r.Kind != KindClassification {
+		if r.Classification != nil || (r.Approval != nil && r.Approval.Classification != nil) {
+			return errors.New("classification requires classification record")
+		}
+		return nil
+	}
+	c, a := r.Classification, r.Approval
+	if c == nil || !ValidFailureOutcome(c.Outcome) || strings.TrimSpace(c.FindingID) == "" || strings.TrimSpace(r.UnitID) == "" {
+		return errors.New("malformed classification")
+	}
+	if a == nil {
+		return errors.New("classification requires human approval")
+	}
+	if err := validateApproval(a); err != nil {
+		return err
+	}
+	if _, err := time.Parse(time.RFC3339, a.Timestamp); err != nil {
+		return errors.New("invalid classification approval timestamp")
+	}
+	if r.Control != ControlApproved || r.Stage != a.CurrentStage || r.UnitID != a.UnitID || !reflect.DeepEqual(c, a.Classification) || a.ProposedTargetOutcome != c.Outcome || r.Outcome != "" {
+		return errors.New("classification approval mismatch")
+	}
+	if a.RunID != r.Metadata.RunID {
+		return errors.New("classification approval run mismatch")
+	}
+	return nil
+}
+
+// HumanApprovedStateChange identifies waiver operations and finding overrides
+// whose approved payload binds the affected unit. Generic approvals do not
+// authorize superseding a classification.
+func HumanApprovedStateChange(r Record) bool {
+	if r.Kind == KindWaiverOperation && r.WaiverOperation != nil && r.UnitID == r.WaiverOperation.UnitID && validateWaiverOperation(r.WaiverOperation) == nil {
+		return true
+	}
+	return r.Kind == KindFindingOverride && r.FindingOverride != nil && r.UnitID == r.FindingOverride.UnitID && validateFindingOverride(r.FindingOverride) == nil
 }

@@ -98,10 +98,12 @@ func runResolve(args []string) error {
 		},
 	}
 	if in.WaiverOperation != nil {
+		rec.UnitID = in.WaiverOperation.UnitID
 		rec.Kind = model.KindWaiverOperation
 		rec.WaiverOperation = in.WaiverOperation
 		rec.Metadata.Actor = in.WaiverOperation.Approver
 	} else {
+		rec.UnitID = in.FindingOverride.UnitID
 		rec.Kind = model.KindFindingOverride
 		rec.FindingOverride = in.FindingOverride
 		rec.Metadata.Actor = in.FindingOverride.Approver

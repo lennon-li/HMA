@@ -17,6 +17,7 @@ const (
 	KindOutcome         RecordKind = "outcome"
 	KindWaiverOperation RecordKind = "waiver_operation"
 	KindFindingOverride RecordKind = "finding_override"
+	KindClassification  RecordKind = "classification"
 )
 
 // Stage is a run stage. Stages are never waived.
@@ -160,6 +161,8 @@ type Finding struct {
 // so approving work against uncommitted content approves one exact worktree
 // state, never whatever happens to be on disk later.
 type ApprovalBinding struct {
+	UnitID                   string                 `json:"unit_id,omitempty"`
+	Classification           *Classification        `json:"classification,omitempty"`
 	RunID                    string                 `json:"run_id"`
 	TransitionDigest         string                 `json:"transition_digest"`
 	CurrentStage             Stage                  `json:"current_stage"`
@@ -247,6 +250,8 @@ const (
 // the repository's current state no longer matches. A waiver that binds none
 // of these fields remains valid, exactly as before.
 type WaiverOperation struct {
+	// UnitID is part of the human-approved payload; empty means no unit supersession.
+	UnitID             string                `json:"unit_id,omitempty"`
 	Operation          WaiverOperationAction `json:"operation"`
 	Scope              ScopeSelector         `json:"scope_selector"`
 	Justification      string                `json:"justification"`
@@ -263,6 +268,8 @@ type WaiverOperation struct {
 // and BaseRevision are optional and enforced when present, exactly as on
 // WaiverOperation.
 type FindingDispositionOverride struct {
+	// UnitID is part of the human-approved payload; empty means no unit supersession.
+	UnitID             string             `json:"unit_id,omitempty"`
 	FindingID          string             `json:"finding_id"`
 	Disposition        FindingDisposition `json:"disposition"`
 	Justification      string             `json:"justification"`
@@ -273,19 +280,27 @@ type FindingDispositionOverride struct {
 	BaseRevision       string             `json:"base_revision,omitempty"`
 }
 
+// Classification is a human-confirmed failure result. Attempt matching belongs to the host.
+type Classification struct {
+	Outcome   TerminalOutcome `json:"outcome"`
+	FindingID string          `json:"finding_id"`
+}
+
 // Record is a portable, chained HMA record.
 type Record struct {
-	Kind     RecordKind        `json:"kind"`
-	Version  int               `json:"version"`
-	Metadata RecordMetadata    `json:"metadata"`
-	Stage    Stage             `json:"stage,omitempty"`
-	Control  StageControlState `json:"control,omitempty"`
-	Criteria []Criterion       `json:"criteria,omitempty"`
-	Findings []Finding         `json:"findings,omitempty"`
-	Waivers  []Waiver          `json:"waivers,omitempty"`
-	Outcome  TerminalOutcome   `json:"outcome,omitempty"`
-	Approval *ApprovalBinding  `json:"approval,omitempty"`
-	Evidence *EvidenceRef      `json:"evidence,omitempty"`
+	UnitID         string            `json:"unit_id,omitempty"`
+	Classification *Classification   `json:"classification,omitempty"`
+	Kind           RecordKind        `json:"kind"`
+	Version        int               `json:"version"`
+	Metadata       RecordMetadata    `json:"metadata"`
+	Stage          Stage             `json:"stage,omitempty"`
+	Control        StageControlState `json:"control,omitempty"`
+	Criteria       []Criterion       `json:"criteria,omitempty"`
+	Findings       []Finding         `json:"findings,omitempty"`
+	Waivers        []Waiver          `json:"waivers,omitempty"`
+	Outcome        TerminalOutcome   `json:"outcome,omitempty"`
+	Approval       *ApprovalBinding  `json:"approval,omitempty"`
+	Evidence       *EvidenceRef      `json:"evidence,omitempty"`
 
 	WaiverOperation *WaiverOperation            `json:"waiver_operation,omitempty"`
 	FindingOverride *FindingDispositionOverride `json:"finding_override,omitempty"`

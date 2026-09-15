@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	ReasonClassificationRequired  Reason = "LIVE_CLASSIFICATION_REQUIRED"
+	ReasonFailurePrecedence       Reason = "LIVE_FAILURE_TAKES_PRECEDENCE"
+	ReasonMalformedClassification Reason = "MALFORMED_CLASSIFICATION"
 	ReasonOutcomeNotImplemented   Reason = "OUTCOME_NOT_IMPLEMENTED"
 	ReasonPartialCriteria         Reason = "PARTIAL_REQUIRES_RESOLVED_AND_UNRESOLVED_CRITERIA"
 	ReasonStageMismatch           Reason = "APPROVAL_STAGE_IS_NOT_THE_RUN_STAGE"
@@ -29,6 +32,9 @@ type StageState struct {
 	// PredecessorHead is the head anchor of the chain tail, empty for an
 	// empty chain.
 	PredecessorHead string
+	// FailureOutcome is the highest-precedence live classification. It does
+	// not make the run terminal: a later approved unit change can supersede it.
+	FailureOutcome model.TerminalOutcome
 	// Terminal reports that the run recorded a terminal outcome. A terminal
 	// run accepts no further transition.
 	Terminal bool
@@ -59,8 +65,16 @@ func ProjectStageState(records []model.Record) StageState {
 		Sequence:     int64(len(records)),
 		UsedNonces:   make(map[string]bool),
 	}
+	live := make(map[string]model.TerminalOutcome)
 	for i := range records {
 		r := records[i]
+		if r.UnitID != "" && model.HumanApprovedStateChange(r) {
+			delete(live, r.UnitID)
+		}
+		if r.Kind == model.KindClassification && model.ValidateClassification(&r) == nil {
+			live[r.UnitID] = r.Classification.Outcome
+		}
+
 		if len(r.Criteria) > 0 {
 			state.Criteria = append([]model.Criterion(nil), r.Criteria...)
 		}
@@ -88,17 +102,26 @@ func ProjectStageState(records []model.Record) StageState {
 	if len(records) > 0 {
 		state.PredecessorHead = records[len(records)-1].Metadata.HeadAnchor
 	}
+	for _, outcome := range []model.TerminalOutcome{model.OutcomeBlocked, model.OutcomeUnknown, model.OutcomeFailed} {
+		for _, classified := range live {
+			if classified == outcome {
+				state.FailureOutcome = outcome
+				return state
+			}
+		}
+	}
 	return state
 }
 
 // StageTransitionRequest is one proposed, human-approved stage transition
 // evaluated against the run's committed chain.
 type StageTransitionRequest struct {
-	State     StageState
-	Expected  model.ApprovalBinding
-	Presented model.ApprovalBinding
-	Now       time.Time
-	MaxAge    time.Duration
+	Classification *model.Classification
+	State          StageState
+	Expected       model.ApprovalBinding
+	Presented      model.ApprovalBinding
+	Now            time.Time
+	MaxAge         time.Duration
 	// WorktreeDigest is the live worktree-content digest the host observes,
 	// empty for a clean worktree. It is enforced only against an approval
 	// that itself binds a worktree digest.
@@ -190,7 +213,7 @@ func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 	if tr.Decision != DecisionLegalPendingApproval {
 		return reject(tr.Reason)
 	}
-	if outcome != "" && outcome != model.OutcomeAborted && outcome != model.OutcomePartial {
+	if outcome != "" && outcome != model.OutcomeAborted && outcome != model.OutcomePartial && !model.ValidFailureOutcome(outcome) {
 		return reject(ReasonOutcomeNotImplemented)
 	}
 	ar := EvaluateApprovalBinding(ApprovalBindingRequest{
@@ -208,6 +231,22 @@ func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 	}
 	if r := requiredEvidenceReason(req.State, req.Presented); r != ReasonNone {
 		return reject(r)
+	}
+	if req.Classification != nil {
+		r := model.Record{Kind: model.KindClassification, UnitID: req.Presented.UnitID, Classification: req.Classification, Approval: &req.Presented, Stage: from, Control: model.ControlApproved, Metadata: model.RecordMetadata{RunID: req.Presented.RunID}}
+		if model.ValidateClassification(&r) != nil {
+			return reject(ReasonMalformedClassification)
+		}
+	} else {
+		if req.Presented.Classification != nil {
+			return reject(ReasonMalformedClassification)
+		}
+		if model.ValidFailureOutcome(outcome) && req.State.FailureOutcome != outcome {
+			return reject(ReasonClassificationRequired)
+		}
+		if outcome == model.OutcomePartial && req.State.FailureOutcome != "" {
+			return reject(ReasonFailurePrecedence)
+		}
 	}
 	if outcome == model.OutcomePartial {
 		resolved, unresolved := false, false

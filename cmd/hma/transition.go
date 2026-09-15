@@ -11,13 +11,13 @@ import (
 	"github.com/lennon-li/HMA/internal/transition"
 )
 
-// runTransition records one human-approved stage or Phase A1 outcome transition. It is the only
+// runTransition records one human-approved stage, classification, or supported outcome. It is the only
 // command that changes a run's stage, and it does so only by recording an
 // approval a human already gave; it never chooses a target or supplies a
 // decision of its own.
 func runTransition(args []string) error {
 	fs := flag.NewFlagSet("transition", flag.ContinueOnError)
-	inputPath := fs.String("input", "", "host input file containing one approved stage, ABORTED, or PARTIAL transition")
+	inputPath := fs.String("input", "", "host input file containing one approved stage, classification, or supported outcome")
 	storePath := fs.String("store", "", "host store directory")
 	if err := fs.Parse(args); err != nil {
 		return err

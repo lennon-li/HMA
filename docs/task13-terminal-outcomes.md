@@ -1,4 +1,4 @@
-# Task 13: Phase A1 terminal outcomes
+# Task 13: Phase A1 and A2 terminal outcomes
 
 Phase A1 extends `hma transition` to record `ABORTED` and `PARTIAL` through
 the existing challenge-bound human approval path. It implements the
@@ -54,10 +54,9 @@ an empty string for an outcome approval.
   The host-trusted chain carries the approved criteria and dispositions.
   The transition input cannot supply a replacement list. Phase A1 does not
   change criterion approval or waiver resolution semantics.
-- `BLOCKED`, `UNKNOWN`, and `FAILED` writes are deferred to Phase A2's
-  live classification and supersession model. `VERIFIED_SUCCESS` and
-  `VERIFIED_WITH_WAIVERS` writes are deferred to Phase B's release gate.
-  All five are refused by this write path, including at release and closure.
+- `BLOCKED`, `UNKNOWN`, and `FAILED` require the matching live classification
+  projection described below. `VERIFIED_SUCCESS` and `VERIFIED_WITH_WAIVERS`
+  remain deferred to Phase B and are refused by this write path.
   The pure edge classifier continues to describe the full architecture.
 
 ## Record and result
@@ -85,8 +84,51 @@ criterion boundary cases, all deferred outcome refusals, target mismatches,
 stale bindings, spent nonces, post-terminal refusal, and tampered chains.
 Golden legacy approval and record serialization protect existing digest inputs.
 
-No release gate, classification schema, publication, dispatch, stage waiver,
+No release gate, publication, dispatch, stage waiver,
 or validator-independence change is included. The execution packet assigns
 independent review to Ming (Claude Code), a different model family from the
 Codex implementer; implementation tests do not substitute for that review.
 
+
+## Phase A2 classification records
+
+Use `hma transition --input <file> --store <directory>` with the same host
+and approval bindings, plus this structured input:
+
+```json
+{
+  "classification": {"outcome": "BLOCKED", "finding_id": "F1"}
+}
+```
+
+Both `expected_approval` and `approval` must additionally contain
+`"unit_id": "U1"` and the identical `classification` object, with
+`proposed_target_outcome` matching the classification and an empty target stage.
+All existing repository, evidence, freshness, stage-time, and single-use nonce
+checks apply. The host's transition digest covers the classification decision;
+the engine also compares the structured payload and unit to the expected binding.
+The allowed outcomes encode permission/safety block (`BLOCKED`), unknown failure
+(`UNKNOWN`), and material failure (`FAILED`). Finding and unit IDs are required;
+free-text outcome attestations are rejected. The human/host has already matched
+material failures; the engine does not count attempts or infer route identity.
+
+This writes `KindClassification`, with approved control and the standard approval,
+without moving the stage or making the run terminal. The result's `to_outcome`
+reports the classified outcome. Projection exposes `FailureOutcome` separately
+from the committed terminal `Outcome`.
+
+A later human-approved state change with exactly the same record `unit_id`
+supersedes the classification, regardless of record kind. Approved stage changes
+(including rewinds) take their unit from `approval.unit_id`; `hma resolve` accepts
+an optional `waiver_operation.unit_id` or `finding_override.unit_id` inside the
+human-approved payload. The record unit must match that payload; resolutions without
+a unit cannot supersede classifications. Top-level `unit_id` input is rejected.
+Other units, earlier changes, and unapproved records do not clear classifications.
+A new classification on the same unit replaces the previous one.
+
+Across live units, projection selects `BLOCKED > UNKNOWN > FAILED`.
+To commit that terminal outcome, submit a fresh standard outcome transition
+without a classification payload. Its target must match the projection.
+A live failure rejects `PARTIAL`, while its existing mixed-criteria rule remains
+unchanged. Human-initiated `ABORTED` retains precedence. Recorded terminal outcomes
+continue to refuse further transitions.
