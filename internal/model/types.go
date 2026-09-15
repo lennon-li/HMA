@@ -164,6 +164,7 @@ type ApprovalBinding struct {
 	TransitionDigest         string                 `json:"transition_digest"`
 	CurrentStage             Stage                  `json:"current_stage"`
 	ProposedTargetStage      Stage                  `json:"proposed_target_stage"`
+	ProposedTargetOutcome    TerminalOutcome        `json:"proposed_target_outcome,omitempty"`
 	RepositoryIdentityDigest string                 `json:"repository_identity_digest"`
 	BaseRevisionDigest       string                 `json:"base_revision_digest"`
 	StageTimeDigest          string                 `json:"stage_time_digest"`

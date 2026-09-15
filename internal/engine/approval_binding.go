@@ -43,7 +43,7 @@ func EvaluateApprovalBinding(req ApprovalBindingRequest) ApprovalBindingResult {
 		return ApprovalBindingResult{Decision: DecisionRejected, Reason: reason, RequiresFreshHumanApproval: true}
 	}
 	a := req.Presented
-	if a.RunID == "" || a.TransitionDigest == "" || !model.ValidStage(a.CurrentStage) || !model.ValidStage(a.ProposedTargetStage) || a.RepositoryIdentityDigest == "" || a.BaseRevisionDigest == "" || a.StageTimeDigest == "" || a.AcceptedPlanDigest == "" || a.ChallengeNonce == "" || a.Approver == "" || a.Timestamp == "" {
+	if a.RunID == "" || a.TransitionDigest == "" || !model.ValidStage(a.CurrentStage) || !model.ValidApprovalTarget(a) || a.RepositoryIdentityDigest == "" || a.BaseRevisionDigest == "" || a.StageTimeDigest == "" || a.AcceptedPlanDigest == "" || a.ChallengeNonce == "" || a.Approver == "" || a.Timestamp == "" {
 		return reject(ReasonMalformedApproval)
 	}
 	if req.UsedNonces[a.ChallengeNonce] {

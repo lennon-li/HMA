@@ -99,6 +99,12 @@ func ValidScopeKind(k ScopeKind) bool {
 	return false
 }
 
+// ValidApprovalTarget requires exactly one known stage or terminal outcome.
+func ValidApprovalTarget(a ApprovalBinding) bool {
+	return (a.ProposedTargetOutcome == "" && ValidStage(a.ProposedTargetStage)) ||
+		(a.ProposedTargetStage == "" && ValidTerminalOutcome(a.ProposedTargetOutcome))
+}
+
 // ApprovalBindsHeadDiff reports whether an approval at stage s must
 // additionally bind the produced head revision and diff digest, per the
 // human-approval contract (architecture section 6). A packet becomes stale
@@ -145,7 +151,6 @@ func validateApproval(a *ApprovalBinding) error {
 		{"run_id", a.RunID},
 		{"transition_digest", a.TransitionDigest},
 		{"current_stage", string(a.CurrentStage)},
-		{"proposed_target_stage", string(a.ProposedTargetStage)},
 		{"repository_identity_digest", a.RepositoryIdentityDigest},
 		{"base_revision_digest", a.BaseRevisionDigest},
 		{"stage_time_digest", a.StageTimeDigest},
@@ -162,8 +167,8 @@ func validateApproval(a *ApprovalBinding) error {
 	if !ValidStage(a.CurrentStage) {
 		return fmt.Errorf("approval current_stage %q is not an approved stage", a.CurrentStage)
 	}
-	if !ValidStage(a.ProposedTargetStage) {
-		return fmt.Errorf("approval proposed_target_stage %q is not an approved stage", a.ProposedTargetStage)
+	if !ValidApprovalTarget(*a) {
+		return errors.New("approval proposed_target_stage or proposed_target_outcome must name exactly one valid target")
 	}
 	if requiresHeadDiff(a.CurrentStage) {
 		if a.ProducedHeadDigest == "" {
@@ -336,6 +341,11 @@ func ValidateRecord(r *Record) error {
 	}
 	if err := validateApproval(r.Approval); err != nil {
 		return err
+	}
+	if a := r.Approval; a != nil && a.ProposedTargetOutcome != "" {
+		if r.Kind != KindOutcome || r.Outcome != a.ProposedTargetOutcome || r.Stage != a.CurrentStage || r.Control != ControlApproved {
+			return errors.New("outcome approval requires a matching approved outcome record at its current stage")
+		}
 	}
 	if err := validateStageTransition(r); err != nil {
 		return err

@@ -7,6 +7,8 @@ import (
 )
 
 const (
+	ReasonOutcomeNotImplemented   Reason = "OUTCOME_NOT_IMPLEMENTED"
+	ReasonPartialCriteria         Reason = "PARTIAL_REQUIRES_RESOLVED_AND_UNRESOLVED_CRITERIA"
 	ReasonStageMismatch           Reason = "APPROVAL_STAGE_IS_NOT_THE_RUN_STAGE"
 	ReasonRunTerminal             Reason = "RUN_ALREADY_TERMINAL"
 	ReasonMissingRequiredEvidence Reason = "REQUIRED_EVIDENCE_NOT_IN_CHAIN"
@@ -36,6 +38,9 @@ type StageState struct {
 	UsedNonces map[string]bool
 	// Evidence is every evidence reference the chain carries, in order.
 	Evidence []model.EvidenceRef
+	// Criteria is the latest non-empty criterion snapshot in the committed chain,
+	// matching the resolution projection. It is never supplied by the transition input.
+	Criteria []model.Criterion
 }
 
 // ProjectStageState replays a committed chain into its stage position. It
@@ -56,6 +61,9 @@ func ProjectStageState(records []model.Record) StageState {
 	}
 	for i := range records {
 		r := records[i]
+		if len(r.Criteria) > 0 {
+			state.Criteria = append([]model.Criterion(nil), r.Criteria...)
+		}
 		if r.Kind == model.KindStageTransition && r.Control == model.ControlApproved &&
 			r.Approval != nil && model.ValidStage(r.Approval.ProposedTargetStage) {
 			state.CurrentStage = r.Approval.ProposedTargetStage
@@ -105,6 +113,7 @@ type StageTransitionResult struct {
 	Reason                     Reason                  `json:"reason,omitempty"`
 	FromStage                  model.Stage             `json:"from_stage,omitempty"`
 	ToStage                    model.Stage             `json:"to_stage,omitempty"`
+	ToOutcome                  model.TerminalOutcome   `json:"to_outcome,omitempty"`
 	ControlState               model.StageControlState `json:"control_state,omitempty"`
 	RequiresFreshHumanApproval bool                    `json:"requires_fresh_human_approval"`
 	MachineAdvanced            bool                    `json:"machine_advanced"`
@@ -159,12 +168,14 @@ func requiredEvidenceReason(state StageState, a model.ApprovalBinding) Reason {
 func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 	from := req.State.CurrentStage
 	to := req.Presented.ProposedTargetStage
+	outcome := req.Presented.ProposedTargetOutcome
 	reject := func(r Reason) StageTransitionResult {
 		return StageTransitionResult{
 			Decision:                   DecisionRejected,
 			Reason:                     r,
 			FromStage:                  from,
 			ToStage:                    to,
+			ToOutcome:                  outcome,
 			RequiresFreshHumanApproval: true,
 			MachineAdvanced:            false,
 		}
@@ -175,9 +186,12 @@ func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 	if req.Presented.CurrentStage != from {
 		return reject(ReasonStageMismatch)
 	}
-	tr := EvaluateTransition(TransitionRequest{Source: from, TargetStage: to})
+	tr := EvaluateTransition(TransitionRequest{Source: from, TargetStage: to, TargetOutcome: outcome})
 	if tr.Decision != DecisionLegalPendingApproval {
 		return reject(tr.Reason)
+	}
+	if outcome != "" && outcome != model.OutcomeAborted && outcome != model.OutcomePartial {
+		return reject(ReasonOutcomeNotImplemented)
 	}
 	ar := EvaluateApprovalBinding(ApprovalBindingRequest{
 		Expected:        req.Expected,
@@ -195,10 +209,27 @@ func EvaluateStageTransition(req StageTransitionRequest) StageTransitionResult {
 	if r := requiredEvidenceReason(req.State, req.Presented); r != ReasonNone {
 		return reject(r)
 	}
+	if outcome == model.OutcomePartial {
+		resolved, unresolved := false, false
+		for _, c := range req.State.Criteria {
+			switch c.Disposition {
+			case model.CriterionPassed, model.CriterionWaived:
+				resolved = true
+			case model.CriterionPending, model.CriterionFailed:
+				unresolved = true
+			default:
+				return reject(ReasonPartialCriteria)
+			}
+		}
+		if !resolved || !unresolved {
+			return reject(ReasonPartialCriteria)
+		}
+	}
 	return StageTransitionResult{
 		Decision:                   DecisionLegalPendingApproval,
 		FromStage:                  from,
 		ToStage:                    to,
+		ToOutcome:                  outcome,
 		ControlState:               model.ControlApproved,
 		RequiresFreshHumanApproval: true,
 		MachineAdvanced:            false,

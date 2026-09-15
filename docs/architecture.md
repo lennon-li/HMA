@@ -159,6 +159,11 @@ unit, never a run-wide selection.
 No unlisted edge is legal. A waiver operation invalidates only approvals bound to
 the affected criterion, finding, or artifact; it never advances a stage.
 
+The Phase A1 write path records human-initiated `ABORTED` and derived,
+human-confirmed `PARTIAL` outcomes; see
+[Task 13 terminal outcomes](task13-terminal-outcomes.md) for its criteria rule
+and the outcomes deferred to later phases.
+
 ## 6. Human approval contract
 
 Every approval is single-use and universally bound to:
@@ -166,7 +171,7 @@ Every approval is single-use and universally bound to:
 - run identifier;
 - transition digest;
 - current stage;
-- proposed target stage;
+- Proposed target (stage or terminal outcome). Exactly one of `proposed_target_stage` or `proposed_target_outcome` must be non-empty. The transition digest covers the populated target. The additive `proposed_target_outcome` field is omitted when empty, preserving existing approval serialization and digests.
 - repository-identity digest;
 - exact base-revision digest;
 - stage-time digest (predecessor chain head and monotonic sequence);

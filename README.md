@@ -104,13 +104,13 @@ A run whose chain is empty is in `GROUNDING`, so `hma transition` is also how
 a run starts; there is no separate `init`. A run that has recorded a terminal
 outcome accepts no further transition.
 
-Terminal outcomes are **not** reachable through this command. An
-`ApprovalBinding` can only name a stage as its proposed target, so approving a
-run into `FAILED`, `BLOCKED`, `ABORTED`, `PARTIAL`, or a verified closure would
-require changing the approval contract in
-[docs/architecture.md](docs/architecture.md) §6. That is a contract decision, not
-an implementation detail, and it is deliberately left open; see
-[docs/task11-stage-transition-path.md](docs/task11-stage-transition-path.md).
+Phase A1 terminal outcomes are reachable through `hma transition`: human-initiated
+`ABORTED`, or human-confirmed `PARTIAL` when the committed criterion snapshot
+contains at least one `PASSED`/`WAIVED` criterion and at least one
+`PENDING`/`FAILED` criterion. The approval names exactly one stage or outcome
+target. Outcome transitions append an `outcome` record and report
+`to_outcome`, with `machine_advanced: false`. See
+[docs/task13-terminal-outcomes.md](docs/task13-terminal-outcomes.md).
 
 `hma resolve` records one human resolution — a waiver grant, expiry, or
 withdrawal, or a finding-disposition override. It replays the committed chain
@@ -184,10 +184,10 @@ Deliberately **not** reachable from any command, and not planned:
   human already made, and verifying that decision is still valid against the
   chain and the repository
 
-Also not yet reachable, and open rather than refused:
+Deferred to later phases:
 
-- recording a terminal outcome, which the approval contract cannot yet
-  express; see `hma transition` above
+- recording `BLOCKED`, `UNKNOWN`, or `FAILED` (Phase A2), or verified terminal
+  closure (Phase B); the Phase A1 write path explicitly refuses these outcomes
 
 `hma eval` classifies a proposed transition without recording anything;
 `hma transition` records one a human approved. Neither supplies the decision.

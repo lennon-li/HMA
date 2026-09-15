@@ -45,16 +45,17 @@ type Input struct {
 // Result reports what was recorded. MachineAdvanced is always false: the
 // machine wrote a record, it did not decide anything.
 type Result struct {
-	Decision                   engine.Decision `json:"decision"`
-	FromStage                  model.Stage     `json:"from_stage"`
-	ToStage                    model.Stage     `json:"to_stage"`
-	Sequence                   int64           `json:"sequence"`
-	HeadAnchor                 string          `json:"head_anchor"`
-	RequiresFreshHumanApproval bool            `json:"requires_fresh_human_approval"`
-	MachineAdvanced            bool            `json:"machine_advanced"`
+	Decision                   engine.Decision       `json:"decision"`
+	FromStage                  model.Stage           `json:"from_stage"`
+	ToStage                    model.Stage           `json:"to_stage"`
+	ToOutcome                  model.TerminalOutcome `json:"to_outcome,omitempty"`
+	Sequence                   int64                 `json:"sequence"`
+	HeadAnchor                 string                `json:"head_anchor"`
+	RequiresFreshHumanApproval bool                  `json:"requires_fresh_human_approval"`
+	MachineAdvanced            bool                  `json:"machine_advanced"`
 }
 
-// Apply verifies and records one approved stage transition.
+// Apply verifies and records one approved stage or Phase A1 outcome transition.
 func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	if in.RunID == "" || in.RepositoryIdentity == "" || in.BaseRevision == "" {
 		return Result{}, errors.New("missing host input")
@@ -154,6 +155,11 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 		Control:  model.ControlApproved,
 		Approval: &in.Approval,
 	}
+	if res.ToOutcome != "" {
+		rec.Kind = model.KindOutcome
+		rec.Outcome = res.ToOutcome
+		rec.Criteria = state.Criteria
+	}
 	if err := s.Append(&rec); err != nil {
 		return Result{}, err
 	}
@@ -162,6 +168,7 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 		Decision:                   res.Decision,
 		FromStage:                  res.FromStage,
 		ToStage:                    res.ToStage,
+		ToOutcome:                  res.ToOutcome,
 		Sequence:                   rec.Metadata.Sequence,
 		HeadAnchor:                 rec.Metadata.HeadAnchor,
 		RequiresFreshHumanApproval: true,
