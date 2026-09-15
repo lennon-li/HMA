@@ -27,10 +27,11 @@ import (
 // actor is not a separate field: the only act being recorded is the human
 // decision, so the record's actor is the approver.
 type Input struct {
-	RunID              string `json:"run_id"`
-	RepositoryRoot     string `json:"repository_root"`
-	RepositoryIdentity string `json:"repository_identity"`
-	BaseRevision       string `json:"base_revision"`
+	Classification     *model.Classification `json:"classification,omitempty"`
+	RunID              string                `json:"run_id"`
+	RepositoryRoot     string                `json:"repository_root"`
+	RepositoryIdentity string                `json:"repository_identity"`
+	BaseRevision       string                `json:"base_revision"`
 	// DirtyWorktreeApproved and ExpectedWorktreeDigest carry the same
 	// meaning as in a pilot capture: a dirty worktree is refused unless the
 	// human approved this dirty use and bound the exact content.
@@ -55,7 +56,7 @@ type Result struct {
 	MachineAdvanced            bool                  `json:"machine_advanced"`
 }
 
-// Apply verifies and records one approved stage or Phase A1 outcome transition.
+// Apply verifies and records one approved stage, classification, or supported outcome.
 func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	if in.RunID == "" || in.RepositoryIdentity == "" || in.BaseRevision == "" {
 		return Result{}, errors.New("missing host input")
@@ -126,6 +127,7 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	state := engine.ProjectStageState(records)
 
 	res := engine.EvaluateStageTransition(engine.StageTransitionRequest{
+		Classification: in.Classification,
 		State:          state,
 		Expected:       expected,
 		Presented:      in.Approval,
@@ -142,6 +144,7 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	// stage. Store.Append computes the head anchor and then validates the
 	// complete record.
 	rec := model.Record{
+		UnitID:  in.Approval.UnitID,
 		Kind:    model.KindStageTransition,
 		Version: 1,
 		Metadata: model.RecordMetadata{
@@ -159,6 +162,12 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 		rec.Kind = model.KindOutcome
 		rec.Outcome = res.ToOutcome
 		rec.Criteria = state.Criteria
+	}
+	if in.Classification != nil {
+		rec.Kind = model.KindClassification
+		rec.Classification = in.Classification
+		rec.Outcome = ""
+		rec.Criteria = nil
 	}
 	if err := s.Append(&rec); err != nil {
 		return Result{}, err
