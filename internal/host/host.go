@@ -73,8 +73,10 @@ type Route struct {
 	WorkerID            string                 `json:"worker_id"`
 	Provider            string                 `json:"provider"`
 	ProviderFamily      string                 `json:"provider_family"`
+	ProviderDigest      string                 `json:"provider_digest"`
 	Model               string                 `json:"model"`
 	ModelFamily         string                 `json:"model_family"`
+	ModelDigest         string                 `json:"model_digest"`
 	ProfileDigest       string                 `json:"profile_digest"`
 	AccessService       string                 `json:"access_service"`
 	AccessServiceDigest string                 `json:"access_service_digest"`
@@ -121,6 +123,8 @@ type Dispatch struct {
 	ArtifactDigest             string               `json:"artifact_digest,omitempty"`
 	ReviewPacketDigest         string               `json:"review_packet_digest,omitempty"`
 	Risk                       model.RouteRiskLevel `json:"risk,omitempty"`
+	Disputed                   bool                 `json:"disputed,omitempty"`
+	FinalValidation            bool                 `json:"final_validation,omitempty"`
 }
 
 type IndependentReview struct {
@@ -223,8 +227,8 @@ func validateRoute(r Route) error {
 	required := []struct {
 		name, value string
 	}{
-		{"worker_id", r.WorkerID}, {"provider", r.Provider}, {"provider_family", r.ProviderFamily},
-		{"model", r.Model}, {"model_family", r.ModelFamily}, {"profile_digest", r.ProfileDigest},
+		{"worker_id", r.WorkerID}, {"provider", r.Provider}, {"provider_family", r.ProviderFamily}, {"provider_digest", r.ProviderDigest},
+		{"model", r.Model}, {"model_family", r.ModelFamily}, {"model_digest", r.ModelDigest}, {"profile_digest", r.ProfileDigest},
 		{"access_service", r.AccessService}, {"access_service_digest", r.AccessServiceDigest},
 		{"runtime", r.Runtime}, {"reasoning_effort", r.ReasoningEffort}, {"route_approval_digest", r.RouteApprovalDigest},
 	}
@@ -330,7 +334,7 @@ func validateDispatch(d *Dispatch) error {
 		return err
 	}
 	if d.Role == RoleImplementation {
-		if d.ImplementationRecordDigest != "" || d.ArtifactDigest != "" || d.ReviewPacketDigest != "" || d.Risk != "" {
+		if d.ImplementationRecordDigest != "" || d.ArtifactDigest != "" || d.ReviewPacketDigest != "" || d.Risk != "" || d.Disputed || d.FinalValidation {
 			return errors.New("implementation dispatch contains review-only fields")
 		}
 		if !contains(d.Route.CapabilityClasses, model.CapabilityBoundedImplementation) {
@@ -571,7 +575,7 @@ func EvaluateDispatch(records []Record, d Dispatch, at time.Time) error {
 	if d.Route.WorkerID == implRoute.WorkerID || d.Route.Model == implRoute.Model || d.WorkContextDigest == implContext {
 		return errors.New(ReasonReviewerNotIndependent)
 	}
-	if d.Risk == model.RouteRiskHigh || d.Risk == model.RouteRiskCritical {
+	if d.Risk == model.RouteRiskHigh || d.Risk == model.RouteRiskCritical || d.Disputed || d.FinalValidation {
 		if d.Route.ProviderFamily == implRoute.ProviderFamily || d.Route.ModelFamily == implRoute.ModelFamily {
 			return errors.New(ReasonReviewerNotIndependent)
 		}
