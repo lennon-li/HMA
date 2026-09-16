@@ -5,45 +5,52 @@ This file tracks implementation work that has not yet been folded into the norma
 ## Interactive orchestration and independent review
 
 These tasks implement `docs/architecture.md` §12.4. They belong to the host
-integration layer; HMA core remains non-dispatching in v1.
+integration layer; HMA core remains non-dispatching in v1. The HMA-side P1
+contract is implemented by `hma host ...`; individual CLI clients still need
+the P2 adapter hooks before they are automatically HMA-conforming.
 
-### P1 — before an interactive CLI host is HMA-conforming
+### P1 — HMA-side contract complete; required before an interactive CLI host is HMA-conforming
 
-- [ ] **Add a versioned orchestration-decision record.** Record `DELEGATE` or
+- [x] **Add a versioned orchestration-decision record.** Record `DELEGATE` or
   `DIRECT_COST_EXCEPTION`, the bounded job, estimated direct and delegated total
   costs, comparison basis, approved permission envelope, decision timestamp,
   and actor. Reject an unrecorded direct-coding path.
-- [ ] **Define and record the route preflight handshake.** Before each dispatch,
+- [x] **Define and record the route preflight handshake.** Before each dispatch,
   send `hi` to the exact approved profile through the approved access service
   and bind the response to profile/provider/model/access-service digests and a
-  freshness timestamp.
-- [ ] **Fail closed on unavailable or indeterminate routes.** An absent response,
+  freshness timestamp. HMA records and verifies the host-observed handshake; it
+  does not send the network/client message itself.
+- [x] **Fail closed on unavailable or indeterminate routes.** An absent response,
   route mismatch, rate limit, or exhausted quota must prevent dispatch and
-  return exactly one next action: use the already-approved escalation route or
-  request a new human route decision. Never substitute silently.
-- [ ] **Emit dispatch telemetry before work starts.** Report worker identity,
+  return to an explicit superseding route decision or human route decision.
+  Never substitute silently.
+- [x] **Emit dispatch telemetry before work starts.** Report worker identity,
   provider, model, reasoning/effort level, access service, runtime, bounded
   task, and permission envelope.
-- [ ] **Add a mandatory independent-review binding for coding work.** Source,
-  test, executable-configuration, build, and CI changes cannot satisfy a coding
-  criterion or support closure without a reviewer record from a distinct agent
-  and separate review context. Treat direct work by the orchestrator as
-  implementation for this rule.
-- [ ] **Enforce independence by risk.** Require a different model for normal
-  coding work and the §13 provider/model-family separation for high-risk,
-  disputed, and final validation; prohibit self-review and silent reviewer
-  substitution.
-- [ ] **Add conformance fixtures.** Cover delegated work, a valid direct-cost
+- [x] **Add a mandatory independent-review binding for coding work.** Source,
+  test, executable-configuration, build, and CI changes cannot progress from
+  implementation review to verification without a reviewer record from a
+  distinct agent and separate review context. Treat direct work by the
+  orchestrator as implementation for this rule.
+- [x] **Enforce independence by risk.** Require a different model for normal
+  coding work and the §13 provider/model-family separation for high-risk and
+  critical work; prohibit self-review and silent reviewer substitution.
+- [x] **Add conformance fixtures.** Cover delegated work, a valid direct-cost
   exception, an unjustified direct path, successful and failed `hi` preflights,
-  quota exhaustion, route mismatch, escalation, orchestrator self-review, same
-  model review, and valid independent review.
+  quota exhaustion, route mismatch, escalation, orchestrator self-review,
+  same-model review, high-risk same-provider review, fixed-packet mismatch,
+  valid independent review, coding-stage enforcement, and host-record tamper
+  detection.
+
+See `docs/task14-host-orchestration.md` for the executable contract and first
+Fury pilot sequence.
 
 ### P2 — host adapters
 
 - [ ] **Implement client-neutral adapter hooks** for orchestration decision,
   preflight, dispatch reporting, artifact return, and independent-review return.
-  Codex, Claude Code, OpenCode, Cursor, and other clients may translate these
-  hooks but may not change their semantics.
+  Codex, Claude Code, OpenCode, Cursor, Hermes/Fury, and other clients may
+  translate these hooks but may not change their semantics.
 - [ ] **Measure estimated versus observed dispatch cost** so the direct-cost
   exception can be calibrated without becoming a convenience bypass.
 

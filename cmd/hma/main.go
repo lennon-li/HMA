@@ -12,7 +12,7 @@ import (
 	"github.com/lennon-li/HMA/internal/pilot"
 )
 
-const usage = "usage: hma [pilot|transition|resolve|eval|show|ci|inventory] ..."
+const usage = "usage: hma [pilot|transition|resolve|eval|show|ci|inventory|host] ..."
 
 func run(args []string) error {
 	if len(args) == 0 {
@@ -31,6 +31,8 @@ func run(args []string) error {
 		return runShow(args[1:])
 	case "inventory":
 		return runInventory(args[1:])
+	case "host":
+		return runHost(args[1:])
 	case "ci":
 		if len(args) < 2 || args[1] != "github" {
 			return errors.New("usage: hma ci github ...")

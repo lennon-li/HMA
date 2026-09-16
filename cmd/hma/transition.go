@@ -8,8 +8,35 @@ import (
 	"io"
 	"os"
 
+	hoststate "github.com/lennon-li/HMA/internal/host"
+	"github.com/lennon-li/HMA/internal/model"
 	"github.com/lennon-li/HMA/internal/transition"
 )
+
+// requireHostTransitionGate makes architecture section 12.4 executable at the
+// two coding progression edges. Implementation cannot be presented for review
+// without a recorded delegation or justified direct-cost path, and review
+// cannot advance to verification without a bound independent APPROVE result.
+func requireHostTransitionGate(storePath string, in transition.Input) error {
+	from := in.ExpectedApproval.CurrentStage
+	to := in.ExpectedApproval.ProposedTargetStage
+	if !((from == model.StageImplementationAuthorization && to == model.StageImplementationReview) ||
+		(from == model.StageImplementationReview && to == model.StageVerification)) {
+		return nil
+	}
+	if in.ExpectedApproval.UnitID == "" {
+		return errors.New("HOST_UNIT_ID_REQUIRED")
+	}
+	history, err := hoststate.NewStore(storePath).Load(in.RunID)
+	if err != nil {
+		return err
+	}
+	if from == model.StageImplementationAuthorization {
+		_, err = hoststate.RequireImplementation(history, in.ExpectedApproval.UnitID)
+		return err
+	}
+	return hoststate.RequireApprovedReview(history, in.ExpectedApproval.UnitID)
+}
 
 // runTransition records one human-approved stage, classification, or supported outcome. It is the only
 // command that changes a run's stage, and it does so only by recording an
@@ -44,6 +71,10 @@ func runTransition(args []string) error {
 			return err
 		}
 		return errors.New("multiple input documents")
+	}
+
+	if err := requireHostTransitionGate(*storePath, in); err != nil {
+		return err
 	}
 
 	result, err := transition.Apply(context.Background(), in, *storePath)

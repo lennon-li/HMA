@@ -4,14 +4,16 @@ Human-gated evidence and stage control for coding agents.
 
 ## Status
 
-HMA v1 is released and tagged `v1.0.0`. It ships one standard-library-only Go
-binary that captures revision-bound evidence, verifies challenge-bound human
-approvals, records human resolutions, and verifies a CI runner against an
-approved revision.
+HMA v1 is released and tagged `v1.0.0`; current `main` has continued beyond the
+tag with the stage/route evaluators and Phase A2 classification records. It
+ships one standard-library-only Go binary that captures revision-bound evidence,
+verifies challenge-bound human approvals, records human resolutions, and
+verifies a CI runner against an approved revision.
 
-Read the boundaries below before relying on it. The six stage-control and
-route evaluators are now reachable from the CLI through the read-only
-`hma eval` family; see [Reachable surface](#reachable-surface).
+Read the boundaries below before relying on it. The six stage-control and route
+evaluators are reachable from the CLI through the read-only `hma eval` family,
+and the interactive-host orchestration contract is reachable through `hma host`;
+see [Reachable surface](#reachable-surface).
 
 ## Purpose
 
@@ -58,6 +60,8 @@ hma resolve --input <file> --store <directory>
 hma eval [transition|invalidation|validator-contract
          |route-verification|route-coherence|route-policy] --input <file>
 hma show --store <directory> --run_id <id>
+hma host [decision|preflight|dispatch|review] --input <file> --store <directory>
+hma host show --store <directory> --run_id <id>
 hma ci github --store <directory> --run_id <id>
               [--verify-only | --repo-root <dir> --exec <prog> [--arg <a>]...]
 hma inventory --allowlist <file> --repo-root <dir> --out <file>
@@ -91,6 +95,13 @@ plan-declared required evidence digest is present in the chain and was
 captured at the revision the approval binds. Recording a human's decision is
 not making one: the result always reports `machine_advanced: false`.
 
+For coding progression, the CLI additionally enforces the host-orchestration
+contract: `IMPLEMENTATION_AUTHORIZATION -> IMPLEMENTATION_REVIEW` requires a
+recorded delegated implementation or justified direct-cost exception, and
+`IMPLEMENTATION_REVIEW -> VERIFICATION` requires an independent `APPROVE`
+bound to that exact implementation. See
+[docs/task14-host-orchestration.md](docs/task14-host-orchestration.md).
+
 Only the four stages whose approvals bind a produced head and diff —
 implementation review, verification, independent validation, and release and
 closure — are checked against the live head and diff. A packet is stale only
@@ -107,9 +118,8 @@ outcome accepts no further transition.
 Phase A1 terminal outcomes are reachable through `hma transition`: human-initiated
 `ABORTED`, or human-confirmed `PARTIAL` when the committed criterion snapshot
 contains at least one `PASSED`/`WAIVED` criterion and at least one
-`PENDING`/`FAILED` criterion. The approval names exactly one stage or outcome
-target. Outcome transitions append an `outcome` record and report
-`to_outcome`, with `machine_advanced: false`. See
+`PENDING`/`FAILED` criterion. Phase A2 adds human-confirmed `BLOCKED`, `UNKNOWN`,
+and `FAILED` classification records. See
 [docs/task13-terminal-outcomes.md](docs/task13-terminal-outcomes.md).
 
 `hma resolve` records one human resolution — a waiver grant, expiry, or
@@ -137,6 +147,15 @@ in, whether it is terminal, and the criteria, findings, active waiver scopes,
 and spent challenge nonces the chain already says. It replays the chain and writes nothing. Waiver scopes and
 nonces are sorted, so repeated invocations over an unchanged chain are
 byte-identical.
+
+`hma host` records and enforces the interactive-host boundary from architecture
+§12.4. `decision` records `DELEGATE` or a mechanically justified
+`DIRECT_COST_EXCEPTION`; `preflight` records the host-observed `hi` result for
+the exact route; `dispatch` fails closed unless the route, permissions, bounded
+task, and preflight match; and `review` binds an independent review to the
+exact implementation, artifact, and fixed review packet. These commands record
+or validate host facts only. HMA still does not send the `hi` message or start
+a worker. `hma host show` prints this separate host-local hash chain.
 
 `hma ci github` verifies that the GitHub Actions runner is on the approved
 repository and revision. It writes an evidence record only when `--exec`
@@ -168,17 +187,22 @@ Implemented and reachable from the CLI:
   route coherence, and the versioned route-policy contract
 - the stage and resolution projection of a chain, via `hma show`
 - host-local machine-truth inventory from an allowlist, via `hma inventory`
+- host orchestration decision, preflight, dispatch telemetry, independent-review
+  binding, and host-chain projection, via `hma host`
 
 `hma eval` is not the whole evaluator surface. The remaining deterministic
 evaluators are reached through the command that owns their side effects, not
 through `eval`: approval binding and resolution through `hma pilot` and
-`hma resolve`, CI verification through `hma ci github`. `EvaluateWaiverChange`
-has no command of its own.
+`hma resolve`, CI verification through `hma ci github`, and interactive-host
+orchestration checks through `hma host`. `EvaluateWaiverChange` has no command
+of its own.
 
 Deliberately **not** reachable from any command, and not planned:
 
-- approval granting, route selection, or worker dispatch — HMA never
-  manufactures the human decision it requires, and never starts a worker
+- approval granting or autonomous route selection — HMA never manufactures the
+  human decision it requires
+- actual worker dispatch — `hma host dispatch` validates and records the
+  dispatch contract but never starts a worker or model call
 - machine stage advancement — no command moves a run on its own judgment.
   `hma transition` moves a run only by recording a challenge-bound decision a
   human already made, and verifying that decision is still valid against the
@@ -186,8 +210,10 @@ Deliberately **not** reachable from any command, and not planned:
 
 Deferred to later phases:
 
-- recording `BLOCKED`, `UNKNOWN`, or `FAILED` (Phase A2), or verified terminal
-  closure (Phase B); the Phase A1 write path explicitly refuses these outcomes
+- verified terminal closure through `VERIFIED_SUCCESS` or
+  `VERIFIED_WITH_WAIVERS` (Phase B)
+- automatic client adapters that translate the host contract for Fury/Hermes,
+  Codex, Claude Code, OpenCode, Cursor, and other interactive hosts
 
 `hma eval` classifies a proposed transition without recording anything;
 `hma transition` records one a human approved. Neither supplies the decision.
@@ -201,6 +227,8 @@ Deferred to later phases:
 - Host-managed, detection-based run store: an append-only JSONL chain with a
   per-run head anchor, an exclusive per-run lock, and a two-phase commit that
   recovers an interrupted write instead of leaving the run unreadable
+- Host-local orchestration chain for decision/preflight/dispatch/review records,
+  with each record bound to the current core HMA head
 - Fresh command/evidence capture bound to exact Git revisions, with the
   executable pinned to a resolved absolute path and no shell
 - Human challenge-bound, single-use approvals
@@ -217,6 +245,10 @@ tamper-resistance claim against an adversary running as the same user, who can
 rewrite the store and its anchors together. Approval nonces, revision binding,
 and evidence freshness are enforced within that boundary, not against it.
 
+The host orchestration chain has the same host-trusted limitation. Its hashes
+and head anchor detect uncoordinated modification; they do not protect against
+an adversary who can rewrite both records and anchors as the same user.
+
 The GitHub Actions actor is unauthenticated environment data and is recorded
 with a `github-actions:` provenance prefix rather than as a human identity.
 
@@ -227,6 +259,8 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 - [Task 10 — deferred schema decisions](docs/task10-deferred-schema-decisions.md)
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)
 - [Task 12 — schema amendments: waiver and worktree binding](docs/task12-schema-amendments.md)
+- [Task 13 — terminal outcomes and Phase A2 classification](docs/task13-terminal-outcomes.md)
+- [Task 14 — interactive host orchestration P1](docs/task14-host-orchestration.md)
 
 ## Deliberate non-goals for v1
 
