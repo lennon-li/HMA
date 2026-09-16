@@ -45,6 +45,7 @@ type hostResult struct {
 	HeadAnchor      string               `json:"head_anchor"`
 	CoreHeadAnchor  string               `json:"core_head_anchor"`
 	DispatchAllowed bool                 `json:"dispatch_allowed,omitempty"`
+	NextAction      string               `json:"next_action"`
 }
 
 func decodeStrictFile(path string, v any) error {
@@ -150,6 +151,7 @@ func runHostDecision(args []string) error {
 	if err != nil {
 		return err
 	}
+	result.NextAction = "RUN_ROUTE_PREFLIGHT"
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
@@ -178,6 +180,11 @@ func runHostPreflight(args []string) error {
 		return err
 	}
 	result.DispatchAllowed = in.Preflight.Status == hoststate.PreflightAvailable
+	if result.DispatchAllowed {
+		result.NextAction = "RECORD_DISPATCH"
+	} else {
+		result.NextAction = "RECORD_SUPERSEDING_ROUTE_DECISION"
+	}
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
@@ -206,6 +213,7 @@ func runHostDispatch(args []string) error {
 		return err
 	}
 	result.DispatchAllowed = true
+	result.NextAction = "START_WORKER"
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
@@ -232,6 +240,7 @@ func runHostReview(args []string) error {
 	if err != nil {
 		return err
 	}
+	result.NextAction = "CONTINUE_HMA_TRANSITION"
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
