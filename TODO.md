@@ -38,6 +38,32 @@ integration layer; HMA core remains non-dispatching in v1.
   quota exhaustion, route mismatch, escalation, orchestrator self-review, same
   model review, and valid independent review.
 
+
+### P1 — Jev decision-provider integration
+
+- [ ] **Add a provider-neutral decision trace schema.** Bind provider/model
+  identity, state digest, typed question contract, probabilities/confidence,
+  threshold-policy version, selected host action, and any override rationale.
+- [ ] **Implement the Jev host adapter.** Support an approved Jev MCP/SDK/HTTP
+  path without adding provider-specific credentials or endpoints to portable
+  HMA core.
+- [ ] **Use Jev at the three execution checkpoints.** Pre-dispatch route choice,
+  post-worker result sufficiency, and pre-next-step continue/retry/replan/
+  escalate/stop. Deterministic HMA eligibility and legality checks run first.
+- [ ] **Add discretionary-idea triage.** Agent-generated optional implementation
+  ideas should be classified as implement/prototype/defer/reject before they can
+  expand scope; an explicit human request is not vetoed by this gate.
+- [ ] **Calibrate confidence policy from recorded outcomes.** Until calibrated,
+  low-confidence or close Jev decisions escalate rather than force an automatic
+  soft judgment.
+- [ ] **Add Jev failure fixtures.** Missing tool, timeout/rate limit,
+  indeterminate answer, low confidence, and attempted illegal-choice expansion
+  must preserve hard policy and return control to the orchestrator/human.
+- [ ] **Keep Jev advisory.** A Jev result cannot approve a transition, waive a
+  rule, satisfy evidence, replace independent review, widen permissions, or
+  authorize commit/push/release.
+
+
 ### P2 — host adapters
 
 - [ ] **Implement client-neutral adapter hooks** for orchestration decision,
