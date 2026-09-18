@@ -33,6 +33,7 @@ HMA is a standalone, vendor-neutral gatekeeper for Git repository coding tasks. 
   quota or rate limit; failure returns to the approved escalation route or a
   human gate, never a silent substitute.
 - Machines gather evidence, enforce unwaivable rules, detect drift, and propose one next action.
+- Interactive hosts use Jev, when configured and available, as an advisory decision tool for eligible-route choice, result sufficiency, and next-step selection; deterministic HMA policy and human approval remain authoritative.
 - Agent prose is not proof.
 - Every coding change receives independent review. The implementing agent,
   including an orchestrator using the direct-execution exception, cannot
@@ -223,6 +224,7 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 ## Documentation
 
 - [Architecture and product contract](docs/architecture.md)
+- [Jev decision-tool host integration](docs/jev-decision-tool.md)
 - [Task 9 — CLI surface](docs/task9-cli-surface-proposal.md)
 - [Task 10 — deferred schema decisions](docs/task10-deferred-schema-decisions.md)
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)
