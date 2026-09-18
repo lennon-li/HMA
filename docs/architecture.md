@@ -463,6 +463,45 @@ validation additionally follow the provider/model-family separation rules in
 is the implementer for independence purposes and therefore cannot review or
 validate that work itself.
 
+
+### 12.5 Advisory decision providers
+
+Interactive hosts may use a learned decision provider for bounded soft
+judgments while HMA core remains deterministic and vendor-neutral. Lennon's
+default host profile uses Jev for this role.
+
+A decision provider may recommend:
+
+- one worker from the set already proven eligible by route policy;
+- task complexity or specialist-reasoning need;
+- whether a worker result appears sufficient to enter the normal
+  verification/review path, or should be retried or escalated;
+- one currently legal next action after a bounded unit; and
+- whether an agent-generated discretionary idea should be implemented,
+  prototyped, deferred, or rejected.
+
+The decision provider never expands the legal choice set and never supplies
+authority. Deterministic route, permission, risk, independence, transition, and
+safety checks run first. Provider output cannot grant approval, widen
+permissions, waive findings, satisfy mandatory evidence, replace independent
+review, advance a stage, publish, or release.
+
+The host records provider identity, model identity when reported, timestamp,
+input-state digest, typed question/choice contract, probabilities/confidence,
+configured threshold-policy version, resulting host action, and any
+orchestrator/human override. Credentials and unnecessary raw private state are
+excluded.
+
+If the configured decision provider is unavailable or indeterminate, the host
+records that condition and returns the soft judgment to the orchestrator or
+human. It must not silently substitute another model under the configured
+provider identity or weaken any deterministic requirement.
+
+The portable core defines only this provider-neutral contract. Jev-specific
+MCP, SDK, HTTP, credential, retry, quota, and endpoint handling belongs to host
+integration and user-local setup.
+
+
 ## 13. Risk and validator independence
 
 HMA computes a deterministic minimum risk floor. Organization and project policy may raise it. The human confirms or raises it. A permitted downgrade must be an explicit waiver; safety-kernel failures remain unwaivable.
