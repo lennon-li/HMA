@@ -12,7 +12,8 @@ verifies a CI runner against an approved revision.
 
 Read the boundaries below before relying on it. The six stage-control and
 route evaluators are now reachable from the CLI through the read-only
-`hma eval` family; see [Reachable surface](#reachable-surface).
+`hma eval` family, and host-orchestration records are reachable through
+`hma host`; see [Reachable surface](#reachable-surface).
 
 ## Purpose
 
@@ -60,6 +61,8 @@ hma resolve --input <file> --store <directory>
 hma eval [transition|invalidation|validator-contract
          |route-verification|route-coherence|route-policy] --input <file>
 hma show --store <directory> --run_id <id>
+hma host [decision|preflight|dispatch|review] --input <file> --store <directory>
+hma host show --store <directory> --run_id <id>
 hma ci github --store <directory> --run_id <id>
               [--verify-only | --repo-root <dir> --exec <prog> [--arg <a>]...]
 hma inventory --allowlist <file> --repo-root <dir> --out <file>
@@ -105,6 +108,14 @@ worktree at every stage; see
 A run whose chain is empty is in `GROUNDING`, so `hma transition` is also how
 a run starts; there is no separate `init`. A run that has recorded a terminal
 outcome accepts no further transition.
+
+For coding progression, the CLI also checks host-orchestration records on the
+two §12.4 edges: implementation authorization to implementation review requires
+a recorded implementation path, and implementation review to verification
+requires an independent `APPROVE` bound to that implementation. These checks
+are a partial HMA-side enforcement surface; interactive host conformance and
+the Jev decision-provider integration remain open. See
+[docs/task14-host-orchestration.md](docs/task14-host-orchestration.md).
 
 Phase A1 terminal outcomes are reachable through `hma transition`: human-initiated
 `ABORTED`, or human-confirmed `PARTIAL` when the committed criterion snapshot
@@ -197,6 +208,8 @@ Deferred to later phases:
 
 - verified terminal closure (`VERIFIED_SUCCESS` or `VERIFIED_WITH_WAIVERS`,
   Phase B); the current write path refuses these outcomes
+- automatic client adapters that translate the host contract for Fury/Hermes,
+  Codex, Claude Code, OpenCode, Cursor, and other interactive hosts
 
 `hma eval` classifies a proposed transition without recording anything;
 `hma transition` records one a human approved. Neither supplies the decision.
@@ -238,6 +251,7 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)
 - [Task 12 — schema amendments: waiver and worktree binding](docs/task12-schema-amendments.md)
 - [Task 13 — terminal outcomes and failure classifications](docs/task13-terminal-outcomes.md)
+- [Task 14 — interactive host orchestration P1](docs/task14-host-orchestration.md)
 
 ## Deliberate non-goals for v1
 
