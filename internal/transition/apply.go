@@ -169,6 +169,9 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 		rec.Outcome = ""
 		rec.Criteria = nil
 	}
+	if err := verifyRepositoryState(ctx, root, in.BaseRevision, in.DirtyWorktreeApproved, in.ExpectedWorktreeDigest, expected); err != nil {
+		return Result{}, err
+	}
 	if err := s.Append(&rec); err != nil {
 		return Result{}, err
 	}
@@ -183,4 +186,27 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 		RequiresFreshHumanApproval: true,
 		MachineAdvanced:            false,
 	}, nil
+}
+
+// verifyRepositoryState closes the gap between the initial approval check and
+// the append. Chain replay and record construction can take long enough for
+// the worktree or HEAD to change after the initial snapshot.
+func verifyRepositoryState(ctx context.Context, root, baseRevision string, dirtyApproved bool, expectedWorktreeDigest string, approval model.ApprovalBinding) error {
+	if err := repostate.VerifyBase(ctx, root, baseRevision); err != nil {
+		return errors.New("repository identity is stale")
+	}
+	current, err := repostate.Snapshot(ctx, root, baseRevision, dirtyApproved)
+	if err != nil {
+		return err
+	}
+	if approval.WorktreeDigest != "" && approval.WorktreeDigest != current.Worktree {
+		return fmt.Errorf("transition rejected: %s", engine.ReasonStaleWorktreeBinding)
+	}
+	if current.Worktree != expectedWorktreeDigest {
+		return errors.New("repository identity is stale")
+	}
+	if model.ApprovalBindsHeadDiff(approval.CurrentStage) && (approval.ProducedHeadDigest != current.Head || approval.DiffDigest != current.Diff) {
+		return errors.New("expected approval binding is stale")
+	}
+	return nil
 }

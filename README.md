@@ -4,10 +4,11 @@ Human-gated evidence and stage control for coding agents.
 
 ## Status
 
-HMA v1 is released and tagged `v1.0.0`. It ships one standard-library-only Go
-binary that captures revision-bound evidence, verifies challenge-bound human
-approvals, records human resolutions, and verifies a CI runner against an
-approved revision.
+The latest tagged release is `v1.2.0`. Current main also includes the Phase A2
+failure-classification write path described below. HMA ships one
+standard-library-only Go binary that captures revision-bound evidence,
+verifies challenge-bound human approvals, records human resolutions, and
+verifies a CI runner against an approved revision.
 
 Read the boundaries below before relying on it. The six stage-control and
 route evaluators are now reachable from the CLI through the read-only
@@ -113,6 +114,13 @@ target. Outcome transitions append an `outcome` record and report
 `to_outcome`, with `machine_advanced: false`. See
 [docs/task13-terminal-outcomes.md](docs/task13-terminal-outcomes.md).
 
+Phase A2 failure classifications are also reachable through `hma transition`:
+human-approved `BLOCKED`, `UNKNOWN`, or `FAILED` classifications are recorded
+against a unit without making the run terminal. A matching fresh outcome
+approval can later commit the live classification as the terminal outcome;
+the projection refuses a different failure outcome or `PARTIAL` while a live
+failure remains. See [docs/task13-terminal-outcomes.md](docs/task13-terminal-outcomes.md).
+
 `hma resolve` records one human resolution — a waiver grant, expiry, or
 withdrawal, or a finding-disposition override. It replays the committed chain
 first, so an already-granted waiver cannot be granted again, a withdrawal with
@@ -187,8 +195,8 @@ Deliberately **not** reachable from any command, and not planned:
 
 Deferred to later phases:
 
-- recording `BLOCKED`, `UNKNOWN`, or `FAILED` (Phase A2), or verified terminal
-  closure (Phase B); the Phase A1 write path explicitly refuses these outcomes
+- verified terminal closure (`VERIFIED_SUCCESS` or `VERIFIED_WITH_WAIVERS`,
+  Phase B); the current write path refuses these outcomes
 
 `hma eval` classifies a proposed transition without recording anything;
 `hma transition` records one a human approved. Neither supplies the decision.
@@ -229,6 +237,7 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 - [Task 10 — deferred schema decisions](docs/task10-deferred-schema-decisions.md)
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)
 - [Task 12 — schema amendments: waiver and worktree binding](docs/task12-schema-amendments.md)
+- [Task 13 — terminal outcomes and failure classifications](docs/task13-terminal-outcomes.md)
 
 ## Deliberate non-goals for v1
 

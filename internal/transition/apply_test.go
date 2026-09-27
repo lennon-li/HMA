@@ -279,6 +279,67 @@ func TestApplyIgnoresHeadForNonBindingStage(t *testing.T) {
 	}
 }
 
+func TestVerifyRepositoryStateRejectsDriftBeforeAppend(t *testing.T) {
+	t.Run("binding stage head and diff", func(t *testing.T) {
+		repo, base := newRepo(t)
+		approved, err := repostate.Snapshot(context.Background(), repo, base, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding := model.ApprovalBinding{
+			CurrentStage:       model.StageImplementationReview,
+			ProducedHeadDigest: approved.Head,
+			DiffDigest:         approved.Diff,
+		}
+		if err := os.WriteFile(filepath.Join(repo, "x"), []byte("two"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		git(t, repo, "add", "x")
+		git(t, repo, "commit", "-qm", "two")
+		if err := verifyRepositoryState(context.Background(), repo, base, false, approved.Worktree, binding); err == nil || !strings.Contains(err.Error(), "expected approval binding is stale") {
+			t.Fatalf("final repository check error = %v, want stale head/diff refusal", err)
+		}
+	})
+
+	t.Run("approved dirty worktree", func(t *testing.T) {
+		repo, base := newRepo(t)
+		if err := os.WriteFile(filepath.Join(repo, "x"), []byte("approved"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		approved, err := repostate.Snapshot(context.Background(), repo, base, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding := model.ApprovalBinding{
+			CurrentStage:   model.StageGrounding,
+			WorktreeDigest: approved.Worktree,
+		}
+		if err := os.WriteFile(filepath.Join(repo, "x"), []byte("drifted"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := verifyRepositoryState(context.Background(), repo, base, true, approved.Worktree, binding); err == nil || !strings.Contains(err.Error(), string(engine.ReasonStaleWorktreeBinding)) {
+			t.Fatalf("final repository check error = %v, want stale worktree binding refusal", err)
+		}
+	})
+
+	t.Run("nonbinding stage permits head drift", func(t *testing.T) {
+		repo, base := newRepo(t)
+		approved, err := repostate.Snapshot(context.Background(), repo, base, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding := model.ApprovalBinding{CurrentStage: model.StageGrounding}
+		if err := os.WriteFile(filepath.Join(repo, "x"), []byte("two"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		git(t, repo, "add", "x")
+		git(t, repo, "commit", "-qm", "two")
+		if err := verifyRepositoryState(context.Background(), repo, base, false, approved.Worktree, binding); err != nil {
+			t.Fatalf("nonbinding stage rejected head/diff drift: %v", err)
+		}
+	})
+}
+
 func TestApplyRefusesDirtyWorktreeWithoutApproval(t *testing.T) {
 	repo, base := newRepo(t)
 	storeDir := t.TempDir()

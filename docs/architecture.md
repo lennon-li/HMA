@@ -4,7 +4,9 @@ Status: bootstrap architecture
 
 Scope: portable product contract for v1
 
-Implementation status: not started
+Implementation status: substantial core implementation exists on current main;
+portable JSON Schema publication and parts of the wider host contract remain
+open or deferred.
 
 ## 1. Product promise
 
@@ -159,10 +161,11 @@ unit, never a run-wide selection.
 No unlisted edge is legal. A waiver operation invalidates only approvals bound to
 the affected criterion, finding, or artifact; it never advances a stage.
 
-The Phase A1 write path records human-initiated `ABORTED` and derived,
-human-confirmed `PARTIAL` outcomes; see
-[Task 13 terminal outcomes](task13-terminal-outcomes.md) for its criteria rule
-and the outcomes deferred to later phases.
+The current write path records human-initiated `ABORTED`, derived and
+human-confirmed `PARTIAL`, and Phase A2 `BLOCKED`, `UNKNOWN`, or `FAILED`
+classifications. See [Task 13 terminal outcomes](task13-terminal-outcomes.md)
+for classification/terminal semantics and the verified-success outcomes deferred
+to Phase B.
 
 ## 6. Human approval contract
 
@@ -703,7 +706,10 @@ V1 implementation target:
 
 Repository-owned portable artifacts must not encode a maintainer's home path, runtime profile names, credentials, provider choices, aliases, or private infrastructure.
 
-Exact package layout, command names, and schemas are deferred to the implementation plan after this contract is reviewed. Illustrative commands are intentionally omitted so documentation does not pretend an unimplemented command exists.
+The concrete package layout and CLI surface are implementation details rather
+than normative architecture. Current commands and implemented schema amendments
+are documented in the README and task documents; the portable JSON Schema
+publication remains an explicit implementation obligation.
 
 ## 24. MVP validation
 
@@ -744,23 +750,21 @@ declared by policy, not invented by the fixture.
 
 After fixtures pass, run one small task in one separately named Git repository. The pilot must reach truthful closure without bypassing a gate. The pilot repository is not the HMA product repository.
 
-## 25. Bootstrap milestone and open decisions
+## 25. Bootstrap milestone and remaining decisions
 
-This architecture document is the bounded bootstrap milestone. It does not establish that HMA is implemented, installable, secure, or ready for users.
+This architecture document remains the portable product contract; implementation
+status and the current command surface are tracked in the README and task
+documents. Their existence does not by itself establish that HMA is secure or
+ready for every user or environment.
 
-Open decisions for the implementation-planning gate:
+Remaining open or deferred implementation decisions include:
 
-- exact Go module and package layout;
-- exact CLI command surface;
-- JSON Schema definitions;
+- portable JSON Schema publication;
 - local store location and retention policy;
 - challenge expiry duration and actor identity mechanism;
 - exported-anchor authentication mechanism and configured trust-root format;
-- CI platform adapter used for the pilot;
 - initial host-local runtime-profile schema;
-- versioned route-policy contract and canonical normalized projection;
 - fixture repository design;
-- first real pilot repository;
-- license and public-release posture.
+- first real pilot repository.
 
 Each decision must preserve the authority, portability, minimality, and evidence boundaries defined above.

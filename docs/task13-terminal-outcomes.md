@@ -117,14 +117,15 @@ without moving the stage or making the run terminal. The result's `to_outcome`
 reports the classified outcome. Projection exposes `FailureOutcome` separately
 from the committed terminal `Outcome`.
 
-A later human-approved state change with exactly the same record `unit_id`
-supersedes the classification, regardless of record kind. Approved stage changes
-(including rewinds) take their unit from `approval.unit_id`; `hma resolve` accepts
-an optional `waiver_operation.unit_id` or `finding_override.unit_id` inside the
-human-approved payload. The record unit must match that payload; resolutions without
-a unit cannot supersede classifications. Top-level `unit_id` input is rejected.
-Other units, earlier changes, and unapproved records do not clear classifications.
-A new classification on the same unit replaces the previous one.
+An approved waiver operation or finding-disposition override supersedes a live
+classification only when its nested approved payload names the same unit as the
+record. Generic approvals, including approved stage changes and rewinds, do not
+clear classifications. `hma resolve` accepts an optional
+`waiver_operation.unit_id` or `finding_override.unit_id` inside the human-approved
+payload. The record unit must match that payload; resolutions without a unit
+cannot supersede classifications. Top-level `unit_id` input is rejected. Other
+units, earlier changes, and unapproved records do not clear classifications. A
+new classification on the same unit replaces the previous one.
 
 Across live units, projection selects `BLOCKED > UNKNOWN > FAILED`.
 To commit that terminal outcome, submit a fresh standard outcome transition
