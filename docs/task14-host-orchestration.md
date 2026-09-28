@@ -1,9 +1,10 @@
 # Task 14: interactive host orchestration P1
 
 Status: partial HMA-side record and transition-gate implementation. This does
-not make an interactive CLI host P1-conforming, and does not implement the
-§12.5 Jev decision-provider contract. Remaining requirements are tracked in
-`TODO.md`.
+not make an interactive CLI host MVP-conforming. Remaining MVP requirements are
+tracked in `TODO.md`. Learned decision-provider integrations under §12.5,
+including Jev, are optional post-MVP work and are not part of this task's MVP
+acceptance boundary.
 
 This task makes the architecture §12.4 host boundary executable without turning
 HMA into a dispatcher. HMA records and checks what an interactive host such as
@@ -153,9 +154,9 @@ side-effect-free; this enforcement belongs to the interactive-host CLI boundary.
 These gates establish only that a current host record exists for the named
 unit. They do not make the host select an eligible route, validate the route
 approval against the approved plan, or implement the host's full decision and
-dispatch flow. Jev route choice, result-sufficiency, next-step, and discretionary
-idea judgments remain outside this P1 implementation; see architecture §12.5
-and `docs/jev-decision-tool.md`.
+dispatch flow. Learned decision-provider route choice, result-sufficiency,
+next-step, and discretionary-idea judgments remain optional post-MVP host
+extensions; see architecture §12.5.
 
 ## Host record store
 

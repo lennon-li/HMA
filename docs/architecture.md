@@ -470,8 +470,10 @@ validate that work itself.
 ### 12.5 Advisory decision providers
 
 Interactive hosts may use a learned decision provider for bounded soft
-judgments while HMA core remains deterministic and vendor-neutral. Lennon's
-default host profile uses Jev for this role.
+judgments while HMA core remains deterministic and vendor-neutral. This is an
+optional extension point, not an MVP requirement. An MVP-conforming host may
+make these soft judgments itself or return them to a human so long as the hard
+HMA rules below remain authoritative.
 
 A decision provider may recommend:
 
@@ -500,9 +502,9 @@ records that condition and returns the soft judgment to the orchestrator or
 human. It must not silently substitute another model under the configured
 provider identity or weaken any deterministic requirement.
 
-The portable core defines only this provider-neutral contract. Jev-specific
-MCP, SDK, HTTP, credential, retry, quota, and endpoint handling belongs to host
-integration and user-local setup.
+The portable core defines only this provider-neutral contract. Jev is one
+possible post-MVP integration; Jev-specific MCP, SDK, HTTP, credential, retry,
+quota, and endpoint handling belongs to host integration and user-local setup.
 
 
 ## 13. Risk and validator independence

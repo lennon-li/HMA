@@ -35,7 +35,8 @@ HMA is a standalone, vendor-neutral gatekeeper for Git repository coding tasks. 
   quota or rate limit; failure returns to the approved escalation route or a
   human gate, never a silent substitute.
 - Machines gather evidence, enforce unwaivable rules, detect drift, and propose one next action.
-- Interactive hosts use Jev, when configured and available, as an advisory decision tool for eligible-route choice, result sufficiency, and next-step selection; deterministic HMA policy and human approval remain authoritative.
+- Learned/advisory decision providers are optional host integrations, not MVP
+  requirements. Deterministic HMA policy and human approval remain authoritative.
 - Agent prose is not proof.
 - Every coding change receives independent review. The implementing agent,
   including an orchestrator using the direct-execution exception, cannot
@@ -113,8 +114,9 @@ For coding progression, the CLI also checks host-orchestration records on the
 two §12.4 edges: implementation authorization to implementation review requires
 a recorded implementation path, and implementation review to verification
 requires an independent `APPROVE` bound to that implementation. These checks
-are a partial HMA-side enforcement surface; interactive host conformance and
-the Jev decision-provider integration remain open. See
+are a partial HMA-side enforcement surface; interactive host conformance
+remains open. Learned decision-provider integrations such as Jev are explicitly
+post-MVP and do not block host MVP conformance. See
 [docs/task14-host-orchestration.md](docs/task14-host-orchestration.md).
 
 Phase A1 terminal outcomes are reachable through `hma transition`: human-initiated
@@ -245,7 +247,7 @@ with a `github-actions:` provenance prefix rather than as a human identity.
 ## Documentation
 
 - [Architecture and product contract](docs/architecture.md)
-- [Jev decision-tool host integration](docs/jev-decision-tool.md)
+- [Post-MVP Jev decision-tool host integration](docs/jev-decision-tool.md)
 - [Task 9 — CLI surface](docs/task9-cli-surface-proposal.md)
 - [Task 10 — deferred schema decisions](docs/task10-deferred-schema-decisions.md)
 - [Task 11 — the stage-transition write path](docs/task11-stage-transition-path.md)

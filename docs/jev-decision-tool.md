@@ -1,11 +1,11 @@
 # Jev as an HMA decision tool
 
-Status: host-integration guidance
+Status: optional post-MVP host-integration guidance
 
-Jev is the preferred default **soft-decision provider** for Lennon's interactive
-HMA workflow. It belongs to the host-integration layer, not the portable HMA
-core. HMA remains vendor-neutral and deterministic where authority or safety is
-involved.
+Jev is an optional **soft-decision provider** for an interactive HMA workflow.
+It is not required for the HMA MVP. It belongs to the host-integration layer,
+not the portable HMA core. HMA remains vendor-neutral and deterministic where
+authority or safety is involved.
 
 TypeSafe's System One API accepts one structured state plus focused typed
 questions. A `Choice` returns one option with probabilities/confidence, a
@@ -33,7 +33,7 @@ For any decision:
 Jev never expands the legal choice set. If deterministic policy says a route is
 ineligible, it is not presented to Jev.
 
-## Required checkpoints
+## Optional integration checkpoints
 
 ### 1. Route decision
 

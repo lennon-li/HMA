@@ -7,11 +7,11 @@ This file tracks implementation work that has not yet been folded into the norma
 These tasks implement `docs/architecture.md` §12.4. They belong to the host
 integration layer; HMA core remains non-dispatching in v1. `hma host ...`
 provides host-local records and partial transition gates. It does not complete
-interactive-host P1 conformance: the host still needs to establish approved
+interactive-host MVP conformance: the host still needs to establish approved
 route/task bindings and perform the orchestration sequence, and HMA does not
 enforce every direct-cost exception condition in §12.4.
 
-### P1 — HMA-side record and gate subset (implemented; P1 conformance remains open)
+### P1 — HMA-side record and gate subset (implemented; MVP conformance remains open)
 
 - [x] **Add a versioned orchestration-decision record.** Record `DELEGATE` or
   `DIRECT_COST_EXCEPTION`, the bounded job, estimated direct and delegated total
@@ -47,7 +47,7 @@ enforce every direct-cost exception condition in §12.4.
 See `docs/task14-host-orchestration.md` for the executable contract and first
 Fury pilot sequence.
 
-Open before interactive-host P1 conformance:
+Open before interactive-host MVP conformance:
 
 - [ ] Bind recorded unit, task, route, permissions, and route approval to the
   actual approved HMA plan/route state. A non-empty approval digest alone does
@@ -65,15 +65,21 @@ Open before interactive-host P1 conformance:
   interactive CLI host; the HMA core must remain non-dispatching.
 
 
-### P1 — Jev decision-provider integration (open; not implemented by `hma host`)
+### Post-MVP — learned decision-provider integration (optional)
+
+This work is intentionally outside the MVP acceptance boundary. The MVP host
+may make soft route/result/next-step judgments itself or return them to a human,
+provided deterministic HMA legality, approval, permission, and independence
+rules remain authoritative. Keep the provider-neutral seam so a learned
+decision provider can be added later without changing portable core semantics.
 
 - [ ] **Add a provider-neutral decision trace schema.** Bind provider/model
   identity, state digest, typed question contract, probabilities/confidence,
   threshold-policy version, selected host action, and any override rationale.
-- [ ] **Implement the Jev host adapter.** Support an approved Jev MCP/SDK/HTTP
+- [ ] **Implement an optional Jev host adapter.** Support an approved Jev MCP/SDK/HTTP
   path without adding provider-specific credentials or endpoints to portable
   HMA core.
-- [ ] **Use Jev at the three execution checkpoints.** Pre-dispatch route choice,
+- [ ] **Optionally use Jev at the three execution checkpoints.** Pre-dispatch route choice,
   post-worker result sufficiency, and pre-next-step continue/retry/replan/
   escalate/stop. Deterministic HMA eligibility and legality checks run first.
 - [ ] **Add discretionary-idea triage.** Agent-generated optional implementation
@@ -85,7 +91,7 @@ Open before interactive-host P1 conformance:
 - [ ] **Add Jev failure fixtures.** Missing tool, timeout/rate limit,
   indeterminate answer, low confidence, and attempted illegal-choice expansion
   must preserve hard policy and return control to the orchestrator/human.
-- [ ] **Keep Jev advisory.** A Jev result cannot approve a transition, waive a
+- [ ] **Keep any learned provider advisory.** A provider result cannot approve a transition, waive a
   rule, satisfy evidence, replace independent review, widen permissions, or
   authorize commit/push/release.
 
