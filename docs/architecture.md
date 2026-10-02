@@ -615,7 +615,29 @@ Every gate and terminal report contains exactly one recommended next action, plu
 
 ## 19. Approval-packet presentation
 
-The human-facing packet is layered.
+The human-facing packet is layered. Presentation is a review interface over the
+evidence, not a substitute for it.
+
+The default prose profile is `STE80`: an HMA-controlled writing profile inspired
+by Simplified Technical English. `STE80` is not a claim of ASD-STE100
+compliance. It constrains presentation, not technical reasoning, evidence
+capture, code, statistical analysis, or validator scope.
+
+For every substantive result, audit, handoff, or review packet, the concise
+human-facing layer:
+
+- uses short, direct sentences and one material claim or instruction per
+  sentence where practical;
+- uses one term consistently for one concept and defines unavoidable jargon;
+- prefers active voice and explicit actors, actions, and conditions;
+- presents observed facts and evidence before interpretation;
+- labels assumptions, inferences, recommendations, and unresolved questions;
+- uses numerical results, dates, versions, revisions, and digests when
+  available;
+- states uncertainty, failures, omissions, truncation, and unresolved findings;
+  and
+- never removes a material qualification or converts missing evidence into
+  confidence.
 
 The concise decision surface contains:
 
@@ -629,7 +651,16 @@ The concise decision surface contains:
 8. proposed route and next action;
 9. exact approval challenge.
 
-Immutable raw logs, manifests, and digests remain available underneath. A summary never replaces the source evidence.
+A host may add a diagram when structure, sequence, dependency, or causality is
+easier to inspect visually. It may add interactive HTML when repeated or complex
+review benefits from expandable evidence, sensitivity views, assumptions, or
+alternatives. A generated video or other sequential explainer may be added for
+teaching, but it is never the sole review surface for an approval decision.
+
+Immutable raw logs, manifests, commands, source references, and digests remain
+available underneath. Visual, interactive, and narrative summaries are derived
+artifacts. They never replace the source evidence or satisfy an evidence
+requirement by themselves.
 
 ## 20. Closure semantics
 
