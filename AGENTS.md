@@ -11,6 +11,38 @@ work unless the recorded direct-cost exception is satisfied. Before dispatch,
 perform the required exact-route `hi` preflight. Report the worker, provider,
 model, reasoning/effort level, access service, task, and permission envelope.
 
+## Human review output (default)
+
+For every substantive result, audit, handoff, or review packet, keep the
+technical evidence intact and add a concise human-facing review layer. Use the
+HMA `STE80` profile by default unless the human requests another presentation.
+`STE80` is an STE-inspired controlled-writing profile; it is not a claim of
+ASD-STE100 compliance.
+
+The presentation layer MUST NOT alter, suppress, or replace the evidence. It
+must:
+
+- use short, direct sentences and one material claim or instruction per sentence
+  where practical;
+- use one term consistently for one concept and define unavoidable jargon once;
+- prefer active voice and make the actor, action, and condition explicit;
+- present observed facts and evidence before interpretation;
+- label assumptions, inferences, recommendations, and unresolved questions;
+- use numbers, dates, versions, revisions, and digests when they are available;
+- state uncertainty, failures, omissions, truncation, and unresolved findings;
+- never simplify away a qualification or turn missing evidence into confidence;
+- keep raw logs, manifests, digests, commands, and source references available;
+  and
+- finish with the single next action required by `docs/architecture.md` §18.
+
+Use a diagram when structure, flow, or dependency is easier to inspect visually.
+Use interactive HTML for complex or repeated review when it improves inspection
+of evidence, assumptions, sensitivity, or alternatives. Visual or interactive
+artifacts are presentation aids only; they are never proof and never replace the
+underlying evidence packet.
+
+See `docs/architecture.md` §19 for the normative human-facing packet contract.
+
 ## Jev decision tool
 
 When an approved Jev decision tool is available through the host (MCP, SDK, or
