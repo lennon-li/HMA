@@ -1,0 +1,482 @@
+{
+  "audit_id": "hma-gate-a-audit-20261015-r7",
+  "dispatch_id": "hma-gate-a-audit-20261015-r7",
+  "date": "2026-10-15",
+  "modes": [
+    "plan",
+    "code",
+    "reasoning"
+  ],
+  "target": "git:118ea3ae4daf0fb9a7c7ae2f3590a40feea19d81; hma-manifest-sha256:fbe57bca95c03df5153096d426a6c9300cf6e65fd4d130b3e2d9c81746a10f46; v7-sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d",
+  "isolation": "partial",
+  "isolation_compromised": false,
+  "isolation_detail": "Isolation is partial. This is the explicitly requested v1-v6-informed re-audit, not a blind first pass. Prior auditor reports are inherited continuity evidence. Author statements inside v3-v7 were evaluated as audit objects. No implementer clarification or controlled unblinding occurred. The frozen Phase 1 is a re-audit assessment, not a claim of retrospective blinding.",
+  "verdict": "conditional-pass",
+  "gate_verdict": "PASS",
+  "gate_scope": "Gate A design re-audit only; no runtime or final acceptance certification",
+  "phase1_frozen": true,
+  "requirements": [
+    {
+      "id": "Q1-v6-finding-closure",
+      "status": "pass",
+      "evidence_refs": [
+        "finding_statuses",
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log"
+      ],
+      "observation": "R11, R4, A1, A2 and A6 CLOSED at design level; earlier closures retained."
+    },
+    {
+      "id": "Q2-approval-compatibility",
+      "status": "pass",
+      "evidence_refs": [
+        "docs/architecture.md:170-202",
+        "internal/model/types.go:156-183",
+        "internal/model/terminal_outcomes_test.go:51-87",
+        "internal/engine/approval_binding.go:45-66",
+        "internal/store/jsonl.go:40-49,106",
+        "go-checks.log",
+        "v3:28-36",
+        "v4:44-49"
+      ],
+      "observation": "No intrinsic conflict. V7 adds no approval field. The single new optional acceptance_contract_digest must preserve exact legacy bytes when absent and bind all new contract transitions when present. Exact normative amendment and future-field tests remain later work."
+    },
+    {
+      "id": "Q3-trusted-host-attack-checks",
+      "status": "pass",
+      "evidence_refs": [
+        "attack_checks",
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-29",
+        "v3:38-65,106-138",
+        "v4:21-95",
+        "v5:10-24,45-58",
+        "v6:9-46",
+        "probes.log"
+      ],
+      "observation": "No conforming closure bypass found under T. Host accidents can still cause a launch when a call is omitted; full namespace import must detect it and emit UNAUTHORIZED_DISPATCH BLOCK. This is not prevention against a same-UID adversary."
+    },
+    {
+      "id": "Q4-new-design-regressions",
+      "status": "pass",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "prior-comparison.json",
+        "probes.log",
+        "obsidian-commit-comparison.json"
+      ],
+      "observation": "No new wrong design or architecture regression identified. Short review TTL, conservative ties and old-generation invalidation remain coherent. Current-controller implementation gaps are explicit future work, not a v7 regression."
+    },
+    {
+      "id": "Q5-human-decision-completeness",
+      "status": "pass",
+      "evidence_refs": [
+        "v4:10-19",
+        "docs/architecture.md:58-85,136-140,170-202",
+        "docs/handoffs/2026-10-15-outcome-consolidation-opus-liz.md:50-64,81-85",
+        "current user dispatch"
+      ],
+      "observation": "T/D1/D3/D4/D5/D6 cover identified product decision categories; current dispatch provides D2 audit authority. No new D7 category identified. These records are not exact unit/stage approvals or approval of still-unwritten normative text."
+    }
+  ],
+  "finding_statuses": [
+    {
+      "id": "R11",
+      "severity": "medium",
+      "status": "CLOSED (design level)",
+      "reason": "V7 states the exact minimum reducer requested in R11, over original expiry and all applicable revocations. It computes the result from the whole chain, fixes generation identity, forbids revival by renewal, retains the half-open interval, and assigns all six requested controls to Gate C import/generation tests. Independent literal models reject both prior counterexamples, every tested ingestion order, ties and old-generation reuse; positive controls admit valid launches. This closes the design criterion. It does not prove future production code.",
+      "closure_criterion": "State valid_until = min(original_expiry, all applicable revocation times), or an equivalent first-revocation terminal rule. Preserve generation identity. Model two revocations in chronological/reverse ingestion order, expiry then later revocation, later renewal, equality ties and the valid-before-earliest-end control. Assign the resulting tests to internal/host import at Gate C (and lease-generation integration at Gate D). No future runtime execution is required to close the Gate A design finding.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log:r11_*"
+      ],
+      "fixed_revision": "v7 design sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d",
+      "code_fixed": false
+    },
+    {
+      "id": "R4",
+      "status": "CLOSED (design level)",
+      "reason": "V7 removes the only residual R11 ambiguity. Retained v3-v6 rules supply atomic reservation, stable IDs, same-request replay, exact-route/preflight and admission association, one observed launch per reservation, conservative unknown-launch accounting, full namespace reconciliation and BLOCK on mismatch. The earliest generation end now governs delayed launches even after later revocations or renewal. Under T, detection at import satisfies the requirement; a hostile hidden ledger is outside scope.",
+      "closure_criterion": "Run duplicate callbacks, a crash after reservation before launch, a lost launch response, resume, two concurrent controllers with one attempt left, a route change, omission of hook and lease renewal after prior spending. Require at most the approved number of launches and exactly one count per observed launch; unknown launch stays reserved.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log",
+        "PHASE1.json"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v7 design sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d"
+    },
+    {
+      "id": "R7",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. V6 explicitly excludes capacity from existing-reservation eligibility. Replay returns the same record and charge; no observed exact-ID ledger run may exist. Time/stage/policy/contract remain checked. A new ID needs capacity. The last-slot lost-response model now permits the reserved launch and refuses used/expired/revoked cases. Canonical ledger mkdir uniqueness is an existing mechanism; actual D5 resume recovery and concurrency proof remain later-gate work.",
+      "closure_criterion": "Lose the response for the final reservation and repeat an identical callback => Same reservation/status returned with no second charge; no new or stale launch authority; Run two distinct attempts from an admitted five-attempt envelope under total ceiling five => Both valid attempts reserve once; attempt six refused; another controller cannot overspend; Create an unlaunched reservation and end the run => Reservation remains accounted separately; launch IDs are a subset of reservation IDs rather than an unjustified equality assertion",
+      "evidence_refs": [
+        "v6:27-33",
+        "v4:53-66",
+        "supplemental-snapshot/AgentSystem/scripts/agent-run-ledger:738-747",
+        "probes.log:r7_*"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v6 design amendment only"
+    },
+    {
+      "id": "R8",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. V6 adds report-body packet_sha256, exact review_dispatch_id and fresh 128-bit review_nonce equality. It drops mtime as authority. The retained receipt checks still require current target, report-byte hash, correct exact ledger run/namespace, review mode, completed exit 0 and eligible independent reviewer. Reserializing the old pass/resolution fails even with a correct current receipt. No report imports nothing. Under T this closes the specified stale-output attack; it does not prove reviewer reasoning or resist a hostile same-UID receipt writer.",
+      "closure_criterion": "Attach a genuine receipt for another packet/prompt, another namespace, altered report bytes, wrong mode or failed worker => Import refused; F1 BLOCK remains; no criterion credit; Use the correct packet/output but same worker/model/context or a contributing implementer => Independence refusal according to normal/high/disputed/final risk; valid independent control succeeds; Import F1 BLOCK, then advisory F2, then a genuine exact-target explicit resolution with empty snapshot => F1 survives F2; only the authenticated resolution clears it; stale or fabricated empty imports cannot clear it; Exercise every skill report-contract verdict and an unknown string => Only an eligible authenticated pass can approve; all other cases have explicit non-approving results",
+      "evidence_refs": [
+        "v6:9-17",
+        "v4:84-95",
+        "v5:45-58",
+        "v3:134-138",
+        "probes.log:r8_*"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v6 design amendment only"
+    },
+    {
+      "id": "R10",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. V6 consolidates both directions of launch association, no reuse, charged unlaunched reservations, journal/admission envelope equality and controller/live-root/baseline/namespace equality. Each journal attempt ID needs a reservation. These explicitly restore the v4 predicates omitted from the v5 replacement list. The time-composition issue is tracked separately as R11.",
+      "closure_criterion": "Explicitly retain journal envelope == admission envelope, exact controller/live/baseline/namespace association, and each implementation reservation maps to at most one observed launch. Unlaunched reservations remain charged.",
+      "evidence_refs": [
+        "v6:35-46",
+        "probes.log:r10_*"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v6 design amendment only"
+    },
+    {
+      "id": "A8",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. V6 replaces impossible journal/reservation set equality with one authority record per observed launch, no reuse and separately charged unlaunched reservations. It assigns final-slot replay, endpoint, stale-body and preserved-envelope controls to internal/host, cmd/hma and the named Obsidian adapters at Gate C. Retained v3-v5 rows cover the other seven-proof obligations and Ming/Liz ownership. Future test names are design commitments, not executed tests. The newly identified R11 sequence needs one additional control; that does not undo the specific v5 matrix repairs.",
+      "closure_criterion": "Review the expanded matrix against proofs 1-7. Execute its bounded checks at their assigned gates and freeze raw results. Require final independent audit of the exact final revision; do not treat a synthetic 17-check run as proof of actual dispatch or human decisions.",
+      "evidence_refs": [
+        "v6:48-60",
+        "v3:146-165",
+        "v4:97-107",
+        "v5:60-71",
+        "probes.log:a8_unlaunched_reservation"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v6 design amendment only"
+    },
+    {
+      "id": "A1",
+      "status": "CLOSED (design level)",
+      "reason": "The remaining R11 dependency closes. Authority still derives only from an authentic approved core transition targeting IMPLEMENTATION_AUTHORIZATION on one of the two legal incoming edges. The approved plan binds policy, unit, route and ceilings; the acceptance contract and dependency graph remain checked. Fixed generations prevent a later approval reviving an old reservation. A host-only lease cache grants no authority or stage transition.",
+      "closure_criterion": "Reject an initial self-issued lease, copied approval, another unit/plan/repository, stale policy/contract, invalidated dependent unit, unauthorized route/permission and rework requiring an unapproved rewind. A valid in-stage bounded lease may run permitted work but cannot advance a stage.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log",
+        "PHASE1.json"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v7 design sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d"
+    },
+    {
+      "id": "A2",
+      "status": "CLOSED (design level)",
+      "reason": "The remaining historical launch-validity dependency closes through R11. The design retains HMA-bound start refusal without the D5 hook, a hook before every launch/resume, exact-route preflight, stable IDs and pinned live-root/baseline/namespace association. HMA re-captures checks after transfer. The actual controller at 9ba1e74a still lacks D5 and route-field preservation. Those are explicit Gate C adapter work; design closure is not integration completion.",
+      "closure_criterion": "Trace two inner repair attempts, interruption/resume and an escalation. Require one HMA-bound reservation/preflight/dispatch per actual attempt. Revocation, missing preflight and required human rewind must prevent the next launch. Reproduce imported checks under HMA or use an explicitly trusted capture adapter; never count worker prose as proof.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log",
+        "PHASE1.json"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v7 design sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d"
+    },
+    {
+      "id": "A4",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. Cumulative prior unresolved findings and explicit per-ID independent resolutions remain required. Severity cannot invent a BLOCK. The authentic empty-snapshot flag, total verdict map, receipt/output/body bindings, final isolation rejection and two-part independent criterion credit are now coherent for the stated v5 closure cases. A stale pass cannot resolve F1; an advisory F2 import cannot erase F1. Actual reducer/import tests remain later gates.",
+      "closure_criterion": "Import BLOCK F1 followed by ADVISORY F2 and prove F1 remains open. Reject self-review, partial/compromised isolation for final independent acceptance, stale target, fabricated phase1 claim and out-of-criteria blockers. Retest repairs and show same-head fresh evidence can resolve an evidence-only gap without manufactured commits.",
+      "evidence_refs": [
+        "v2:103-116 (cumulative/explicit-resolution obligations only; v3 replaces old disposition rule)",
+        "v3:106-138",
+        "v4:84-95",
+        "v5:45-58",
+        "v6:9-17",
+        "probes.log:a4_prior_block_preserved and r8_*"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v6 design amendment only"
+    },
+    {
+      "id": "A6",
+      "status": "CLOSED (design level)",
+      "reason": "The remaining R11 dependency closes. Original expiry and generation revocation can no longer be extended during reconciliation. Atomic per-unit reservation charges, one-time envelope admission, lifetime monotonic counters across renewal, spent unknown/unlaunched slots, review exclusion, same-failure stopping and refusal of unsupported metering remain specified. Final-slot replay still avoids a second debit. A new generation does not reset spent authority.",
+      "closure_criterion": "For lease ceiling 5 accept envelope ceilings 4 and 5, refuse 6. Exercise crash before/after launch, resume, direct work, nested attempts, reviews, reroute and lease renewal. Assert no reset of spent authority, no third blind same-failure attempt, and refusal of unmetered paid/token routes.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md:9-40",
+        "probes.log",
+        "PHASE1.json"
+      ],
+      "code_fixed": false,
+      "fixed_revision": "v7 design sha256:acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d"
+    },
+    {
+      "id": "R1",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. Unchanged in v6; retained prior design closure. Unchanged and retained. V4 uses one target-based issuance rule over the two legal incoming edges. Review/Verification rework goes through human-approved Route selection; Independent validation can return directly to Implementation authorization. The retained active-stage, invalidation and monotonic-counter rules prevent old approvals from reviving after a rewind. No new stage or edge is introduced.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v4.md:21-42",
+        "docs/handoffs/2026-10-15-gate-a-v3.md:47-65",
+        "internal/engine/transitions.go:94-151",
+        "go-checks.log"
+      ],
+      "closure_criterion": "Design-trace a real unit from route approval through execution and review, then rewind. Require zero launches before the authentic lease approval, valid in-stage attempts after it, and rejection after rewind. Keep ValidStage/IsLegalEdge negative controls.",
+      "code_fixed": false,
+      "fixed_revision": null
+    },
+    {
+      "id": "R6",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. Unchanged in v6; retained prior design closure. Unchanged and retained. The required effective-policy digest now has a named location in hma.plan/v1. The existing accepted_plan_digest binds that document to a human approval. Current-policy mismatch voids the lease. Legacy runs without the new plan cannot obtain a lease under the retained fail-closed rule. Later code must canonicalize the effective hierarchy; the existing route-policy normalizer alone does not prove that full hierarchy is already implemented.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v4.md:44-49",
+        "docs/handoffs/2026-10-15-gate-a-v3.md:38-46,60-65",
+        "internal/engine/route_policy.go:74-97",
+        "go-checks.log"
+      ],
+      "closure_criterion": "Approve Q0, then change effective policy at the same head/plan unit => Next launch refused until applicable fresh human authority binds the new policy; Omit policy data, submit a host-only cache, or reorder semantically identical policy input => Missing/unbound policy refused; equivalent normalized policy yields the same digest; Load a legacy approval without a new plan/contract => No retroactive requirement for old transitions; no new lease is derived without the new required authority document",
+      "code_fixed": false,
+      "fixed_revision": null
+    },
+    {
+      "id": "R9",
+      "status": "CLOSED (design level)",
+      "reason": "Retained design closure; v7 does not amend this rule. Unchanged in v6; retained prior design closure. V5 classifies implementation and review launches separately. Reviews match HMA-issued review dispatches, retain stage/independence checks and do not debit implementation attempts. Missing/double matches and write-mode review receipts block. The literal controls authorize one implementation plus one legitimate review and charge one implementation attempt. Future implementation must bind the two named dispatch IDs unambiguously.",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-15-gate-a-v5.md:12-24",
+        "probes.log"
+      ],
+      "closure_criterion": "Run one implementation plus one legitimate independent review in the permitted namespace arrangement => One implementation attempt charged; both launches authorized; no false BLOCK; Add an unapproved review or relabel an implementation as review => Import refuses the unauthorized launch; role labels alone cannot bypass attempt accounting",
+      "code_fixed": false,
+      "fixed_revision": null
+    }
+  ],
+  "findings": [],
+  "new_findings": [],
+  "attack_checks": [
+    {
+      "id": "self-issued-lease",
+      "sequence": "Host writes lease cache L without an approved core issuer, or copies another unit/plan/repository approval.",
+      "expected": "No lease authority; launch hook refuses. A visible launch despite omission has no valid reservation and import creates BLOCK.",
+      "result": "No permitted design bypass found.",
+      "evidence_refs": [
+        "v3:38-65",
+        "v4:21-49"
+      ]
+    },
+    {
+      "id": "wrong-attempt-count",
+      "sequence": "Reserve final slot I; lose response; replay identical request. Then replay after ledger I exists, request new ID at exhausted capacity, and renew after prior spending.",
+      "expected": "One charge for I. One eligible unused launch while generation active. Used/new exhausted IDs refused. Unknown/unlaunched reservations stay charged. Renewal preserves total spending.",
+      "result": "No permitted double debit/reset/reuse path found. Reviews have separate issued dispatch records and do not consume implementation slots.",
+      "evidence_refs": [
+        "v4:51-66",
+        "v5:10-24",
+        "v6:27-46",
+        "v7:24-26",
+        "probes.log:r7_*"
+      ]
+    },
+    {
+      "id": "r11-revocation-counterexample",
+      "sequence": "G1 issue10/end100; approved rewind to Route selection40; delayed visible launch50 with omitted hook; approved rewind to Planning60; later authentic G2 approval70; import.",
+      "expected": "G1 end=min(100,40,60)=40. Launch50 creates UNAUTHORIZED_DISPATCH BLOCK. G2 cannot revive G1 or adopt its reservation.",
+      "result": "Old attack rejected by v7. Literal prior assignment would accept; negative control confirms test sensitivity.",
+      "evidence_refs": [
+        "v7:9-29",
+        "probes.log:r11_two_legal_rewinds",
+        "probes.log:r11_literal_v6_negative_control"
+      ]
+    },
+    {
+      "id": "expiry-counterexample",
+      "sequence": "Original expiry20; delayed visible launch30; later policy revocation40; import in either order.",
+      "expected": "End20; unauthorized launch30; no extension to40.",
+      "result": "Old attack rejected by v7.",
+      "evidence_refs": [
+        "v7:17-22",
+        "probes.log:r11_expiry_before_later_revocation"
+      ]
+    },
+    {
+      "id": "stale-or-self-review",
+      "sequence": "Create fresh completed review receipt but attach accurately hashed reserialized old PASS/resolution. Alternatively use implementation ledger run, wrong namespace/mode, nonterminal/failed worker, same reviewer/model/context, or altered target/report bytes.",
+      "expected": "Current packet digest, review ID, nonce, receipt/report/target and independence requirements refuse the import. No resolution or criterion credit.",
+      "result": "No permitted import found. No reviewer reasoning or malicious receipt-writer guarantee claimed.",
+      "evidence_refs": [
+        "v3:134-138",
+        "v4:84-95",
+        "v5:45-58",
+        "v6:9-17",
+        "probes.log:r8_*"
+      ]
+    },
+    {
+      "id": "hide-block",
+      "sequence": "Import BLOCK F1. Import advisory F2 with no F1 resolution. Then try stale/unauthenticated empty snapshot; finally test eligible exact-target independent explicit F1 resolution.",
+      "expected": "F1 remains through F2 and invalid empty imports. Only the eligible explicit resolution can remove F1 through the flagged cumulative snapshot.",
+      "result": "No permitted erasure found. Human downgrade of a kernel BLOCK stays refused.",
+      "evidence_refs": [
+        "v2:103-116 (retained cumulative-resolution rules only)",
+        "v3:106-138",
+        "v6:9-17",
+        "probes.log:a4_*",
+        "go-checks.log:TestEvaluateResolution"
+      ]
+    },
+    {
+      "id": "hook-omission-current-code",
+      "sequence": "At current 9ba1e74a validate an envelope with hma marker and no authority_hook; then supply false hook and call dispatch_agent with Popen fully mocked.",
+      "expected": "Current controller is not yet D5-conforming. Future adapter must refuse missing/failed/ineligible hook. HMA import must detect actual unreserved namespace launches.",
+      "result": "Observed acceptance without hook and mocked launch despite false hook. This is acknowledged Gate C work, not a closed runtime integration claim. No real child or model API ran.",
+      "evidence_refs": [
+        "obsidian:AgentSystem/scripts/verify-loop:363-433,831-861",
+        "probes.log:controller_*"
+      ]
+    }
+  ],
+  "approval_compatibility": {
+    "answer": "No intrinsic conflict; exact serialization and normative amendment remain mandatory.",
+    "details": [
+      "Only acceptance_contract_digest remains a proposed optional ApprovalBinding field. V3 removed execution_lease_digest. V4 binds policy_digest inside the accepted plan. findings_snapshot is an additive record flag. V7 adds no approval or core stage field.",
+      "Absent fields must preserve exact legacy serialization bytes, field order and hashes, not just equivalent JSON. New fields must be omitted when empty. Existing approvals keep legacy semantics; legacy runs without hma.plan/v1 cannot derive new leases.",
+      "For contract runs, require the contract digest on ACCEPTANCE_CRITERIA -> PLANNING and every later approval. Changed thresholds/checks/criteria/policy must invalidate affected authority. Populated fields participate in equality, transition/record digest and freshness checks. Add new-field negative and legacy golden tests during implementation.",
+      "The 2026-09-08 optional worktree binding and proposed_target_outcome precedent show compatibility is feasible. They do not waive exact architecture amendment authority. Current strict older readers can reject populated new fields; document version/read compatibility.",
+      "Nine selected existing model/engine test functions passed. They protect present behavior only; they cannot prove the not-yet-added contract field or snapshot flag."
+    ]
+  },
+  "human_decisions": {
+    "answer": "Complete for identified product-decision categories; not blanket authority to begin arbitrary Gate B code.",
+    "items": [
+      "T confirmed in this request. D1 amendment direction, D3 Phase B, D4 conditional main commits, D5 controller hook, D6 receipt digests are recorded in v4 section 0. Current dispatch supplies D2 review authorization.",
+      "No new product decision category is needed for v7 minimum-end/generation clarification. Gate A design acceptance and each applicable authentic unit/route/stage approval remain required.",
+      "Prepare exact normative text and obtain the authority required by architecture before implementation depends on changed semantics. Routine authorized existing-defect remediation need not await all Gate D documentation.",
+      "Obsidian 9ba1e74a contains the stated repair and the three files match. It is not evidence that D5 or D6 is implemented. Push remains outside D4 blanket scope."
+    ]
+  },
+  "limitations": [
+    "Isolation is partial. This is the explicitly requested v1-v6-informed re-audit, not a blind first pass. Prior auditor reports are inherited continuity evidence. Author statements inside v3-v7 were evaluated as audit objects. No implementer clarification or controlled unblinding occurred. The frozen Phase 1 is a re-audit assessment, not a claim of retrospective blinding.",
+    "The requested route is liz / OpenAI / gpt-6.1-sol / high / review mode. Actual managed runtime identity, access-service executable and the coordinator exact-route hi preflight were not independently attested. This auditor dispatched no worker and invoked no nested agent CLI or model API.",
+    "Both repositories were read-only by procedure, not OS read-only mounts. Snapshot/report/helper/test temporary/cache writes are under the output directory. Final byte/mode, HEAD, status and HMA path inventory checks found no target drift. No Git write ran.",
+    "HMA freeze covers 108 tracked or nonignored untracked paths, excluding .serena/. Ignored files and Git internals are outside the content snapshot. Obsidian scope is the three requested controller artifacts, supplemental ledger uniqueness source and the audit skill/validator. Whole Obsidian is not recertified.",
+    "The first attempted freeze used unavailable python; successful start freeze used python3. Two shorthand Obsidian paths did not exist; canonical agent-memory paths were then located, frozen before substantive inspection and checked against commit 9ba1e74a. Missing-path entries are retained in the initial manifest. Broad truncated displays were followed by focused relevant reads; full source bytes remain in content-addressed snapshots.",
+    "Gate A closes design findings only. Future reservation/import/lease-generation fields, D5 authority hook and D6 receipt changes are not runtime-validated. The current controller still accepts hma without a hook and drops provider/profile/access-service route keys. Code integration proof belongs to Gates C/D/E/F as assigned.",
+    "Original baseline code findings retain their original severity and uncertainty. H1-H4, M1-M6, L1/L3, N1/N2 remain assigned to Gate B. This re-audit neither fixes nor recertifies those code paths. D3 includes Phase B; successful closure/release behavior remains later-gate work.",
+    "Checks are bounded: 9 existing model/engine Go test functions, 7 pure/mocked controller tests and 42 pure-design/mocked observations. No full suite, race test, crash/concurrency production integration, real dispatch, provider quota/billing meter, complete skill repair audit, release gate or end-to-end dogfood ran.",
+    "The design models directly encode the written predicates. They demonstrate consistency and reject prior counterexamples; they cannot prove production HMA behavior or reviewer reasoning. Current controller observations use Popen and ledger-status mocks. No hypothetical production remedy is described as runtime validated.",
+    "T trusts the host for accident/drift detection. Same-UID hostile ledger suppression, forged receipt/report data, hostile OS and semantic reviewer dishonesty are not prevented by nonce or snapshot integrity. A 128-bit nonce binds current output under T; it is not an independent proof of reasoning.",
+    "Original human dialogue for recorded D1/D3/D4/D5/D6 was not supplied. Current user confirms T. The recorded decisions are reviewed as product-decision records, not as challenge-bound authority for a concrete Gate B unit. No exact Gate B approval packet was supplied.",
+    "JEV_UNAVAILABLE: the exposed host tool inventory contains no approved Jev tool. Auditor judgment is the documented fallback. No substitute model was presented as Jev and no model API adapter was invoked.",
+    "The skill report contract forbids verdict=pass when isolation=partial. The JSON uses conditional-pass for that disclosure and separately records gate_verdict=PASS for the explicitly permitted design re-audit. Under the proposed importer conditional-pass does not approve a stage or final acceptance. This packet is not a final independent-acceptance report.",
+    "Report validation checks form and consistency only. It does not authenticate independence, human decisions or the truth of evidence."
+  ],
+  "target_freeze": {
+    "hma_head": "118ea3ae4daf0fb9a7c7ae2f3590a40feea19d81",
+    "branch": "main",
+    "frozen_at_utc": "2026-10-15T17:49:12.081567+00:00",
+    "hma_manifest": "hma-freeze.json",
+    "hma_manifest_sha256": "fbe57bca95c03df5153096d426a6c9300cf6e65fd4d130b3e2d9c81746a10f46",
+    "hma_files": 108,
+    "v7_sha256": "acf7ca239dd65f014c2512b4f85cf2d92fe0a6e54e60c7c9a82478f560804f4d",
+    "obsidian_head": "9ba1e74a61ef5133f911903cd5c328666e2170ca",
+    "obsidian_manifest": "obsidian-freeze.json",
+    "obsidian_manifest_sha256": "e7200a11dc2aa2d73dce05fa0072f4b41b304d70bae4e7eb6a3a3b3bf48164e5",
+    "obsidian_supplemental_manifest": "obsidian-supplemental-freeze.json",
+    "obsidian_relevant_files_match_commit_9ba1e74a": true,
+    "prior_comparison": {
+      "changed": [],
+      "added": [
+        "docs/handoffs/2026-10-15-gate-a-v7.md"
+      ],
+      "removed": []
+    }
+  },
+  "phase1": {
+    "path": "PHASE1.json",
+    "sha256": "e8912d0d8e7c1a784104ca64712f2578c709382e18c476b533225380fb81e75f",
+    "frozen_at_utc": "2026-10-15T17:52:26.382810+00:00",
+    "controlled_unblinding": "None; prior-audit-informed scope disclosed from start."
+  },
+  "verification": {
+    "go": {
+      "exit_code": 0,
+      "test_functions": 9,
+      "packages": 2,
+      "log": "go-checks.log",
+      "command_record": "go-checks.json"
+    },
+    "controller_unit": {
+      "exit_code": 0,
+      "tests": 7,
+      "log": "controller-unit-checks.log",
+      "runner": "controller_unit_checks.py"
+    },
+    "independent_probes": {
+      "exit_code": 0,
+      "checks": 42,
+      "source": "probes.py",
+      "log": "probes.log",
+      "machine_results": "probe-results.json",
+      "scope": "Pure literal models and mocked current-controller observations; not production importer tests."
+    },
+    "reproduction_commands": [
+      "Use argv, cwd and environment in go-checks.json for the selected Go tests.",
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp/hma-gate-a-20261015-r7/test-tmp python3 /tmp/hma-gate-a-20261015-r7/controller_unit_checks.py",
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp/hma-gate-a-20261015-r7/test-tmp python3 /tmp/hma-gate-a-20261015-r7/probes.py",
+      "PYTHONDONTWRITEBYTECODE=1 python3 /tmp/hma-gate-a-20261015-r7/verify_target.py",
+      "python3 /tmp/hma-gate-a-20261015-r7/obsidian-snapshot/AgentSystem/agent-memory/skills/independent-audit/scripts/validate_report.py /tmp/hma-gate-a-20261015-r7/AUDIT.json"
+    ]
+  },
+  "evidence_inventory": [
+    "snapshot/",
+    "obsidian-snapshot/",
+    "prior-reports/",
+    "hma-freeze.json",
+    "obsidian-freeze.json",
+    "obsidian-supplemental-freeze.json",
+    "obsidian-commit-comparison.json",
+    "prior-comparison.json",
+    "PHASE1.json",
+    "go-checks.json",
+    "go-checks.log",
+    "controller_unit_checks.py",
+    "controller-unit-checks.log",
+    "python-checks.json",
+    "probes.py",
+    "probes.log",
+    "probe-results.json",
+    "verify_target.py",
+    "target-verification.json",
+    "build_report.py",
+    "report-validation.log"
+  ],
+  "improvement_opportunities": [],
+  "next_action": {
+    "action": "CONTINUE",
+    "owner": "Ming",
+    "current_outcome": "Gate A PASS at design level; R11/R4/A1/A2/A6 closed; no new design finding.",
+    "rationale": "V7 meets the last open design closure criterion. Existing defect remediation is the next ordered gate in the original objective.",
+    "recommendation": "Prepare the first bounded Gate B existing-defect remediation unit and its exact approval packet, then execute only under the applicable authentic approvals.",
+    "proposed_route": "Ming / Anthropic / claude-opus-5-5 / high / Claude Code CLI through the existing approved access-service profile. Confirm exact eligible route/service and perform hi before any dispatch. This auditor dispatches nobody.",
+    "permission_envelope": "Approved Gate B existing-defect scope and per-unit file/tool/cost envelope. Prepare and audit concrete normative amendments before code depends on changed approval semantics. This report grants no repository/Git write, push, publication, new budget or stage authority.",
+    "exact_approval_required": "Human Gate A design acceptance where required by the governing run, plus the concrete challenge-bound unit/route/stage approvals required by architecture sections 4-6. Existing valid approvals need not be requested again. D1 is direction, not approval of unwritten exact semantic text. D4 commits remain conditional on the corresponding gate audit and full tests; push requires separate explicit approval.",
+    "stop_escalation_conditions": "Stop for missing/stale authority, an open kernel finding, unavailable/indeterminate route, acceptance/risk/permission/budget change, or conflict with normative architecture. Escalate such cases to Lennon. Do not treat gate_verdict or the report as an HMA stage transition."
+  },
+  "target_verification": {
+    "path": "target-verification.json",
+    "all_unchanged": true,
+    "sha256": "9ea0009840c4114516d66b13161922e6d85cb45a43b3f465eead926ed96a2ac6"
+  },
+  "report_validation": {
+    "command": "python3 obsidian-snapshot/AgentSystem/agent-memory/skills/independent-audit/scripts/validate_report.py AUDIT.json",
+    "log": "report-validation.log",
+    "scope": "Structure only; exit status is recorded after execution.",
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,894 @@
+{
+  "audit_id": "hma-gate-a-audit-20261015",
+  "dispatch_id": "hma-gate-a-audit-20261015",
+  "date": "2026-10-15T13:36:13.913606+00:00",
+  "modes": [
+    "plan",
+    "code"
+  ],
+  "target": "git:118ea3ae4daf0fb9a7c7ae2f3590a40feea19d81; tracked-diff-sha256:ce2c0caf6c85ea3539542511709e1e3e7e96dc7fa299316a53c7ad6b1466b66c; file-manifest-sha256:3e1c0dfc56e135fabb9e0923b49fdf617d401e7410675b402305a12500e13cd4; baseline-sha256:a90913fea56132d2f412cbef318079fd4c0369d749e4324b94129fed20333125",
+  "isolation": "isolated",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "requirements": [
+    {
+      "id": "Q1-finding-status-and-missing-defects",
+      "status": "fail",
+      "evidence_refs": [
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "L1",
+        "L2",
+        "L3",
+        "N1",
+        "N2"
+      ]
+    },
+    {
+      "id": "Q2-architecture-and-human-authority",
+      "status": "fail",
+      "evidence_refs": [
+        "A1",
+        "A3",
+        "A5",
+        "A6",
+        "A7",
+        "N1"
+      ]
+    },
+    {
+      "id": "Q3-skill-mapping-and-independent-proof",
+      "status": "fail",
+      "evidence_refs": [
+        "A2",
+        "A4",
+        "A6"
+      ]
+    },
+    {
+      "id": "Q4-plan-findings-decisions-and-Gate-B-readiness",
+      "status": "fail",
+      "evidence_refs": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7"
+      ]
+    },
+    {
+      "id": "Q5-minimum-proof-test-plan",
+      "status": "fail",
+      "evidence_refs": [
+        "A8",
+        "L2",
+        "N1",
+        "N2"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "H1",
+      "title": "CI reads the record stage instead of the projected stage",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "CI uses the last record Stage. Approved transition records store the source stage. Resolution records can omit Stage. CI can reject a permitted current stage or evaluate a stage the run has left.",
+      "expected": "CI must evaluate the committed current stage and select a corresponding applicable approval.",
+      "actual": "CI uses the last record Stage. Approved transition records store the source stage. Resolution records can omit Stage. CI can reject a permitted current stage or evaluate a stage the run has left.",
+      "evidence": [
+        {
+          "source": "cmd/hma/ci.go:72-90,130; internal/engine/stage_state.go:62-87",
+          "observation": "CI uses the last record Stage. Approved transition records store the source stage. Resolution records can omit Stage. CI can reject a permitted current stage or evaluate a stage the run has left."
+        }
+      ],
+      "fix": {
+        "action": "Use ProjectStageState for CI legality and evidence-record stage. Select the bound approval by the intended CI check, rather than the latest arbitrary Approval pointer.",
+        "why": "CI must evaluate the committed current stage and select a corresponding applicable approval.",
+        "verification": [
+          {
+            "method": "Run CI after IMPLEMENTATION_AUTHORIZATION -> IMPLEMENTATION_REVIEW and after an appended resolution. Also test VERIFICATION -> INDEPENDENT_VALIDATION. Assert projected-stage behavior and no fallback to an unrelated approval.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A projected stage alone does not supply a produced-head approval where the preceding source-stage approval never bound one.",
+        "alternative": "Require an explicit validated CI request bound to the projected stage. This changes more CLI surface.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Run CI after IMPLEMENTATION_AUTHORIZATION -> IMPLEMENTATION_REVIEW and after an appended resolution. Also test VERIFICATION -> INDEPENDENT_VALIDATION. Assert projected-stage behavior and no fallback to an unrelated approval.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "H2",
+      "title": "Pilot rejects valid early-stage approvals",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "A Grounding approval without produced head/diff is rejected as expected approval binding is stale. Model validation forbids those fields at early stages. The independent probe reproduced the conflict.",
+      "expected": "Pilot must enforce head/diff only at stages whose approval binds them. Its live capture snapshot still binds the actual evidence.",
+      "actual": "A Grounding approval without produced head/diff is rejected as expected approval binding is stale. Model validation forbids those fields at early stages. The independent probe reproduced the conflict.",
+      "evidence": [
+        {
+          "source": "internal/pilot/run.go:90-95; internal/model/validate.go:175-188; probes.log:TestAuditEarlyStagePilot",
+          "observation": "A Grounding approval without produced head/diff is rejected as expected approval binding is stale. Model validation forbids those fields at early stages. The independent probe reproduced the conflict."
+        }
+      ],
+      "fix": {
+        "action": "Reuse model.ApprovalBindsHeadDiff for the expected-approval comparison, as transition.Apply already does. Keep live repository and exact dirty-content checks.",
+        "why": "Pilot must enforce head/diff only at stages whose approval binds them. Its live capture snapshot still binds the actual evidence.",
+        "verification": [
+          {
+            "method": "Pass valid Grounding and Planning captures without approval head/diff. Reject stale head/diff at Implementation Review and a changed approved dirty worktree.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Do not remove live snapshot checks when narrowing approval comparisons.",
+        "alternative": "Limit pilot to later stages and introduce a separate early-stage evidence path. This is a larger compatibility change.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Pass valid Grounding and Planning captures without approval head/diff. Reject stale head/diff at Implementation Review and a changed approved dirty worktree.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "H3",
+      "title": "Host append has no interrupted-write recovery",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Append writes a numbered record before the head. The crash-window byte state (durable record, missing head) fails Load with HOST_HEAD_MISMATCH. The independent probe reconstructed that state; it did not kill a process. There is no pending transaction or per-run lock. O_EXCL does prevent two writers from overwriting the same numbered file; lost writes from concurrency were not demonstrated.",
+      "expected": "Interrupted appends must recover or roll back deterministically without losing a committed record. Concurrent writes must preserve one valid chain.",
+      "actual": "Append writes a numbered record before the head. The crash-window byte state (durable record, missing head) fails Load with HOST_HEAD_MISMATCH. The independent probe reconstructed that state; it did not kill a process. There is no pending transaction or per-run lock. O_EXCL does prevent two writers from overwriting the same numbered file; lost writes from concurrency were not demonstrated.",
+      "evidence": [
+        {
+          "source": "internal/host/store.go:85-135,138-192; probes.log:TestAuditHostInterruptedHead",
+          "observation": "Append writes a numbered record before the head. The crash-window byte state (durable record, missing head) fails Load with HOST_HEAD_MISMATCH. The independent probe reconstructed that state; it did not kill a process. There is no pending transaction or per-run lock. O_EXCL does prevent two writers from overwriting the same numbered file; lost writes from concurrency were not demonstrated."
+        }
+      ],
+      "fix": {
+        "action": "Use a per-run transaction lock and durable pending commit protocol comparable to the core store. Recover before Load/Append and synchronize directory changes where required.",
+        "why": "Interrupted appends must recover or roll back deterministically without losing a committed record. Concurrent writes must preserve one valid chain.",
+        "verification": [
+          {
+            "method": "Inject failure after creation, partial record write, fsync, pending intent and head replacement. Restart and assert one valid committed prefix. Exercise separate-process writers and verify every accepted append remains in the chain.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Recovery needs an explicit commit point. Blindly trusting the final numbered record could accept an incomplete write.",
+        "alternative": "Store host events through a shared proven transaction primitive while preserving separate host record semantics.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Inject failure after creation, partial record write, fsync, pending intent and head replacement. Restart and assert one valid committed prefix. Exercise separate-process writers and verify every accepted append remains in the chain.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "H4",
+      "title": "Host operations accept a terminal run",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "A core ABORTED outcome does not clear the route digest. A new host decision succeeds and appends against that terminal core head. The same outcome checks are absent from the other host mutation entrypoints.",
+      "expected": "A terminal run must refuse new execution-authorizing host operations. Reading historical telemetry can remain allowed.",
+      "actual": "A core ABORTED outcome does not clear the route digest. A new host decision succeeds and appends against that terminal core head. The same outcome checks are absent from the other host mutation entrypoints.",
+      "evidence": [
+        {
+          "source": "cmd/hma/host.go:76-121,131-253; cmd/hma/transition.go:131-164; probes.log:TestAuditTerminalHostDecision",
+          "observation": "A core ABORTED outcome does not clear the route digest. A new host decision succeeds and appends against that terminal core head. The same outcome checks are absent from the other host mutation entrypoints."
+        }
+      ],
+      "fix": {
+        "action": "Project core stage/outcome before all host execution mutations. Reject terminal execution and bind the check and append to a consistent core snapshot. Define any allowed post-terminal reporting operation explicitly.",
+        "why": "A terminal run must refuse new execution-authorizing host operations. Reading historical telemetry can remain allowed.",
+        "verification": [
+          {
+            "method": "After each supported terminal outcome, refuse decision, preflight and dispatch without byte changes. Test any permitted read/report path separately.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A future lease check does not repair the present defect until it is implemented on every path.",
+        "alternative": "Apply the terminal guard at a shared host boundary and keep historical reads available.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "After each supported terminal outcome, refuse decision, preflight and dispatch without byte changes. Test any permitted read/report path separately.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M1",
+      "title": "CI can write a store inside the claimed repository",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "CI appends evidence to a store under --repo-root. It does not call StoreOutsideRepository. The probe reproduced this with a claimed root; actual Git identity is independently missing under N2.",
+      "expected": "The canonical store must remain outside the worker-writable project tree (architecture \u00a715).",
+      "actual": "CI appends evidence to a store under --repo-root. It does not call StoreOutsideRepository. The probe reproduced this with a claimed root; actual Git identity is independently missing under N2.",
+      "evidence": [
+        {
+          "source": "cmd/hma/ci.go:40-58,104-134; probes.log:TestAuditCIInsideRepositoryStore",
+          "observation": "CI appends evidence to a store under --repo-root. It does not call StoreOutsideRepository. The probe reproduced this with a claimed root; actual Git identity is independently missing under N2."
+        }
+      ],
+      "fix": {
+        "action": "Apply the canonical, symlink-aware outside-repository store guard before CI evidence execution or mutation.",
+        "why": "The canonical store must remain outside the worker-writable project tree (architecture \u00a715).",
+        "verification": [
+          {
+            "method": "Reject a store inside an actual scratch Git repository and one that resolves inside through a symlink. Allow a separate scratch store.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Use canonical paths so a lexical prefix check cannot miss symlinks.",
+        "alternative": "Require the host to provide an already validated external store handle; this needs a wider API change.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Reject a store inside an actual scratch Git repository and one that resolves inside through a symlink. Allow a separate scratch store.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M2",
+      "title": "Resolve accepts trailing JSON documents",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "A valid waiver JSON followed by a second JSON object is accepted and appends the waiver. The independent probe reproduced this.",
+      "expected": "One CLI input must contain exactly one strictly decoded document.",
+      "actual": "A valid waiver JSON followed by a second JSON object is accepted and appends the waiver. The independent probe reproduced this.",
+      "evidence": [
+        {
+          "source": "cmd/hma/resolve.go:52-57; probes.log:TestAuditResolveTrailingJSON",
+          "observation": "A valid waiver JSON followed by a second JSON object is accepted and appends the waiver. The independent probe reproduced this."
+        }
+      ],
+      "fix": {
+        "action": "Use the existing strict decoder helper, including a trailing io.EOF check, before any store mutation.",
+        "why": "One CLI input must contain exactly one strictly decoded document.",
+        "verification": [
+          {
+            "method": "Reject two documents and trailing malformed tokens. Accept whitespace after one valid document. Assert unchanged chain/head bytes on refusal.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Clients relying on ignored trailing bytes will fail. That is the intended boundary.",
+        "alternative": "Add an equivalent local EOF check if sharing the helper would create package coupling.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Reject two documents and trailing malformed tokens. Accept whitespace after one valid document. Assert unchanged chain/head bytes on refusal.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M3",
+      "title": "Caller can select weak independence for critical risk",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "A CRITICAL request with a same-provider/model-family validator is rejected with the high-risk rule, then accepted when only independence_rule_id changes to a low-risk rule. The policy contains both rules. The independent probe supplies this negative control. The reference audit labels this medium; high is appropriate because the \u00a713 independence requirement is bypassed in the route evaluator.",
+      "expected": "Caller selection cannot weaken the mandatory high-risk, disputed or final independence floor.",
+      "actual": "A CRITICAL request with a same-provider/model-family validator is rejected with the high-risk rule, then accepted when only independence_rule_id changes to a low-risk rule. The policy contains both rules. The independent probe supplies this negative control. The reference audit labels this medium; high is appropriate because the \u00a713 independence requirement is bypassed in the route evaluator.",
+      "evidence": [
+        {
+          "source": "internal/engine/route_coherence.go:263-273,308-325; probes.log:TestAuditCriticalWeakRule",
+          "observation": "A CRITICAL request with a same-provider/model-family validator is rejected with the high-risk rule, then accepted when only independence_rule_id changes to a low-risk rule. The policy contains both rules. The independent probe supplies this negative control. The reference audit labels this medium; high is appropriate because the \u00a713 independence requirement is bypassed in the route evaluator."
+        }
+      ],
+      "fix": {
+        "action": "Derive the effective independence constraints from risk and all applicable policy rules. Enforce the kernel floor independently of the caller rule ID. Explicitly represent disputed/final conditions when this evaluator is used for those decisions.",
+        "why": "Caller selection cannot weaken the mandatory high-risk, disputed or final independence floor.",
+        "verification": [
+          {
+            "method": "For CRITICAL and HIGH, select every lower-risk rule in turn and assert same-family rejection. Preserve valid separated routes and normal-work controls. Cover final and disputed validation.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Combining constraints requires a deterministic documented precedence or union rule.",
+        "alternative": "Reject every noncanonical rule selection for the risk, then enforce the kernel floor separately.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "For CRITICAL and HIGH, select every lower-risk rule in turn and assert same-family rejection. Preserve valid separated routes and normal-work controls. Cover final and disputed validation.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M4",
+      "title": "Review gate omits direct route revalidation; exploit remains unproven",
+      "kind": "risk",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "inferred",
+      "diagnosis": "The second coding gate checks an APPROVE and the review record core head, but does not call requireApprovedHostRoute. Core-head freshness rejects simple old-review reuse after a rewind. No legal end-to-end bypass due only to this omission was reproduced. The baseline accurately calls it structural and unproven.",
+      "expected": "Do not describe this as a demonstrated route bypass. Determine whether the second gate must enforce an active route under the approved contract.",
+      "actual": "The second coding gate checks an APPROVE and the review record core head, but does not call requireApprovedHostRoute. Core-head freshness rejects simple old-review reuse after a rewind. No legal end-to-end bypass due only to this omission was reproduced. The baseline accurately calls it structural and unproven.",
+      "evidence": [
+        {
+          "source": "cmd/hma/transition.go:35-74; cmd/hma/host.go:229-248",
+          "observation": "The second coding gate checks an APPROVE and the review record core head, but does not call requireApprovedHostRoute. Core-head freshness rejects simple old-review reuse after a rewind. No legal end-to-end bypass due only to this omission was reproduced. The baseline accurately calls it structural and unproven."
+        }
+      ],
+      "fix": {
+        "action": "First add a route-supersession/rewind test through both legal coding edges, including attempted review re-attestation. Revalidate the current route and implementation at the shared gate if needed; retain freshness checks.",
+        "why": "Do not describe this as a demonstrated route bypass. Determine whether the second gate must enforce an active route under the approved contract.",
+        "verification": [
+          {
+            "method": "Attempt stale, superseded, dependent-invalidated and re-attested review paths with authentic fixture transitions. Report the actual first refusal. Close as a documented non-defect if all legal paths enforce the invariant elsewhere.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A redundant check can improve defense but must not invent an approval requirement.",
+        "alternative": "Prove the invariant from the full transition path and retain the omission with that proof.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Attempt stale, superseded, dependent-invalidated and re-attested review paths with authentic fixture transitions. Report the actual first refusal. Close as a documented non-defect if all legal paths enforce the invariant elsewhere.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M5",
+      "title": "Synthetic-store marker does not establish fixture ownership",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "requireSyntheticStore uses os.Stat only. A copied marker, symlink or directory with that name passes. Approval seeding accepts any nonempty run, without checking the seeded criterion identity, run contents or prior approvals. This is a fixture guard defect, not a same-UID tamper-resistance claim.",
+      "expected": "Synthetic approval-shaped records must be confined to an identified scratch fixture, not appended to an arbitrary marked store.",
+      "actual": "requireSyntheticStore uses os.Stat only. A copied marker, symlink or directory with that name passes. Approval seeding accepts any nonempty run, without checking the seeded criterion identity, run contents or prior approvals. This is a fixture guard defect, not a same-UID tamper-resistance claim.",
+      "evidence": [
+        {
+          "source": "scripts/dogfood/hostinput/main.go:112-116,144-170",
+          "observation": "requireSyntheticStore uses os.Stat only. A copied marker, symlink or directory with that name passes. Approval seeding accepts any nonempty run, without checking the seeded criterion identity, run contents or prior approvals. This is a fixture guard defect, not a same-UID tamper-resistance claim."
+        }
+      ],
+      "fix": {
+        "action": "Validate canonical scratch ownership, a regular non-symlink marker with expected identity, the exact seed run and permitted record sequence before seeding. Refuse existing approvals and foreign records.",
+        "why": "Synthetic approval-shaped records must be confined to an identified scratch fixture, not appended to an arbitrary marked store.",
+        "verification": [
+          {
+            "method": "Reject marker directories/symlinks, copied markers on foreign stores, mismatched runs, foreign seed records and second approval seeding. Keep the labelled fresh-scratch positive fixture.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Filesystem marker checks cannot protect against a fully hostile same-user writer. Keep the trust claim bounded.",
+        "alternative": "Eliminate the standalone seeding command and create all fixture state inside a scratch-only test harness.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Reject marker directories/symlinks, copied markers on foreign stores, mismatched runs, foreign seed records and second approval seeding. Keep the labelled fresh-scratch positive fixture.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "M6",
+      "title": "Refusal harness compares record counts, not stored bytes",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "expect_refusal checks host record count and core line count. An in-place change of a record or anchor can preserve both counts. The baseline correctly retains this finding.",
+      "expected": "A refusal that promises no mutation must preserve all relevant chain and head bytes.",
+      "actual": "expect_refusal checks host record count and core line count. An in-place change of a record or anchor can preserve both counts. The baseline correctly retains this finding.",
+      "evidence": [
+        {
+          "source": "scripts/dogfood/host-dogfood.sh:69-80",
+          "observation": "expect_refusal checks host record count and core line count. An in-place change of a record or anchor can preserve both counts. The baseline correctly retains this finding."
+        }
+      ],
+      "fix": {
+        "action": "Hash a sorted path/content manifest of core stream, core head/pending state and host record/head files before and after refusal. Compare additions, deletions and content.",
+        "why": "A refusal that promises no mutation must preserve all relevant chain and head bytes.",
+        "verification": [
+          {
+            "method": "Use a deliberately mutating refusal double that preserves counts but alters one stored byte. The harness must fail. Unchanged genuine refusals must pass.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Snapshot only the controlled store; stdout logs and unrelated scratch outputs should not affect the comparison.",
+        "alternative": "Compare complete copied store trees byte-for-byte in scratch instead of hashes.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Use a deliberately mutating refusal double that preserves counts but alters one stored byte. The harness must fail. Unchanged genuine refusals must pass.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "L1",
+      "title": "Route attestation lacks direct structural test coverage",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "low",
+      "confidence": "observed",
+      "diagnosis": "The attestation validator exists, but the model tests do not directly exercise its structural field boundaries. The prior low-priority coverage observation is correct. Missing coverage alone is not a demonstrated production failure.",
+      "expected": "The portable attestation field contract needs positive and negative structural fixtures.",
+      "actual": "The attestation validator exists, but the model tests do not directly exercise its structural field boundaries. The prior low-priority coverage observation is correct. Missing coverage alone is not a demonstrated production failure.",
+      "evidence": [
+        {
+          "source": "internal/model/route.go:51-103; internal/model/*_test.go (rg for RouteAttestation/validateRouteAttestation returned no matches)",
+          "observation": "The attestation validator exists, but the model tests do not directly exercise its structural field boundaries. The prior low-priority coverage observation is correct. Missing coverage alone is not a demonstrated production failure."
+        }
+      ],
+      "fix": {
+        "action": "Add a valid attestation and table cases for missing required fields, invalid execution context, empty class sets and empty members through ValidateRecord.",
+        "why": "The portable attestation field contract needs positive and negative structural fixtures.",
+        "verification": [
+          {
+            "method": "Assert acceptance of the valid control and refusal of each malformed attestation. Test the intentional nil-attestation compatibility path.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Tests should encode the approved schema, not silently add policy semantics to structural validation.",
+        "alternative": "Cover these cases in portable schema conformance tests when those schemas ship.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Assert acceptance of the valid control and refusal of each malformed attestation. Test the intentional nil-attestation compatibility path.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "L2",
+      "title": "Verified closure and the \u00a721 release gate remain deferred",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The write path refuses VERIFIED_SUCCESS and VERIFIED_WITH_WAIVERS. The CI evaluator checks stage and identity only; it does not implement the \u00a721 release contract. The baseline is correct that this is deferred work, not a new regression. It is high impact relative to the approved consolidation outcome.",
+      "expected": "The final requested verified closure must have independently verified criteria, final validation, required CI and authentic human closure authority.",
+      "actual": "The write path refuses VERIFIED_SUCCESS and VERIFIED_WITH_WAIVERS. The CI evaluator checks stage and identity only; it does not implement the \u00a721 release contract. The baseline is correct that this is deferred work, not a new regression. It is high impact relative to the approved consolidation outcome.",
+      "evidence": [
+        {
+          "source": "docs/task13-terminal-outcomes.md:41-46; internal/engine/ci_verification.go:24-53; internal/engine/stage_state.go:ReasonOutcomeNotImplemented; README.md deferred phases",
+          "observation": "The write path refuses VERIFIED_SUCCESS and VERIFIED_WITH_WAIVERS. The CI evaluator checks stage and identity only; it does not implement the \u00a721 release contract. The baseline is correct that this is deferred work, not a new regression. It is high impact relative to the approved consolidation outcome."
+        }
+      ],
+      "fix": {
+        "action": "Resolve D3 explicitly. Include the minimal Phase B verified-closure and \u00a721 work in the authorized plan, or obtain explicit human approval to reduce the original deliverable and label it incomplete.",
+        "why": "The final requested verified closure must have independently verified criteria, final validation, required CI and authentic human closure authority.",
+        "verification": [
+          {
+            "method": "Exercise successful closure only from RELEASE_AND_CLOSURE with all required proof. Reject missing final audit, required CI, stale evidence, unresolved BLOCK/WAIVABLE and missing human approval. Test waivers yield VERIFIED_WITH_WAIVERS.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "This is broader than defect-only Gate B. It must have an explicit phase and approval boundary.",
+        "alternative": "Deliver an explicitly human-approved partial scope. That alternative cannot be called completion of the original plan.",
+        "effort": "large",
+        "status": "proposed"
+      },
+      "closure_criterion": "Exercise successful closure only from RELEASE_AND_CLOSURE with all required proof. Reject missing final audit, required CI, stale evidence, unresolved BLOCK/WAIVABLE and missing human approval. Test waivers yield VERIFIED_WITH_WAIVERS.",
+      "priority": "Resolve scope before Gate B; implement at approved later gate",
+      "fixed_revision": null
+    },
+    {
+      "id": "L3",
+      "title": "CI does not execute the shell dogfood harness",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "low",
+      "confidence": "observed",
+      "diagnosis": "The workflow runs formatting, vet, build, tests, race and determinism. It has no dogfood step. Go test does not execute the shell harness. The baseline status is correct.",
+      "expected": "The hardened executable harness must run in the conformance workflow before its result is used as release evidence.",
+      "actual": "The workflow runs formatting, vet, build, tests, race and determinism. It has no dogfood step. Go test does not execute the shell harness. The baseline status is correct.",
+      "evidence": [
+        {
+          "source": ".github/workflows/ci.yml:verify steps; scripts/dogfood/host-dogfood.sh",
+          "observation": "The workflow runs formatting, vet, build, tests, race and determinism. It has no dogfood step. Go test does not execute the shell harness. The baseline status is correct."
+        }
+      ],
+      "fix": {
+        "action": "After M5/M6 review, add a CI step for the harness with declared Go/jq dependencies and retained failure evidence.",
+        "why": "The hardened executable harness must run in the conformance workflow before its result is used as release evidence.",
+        "verification": [
+          {
+            "method": "Run the workflow command in a scratch store and prove an induced harness failure fails the job.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A green synthetic harness remains synthetic evidence; it does not prove real host dispatch.",
+        "alternative": "Move the same bounded CLI checks into Go integration tests that CI already executes.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Run the workflow command in a scratch store and prove an induced harness failure fails the job.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "N1",
+      "title": "Independent review is not bound to the transition artifact",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The same valid review lets requireHostTransitionGate accept two different ProducedHeadDigest values with an unrelated DiffDigest. The gate never resolves ArtifactDigest/ReviewPacketDigest to the transition repository, head, diff or exact dirty bytes. The probe demonstrates the host-gate defect, not a complete stage transition without human approval.",
+      "expected": "Only an independent review of the exact artifact being progressed may satisfy a coding gate (architecture \u00a7\u00a76,12.4,14).",
+      "actual": "The same valid review lets requireHostTransitionGate accept two different ProducedHeadDigest values with an unrelated DiffDigest. The gate never resolves ArtifactDigest/ReviewPacketDigest to the transition repository, head, diff or exact dirty bytes. The probe demonstrates the host-gate defect, not a complete stage transition without human approval.",
+      "evidence": [
+        {
+          "source": "cmd/hma/transition.go:54-74; internal/host/host.go:118-141,589-608,635-649; probes.log:TestAuditReviewGateUnreviewedArtifact",
+          "observation": "The same valid review lets requireHostTransitionGate accept two different ProducedHeadDigest values with an unrelated DiffDigest. The gate never resolves ArtifactDigest/ReviewPacketDigest to the transition repository, head, diff or exact dirty bytes. The probe demonstrates the host-gate defect, not a complete stage transition without human approval."
+        }
+      ],
+      "fix": {
+        "action": "Define an immutable artifact manifest with repository/base/head/diff and optional exact worktree digest, plus the core/host binding. Resolve and compare it at review import and the transition gate. Make any later artifact change require a fresh independent review.",
+        "why": "Only an independent review of the exact artifact being progressed may satisfy a coding gate (architecture \u00a7\u00a76,12.4,14).",
+        "verification": [
+          {
+            "method": "Review artifact A, change the artifact to B without changing the core chain, and present otherwise valid approval for B. Reject progression until a fresh review of B is recorded. Include dirty bytes and a valid A control.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "An opaque digest proves equality only between fields that are actually compared. Do not replace the human approval or expand the same-UID threat model.",
+        "alternative": "Persist explicit artifact binding fields on review records and compare them directly; still retain immutable packet bytes.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Review artifact A, change the artifact to B without changing the core chain, and present otherwise valid approval for B. Reject progression until a fresh review of B is recorded. Include dirty bytes and a valid A control.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "N2",
+      "title": "CI labels evidence with a revision it never checks locally",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "CI accepts matching environment strings and an approval, runs /bin/true in an empty non-Git directory, and writes evidence labelled approved-sha with the approval diff. The independent probe reproduced this. The existing positive CI test also uses a non-Git directory. No before/after Git snapshot or dirty-content check establishes what was tested.",
+      "expected": "Fresh required evidence must describe the exact tested repository content. Environment metadata alone is insufficient (architecture \u00a7\u00a77.1,14,21).",
+      "actual": "CI accepts matching environment strings and an approval, runs /bin/true in an empty non-Git directory, and writes evidence labelled approved-sha with the approval diff. The independent probe reproduced this. The existing positive CI test also uses a non-Git directory. No before/after Git snapshot or dirty-content check establishes what was tested.",
+      "evidence": [
+        {
+          "source": "cmd/hma/ci.go:85-115; internal/evidence/capture.go:98-160; cmd/hma/main_test.go:256-287; probes.log:TestAuditCINonRepositoryEvidence",
+          "observation": "CI accepts matching environment strings and an approval, runs /bin/true in an empty non-Git directory, and writes evidence labelled approved-sha with the approval diff. The independent probe reproduced this. The existing positive CI test also uses a non-Git directory. No before/after Git snapshot or dirty-content check establishes what was tested."
+        }
+      ],
+      "fix": {
+        "action": "Validate the actual --repo-root repository, base, head, diff and approved dirty-content state before capture. Capture metadata from that snapshot. Verify unchanged content after the command before appending evidence.",
+        "why": "Fresh required evidence must describe the exact tested repository content. Environment metadata alone is insufficient (architecture \u00a7\u00a77.1,14,21).",
+        "verification": [
+          {
+            "method": "Reject an empty directory, another checkout, wrong head/diff, unapproved dirt and a command that mutates the checkout. Accept only a real matching clean/explicitly bound dirty fixture.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "GitHub environment identity still has host-trust limits; this fix establishes actual local content, not actor authentication.",
+        "alternative": "Delegate capture to the established pilot snapshot boundary with CI-specific identity checks.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Reject an empty directory, another checkout, wrong head/diff, unapproved dirt and a command that mutates the checkout. Accept only a real matching clean/explicitly bound dirty fixture.",
+      "priority": "Gate B",
+      "fixed_revision": null
+    },
+    {
+      "id": "A1",
+      "title": "Lease and contract approval authority is underspecified",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The proposed initial lease contains no human decision reference or approval binding. Active checks cover expiry, counters, current route/contract and nonterminal status, but not an approved unit/plan, legal execution phase, exact permission facts or dependent-unit invalidation. Only widening is explicitly called human-approved. The packet acknowledges that existing route approval stores no approved route facts, yet gives that digest authority over the lease.",
+      "expected": "A host execution lease must derive authority from an authentic trusted human decision for exact approved scope. It cannot authorize a new HMA stage or bypass the human gate on rework.",
+      "actual": "The proposed initial lease contains no human decision reference or approval binding. Active checks cover expiry, counters, current route/contract and nonterminal status, but not an approved unit/plan, legal execution phase, exact permission facts or dependent-unit invalidation. Only widening is explicitly called human-approved. The packet acknowledges that existing route approval stores no approved route facts, yet gives that digest authority over the lease.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:87-110,141-144; docs/architecture.md \u00a7\u00a74-6,10,12.4,15",
+          "observation": "The proposed initial lease contains no human decision reference or approval binding. Active checks cover expiry, counters, current route/contract and nonterminal status, but not an approved unit/plan, legal execution phase, exact permission facts or dependent-unit invalidation. Only widening is explicitly called human-approved. The packet acknowledges that existing route approval stores no approved route facts, yet gives that digest authority over the lease."
+        }
+      ],
+      "fix": {
+        "action": "Specify the trusted issuance/revocation path, exact human-bound lease/contract/policy digests, approved plan/unit/route roles and permission facts, legal phase conditions, dependency invalidation and replay rules. Keep worker access outside the approval/store boundary. Make all host execution entrypoints consume this checked authority; retain the existing transition approval path.",
+        "why": "A host execution lease must derive authority from an authentic trusted human decision for exact approved scope. It cannot authorize a new HMA stage or bypass the human gate on rework.",
+        "verification": [
+          {
+            "method": "Reject an initial self-issued lease, copied approval, another unit/plan/repository, stale policy/contract, invalidated dependent unit, unauthorized route/permission and rework requiring an unapproved rewind. A valid in-stage bounded lease may run permitted work but cannot advance a stage.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "This requires a concrete architecture amendment and persisted approval facts. Merely accepting D1 direction does not define the binding. No new cryptographic identity system is required within the existing trusted-host threat model.",
+        "alternative": "Defer lease dispatch and retain manual trusted-host execution until the authority schema is approved.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Reject an initial self-issued lease, copied approval, another unit/plan/repository, stale policy/contract, invalidated dependent unit, unauthorized route/permission and rework requiring an unapproved rewind. A valid in-stage bounded lease may run permitted work but cannot advance a stage.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A2",
+      "title": "Completed verify-loop import does not integrate its execution authority",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The actual controller owns attempts, deadlines, recovery and worker launch through agent-dispatch. It can select an escalation route after failed interventions. The proposed mapping only imports a completed result. It defines no before-each-attempt HMA eligibility, exact-route preflight, dispatch receipt, authority/stop check, or approved escalation bridge. Host counting of dispatch records will miss these inner attempts unless that bridge exists. The current skill also runs workers/checks in a private clone and copies changed paths back; the packet does not bind clone evidence to the returned HMA artifact.",
+      "expected": "Use one authoritative HMA run and approval model. Retain the controller execution journal as subordinate evidence. Every actual dispatch must obey HMA policy, including resume and escalation.",
+      "actual": "The actual controller owns attempts, deadlines, recovery and worker launch through agent-dispatch. It can select an escalation route after failed interventions. The proposed mapping only imports a completed result. It defines no before-each-attempt HMA eligibility, exact-route preflight, dispatch receipt, authority/stop check, or approved escalation bridge. Host counting of dispatch records will miss these inner attempts unless that bridge exists. The current skill also runs workers/checks in a private clone and copies changed paths back; the packet does not bind clone evidence to the returned HMA artifact.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:129-137; external-snapshot/scripts/verify-loop:819-850,1255-1273,1437-1448; external-snapshot/agent-memory/skills/verify-loop.md:3-13,44-74",
+          "observation": "The actual controller owns attempts, deadlines, recovery and worker launch through agent-dispatch. It can select an escalation route after failed interventions. The proposed mapping only imports a completed result. It defines no before-each-attempt HMA eligibility, exact-route preflight, dispatch receipt, authority/stop check, or approved escalation bridge. Host counting of dispatch records will miss these inner attempts unless that bridge exists. The current skill also runs workers/checks in a private clone and copies changed paths back; the packet does not bind clone evidence to the returned HMA artifact."
+        }
+      ],
+      "fix": {
+        "action": "Choose and document one integration seam before Gate C. Prefer a controller callback/adapter that reserves each attempt under the HMA lease, validates the exact approved route, performs real preflight, records dispatch before launch, and checks stop/rewind conditions. Bind controller run/envelope/check-definition hashes and clone/result artifact digests on import. HMA owns findings/acceptance; the loop owns only its execution journal.",
+        "why": "Use one authoritative HMA run and approval model. Retain the controller execution journal as subordinate evidence. Every actual dispatch must obey HMA policy, including resume and escalation.",
+        "verification": [
+          {
+            "method": "Trace two inner repair attempts, interruption/resume and an escalation. Require one HMA-bound reservation/preflight/dispatch per actual attempt. Revocation, missing preflight and required human rewind must prevent the next launch. Reproduce imported checks under HMA or use an explicitly trusted capture adapter; never count worker prose as proof.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A final JSON import can be useful evidence but cannot retroactively govern dispatch. Changing the external controller needs its own authorized scope and review; do not silently edit AgentSystem.",
+        "alternative": "Run the loop as a separately approved bounded controller job and explicitly prove each inner dispatch conforms; a narrow evidence-only pilot must disclose that it does not prove full execution integration.",
+        "effort": "large",
+        "status": "proposed"
+      },
+      "closure_criterion": "Trace two inner repair attempts, interruption/resume and an escalation. Require one HMA-bound reservation/preflight/dispatch per actual attempt. Revocation, missing preflight and required human rewind must prevent the next launch. Reproduce imported checks under HMA or use an explicitly trusted capture adapter; never count worker prose as proof.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A3",
+      "title": "The criteria digest does not bind objective criterion definitions",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Criterion records contain ID and disposition only. A digest over those records does not bind acceptance test definitions, thresholds, non-goals or evidence requirements. It also conflates mutable result disposition with the approved definition. The proposal does not specify which approved snapshot is canonical or how a criterion maps to independent acceptance. Risk, routes, permissions and budgets appear in multiple places without a precedence rule.",
+      "expected": "One immutable approved semantic acceptance contract must define objective success. Result projections must not redefine it or double-count duplicate evidence.",
+      "actual": "Criterion records contain ID and disposition only. A digest over those records does not bind acceptance test definitions, thresholds, non-goals or evidence requirements. It also conflates mutable result disposition with the approved definition. The proposal does not specify which approved snapshot is canonical or how a criterion maps to independent acceptance. Risk, routes, permissions and budgets appear in multiple places without a precedence rule.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:70-73,91-99,122-127; internal/model/types.go:142-146; internal/engine/stage_state.go:47-49,78-80",
+          "observation": "Criterion records contain ID and disposition only. A digest over those records does not bind acceptance test definitions, thresholds, non-goals or evidence requirements. It also conflates mutable result disposition with the approved definition. The proposal does not specify which approved snapshot is canonical or how a criterion maps to independent acceptance. Risk, routes, permissions and budgets appear in multiple places without a precedence rule."
+        }
+      ],
+      "fix": {
+        "action": "Define one canonical approved specification containing criteria definitions, tests/thresholds, non-goals, dependencies, required evidence and policy version. Persist/reference its digest from core approval and the outcome record. Keep criterion dispositions and independent evidence links as separate projections. Specify precedence over lease/envelope copies and exact invalidation rules for every contract field.",
+        "why": "One immutable approved semantic acceptance contract must define objective success. Result projections must not redefine it or double-count duplicate evidence.",
+        "verification": [
+          {
+            "method": "Change a threshold while preserving criterion IDs/dispositions and require invalidation plus human reauthorization. Record PASS without independent evidence and require zero independently verified credit. Test stale/duplicate/reopened evidence, waivers and zero criteria.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "A specification may live as a content-addressed document; extending every portable record is unnecessary. Existing records need explicit migration semantics.",
+        "alternative": "Publish the complete criterion specification as a single host contract, with core approvals binding its digest; do not duplicate definitions in the host and core.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Change a threshold while preserving criterion IDs/dispositions and require invalidation plus human reauthorization. Record PASS without independent evidence and require zero independently verified credit. Test stale/duplicate/reopened evidence, waivers and zero criteria.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A4",
+      "title": "Audit import can lose findings and lacks acceptance/disposition rules",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The audit report uses severity and verdict, while HMA findings use BLOCK/WAIVABLE/ADVISORY. The mapping supplies no deterministic disposition/reference policy or verified per-criterion acceptance. It says each finding becomes a core finding record; current projection replaces the whole nonempty Findings snapshot, so naive one-finding-per-record imports hide earlier findings. Closure at a newer head is an extra condition even when fresh evidence at the same head resolves a non-code gap. A report digest and phase1_frozen field do not establish reviewer independence.",
+      "expected": "Preserve all linked findings and their approved invariant/criterion references. Severity alone cannot invent a blocker. Only a properly bound independent review can support verified acceptance. Freshness must follow actually bound inputs.",
+      "actual": "The audit report uses severity and verdict, while HMA findings use BLOCK/WAIVABLE/ADVISORY. The mapping supplies no deterministic disposition/reference policy or verified per-criterion acceptance. It says each finding becomes a core finding record; current projection replaces the whole nonempty Findings snapshot, so naive one-finding-per-record imports hide earlier findings. Closure at a newer head is an extra condition even when fresh evidence at the same head resolves a non-code gap. A report digest and phase1_frozen field do not establish reviewer independence.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:134; internal/model/types.go:148-155; internal/engine/resolution.go:42-49; external-snapshot/agent-memory/skills/independent-audit/references/report-contract.md",
+          "observation": "The audit report uses severity and verdict, while HMA findings use BLOCK/WAIVABLE/ADVISORY. The mapping supplies no deterministic disposition/reference policy or verified per-criterion acceptance. It says each finding becomes a core finding record; current projection replaces the whole nonempty Findings snapshot, so naive one-finding-per-record imports hide earlier findings. Closure at a newer head is an extra condition even when fresh evidence at the same head resolves a non-code gap. A report digest and phase1_frozen field do not establish reviewer independence."
+        }
+      ],
+      "fix": {
+        "action": "Specify report verdict/disposition mapping, allowed invariant/criterion references, complete snapshot or explicit event-reducer semantics, stable IDs and reopen/supersession links. Define authenticated host provenance for reviewer/model/provider/context separation and the frozen target. Require independent confirmation of repairs at the exact current artifact; require a new head only when the repair changes committed content.",
+        "why": "Preserve all linked findings and their approved invariant/criterion references. Severity alone cannot invent a blocker. Only a properly bound independent review can support verified acceptance. Freshness must follow actually bound inputs.",
+        "verification": [
+          {
+            "method": "Import BLOCK F1 followed by ADVISORY F2 and prove F1 remains open. Reject self-review, partial/compromised isolation for final independent acceptance, stale target, fabricated phase1 claim and out-of-criteria blockers. Retest repairs and show same-head fresh evidence can resolve an evidence-only gap without manufactured commits.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Preserve the skill method and raw report. Structural report validation checks shape, not truth. BLOCK findings must not be silently waived or overwritten.",
+        "alternative": "Store the full immutable report and a validated cumulative HMA finding snapshot with explicit source links, rather than importing isolated rows.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Import BLOCK F1 followed by ADVISORY F2 and prove F1 remains open. Reject self-review, partial/compromised isolation for final independent acceptance, stale target, fabricated phase1 claim and out-of-criteria blockers. Retest repairs and show same-head fresh evidence can resolve an evidence-only gap without manufactured commits.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A5",
+      "title": "Checkpoint policy omits final/irreversible triggers and packet bindings",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The proposed detector input has paths, risk, contract/interface delta and unit completion, but no explicit final-closure or irreversible/external-effect event. Packet binding is described only as packet digest plus head/diff. It omits the required scope/criteria/evidence/policy and reviewer-context bindings. Same-route refusal alone does not enforce different exact model at normal risk or provider/model-family separation for high, disputed and final validation.",
+      "expected": "Every mandatory meaningful-change trigger and final audit must be deterministic and unavoidable. Every coding change still needs independent review.",
+      "actual": "The proposed detector input has paths, risk, contract/interface delta and unit completion, but no explicit final-closure or irreversible/external-effect event. Packet binding is described only as packet digest plus head/diff. It omits the required scope/criteria/evidence/policy and reviewer-context bindings. Same-route refusal alone does not enforce different exact model at normal risk or provider/model-family separation for high, disputed and final validation.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:112-120; approved handoff \u00a7\u00a73,5; docs/architecture.md \u00a7\u00a712.4,13,16,21",
+          "observation": "The proposed detector input has paths, risk, contract/interface delta and unit completion, but no explicit final-closure or irreversible/external-effect event. Packet binding is described only as packet digest plus head/diff. It omits the required scope/criteria/evidence/policy and reviewer-context bindings. Same-route refusal alone does not enforce different exact model at normal risk or provider/model-family separation for high, disputed and final validation."
+        }
+      ],
+      "fix": {
+        "action": "List the full trigger table from plan \u00a73, with explicit final-closure, external/irreversible effect and approved milestone events. Define a versioned immutable packet manifest containing exact revision/diff/dirty bytes, scope, criteria, required evidence digests, reviewer identity/model/provider/context and policy. Enforce \u00a713 independently of route equality.",
+        "why": "Every mandatory meaningful-change trigger and final audit must be deterministic and unavoidable. Every coding change still needs independent review.",
+        "verification": [
+          {
+            "method": "Use a same-path metadata-only criteria/permission change, an external-effect event without code diff, final closure with no new diff, and every mandatory trigger. Reject changed policy/evidence/criteria at unchanged head and same-model/different-worker or same-family final reviewers.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Policy may add triggers but cannot weaken the compiled floor. Conservative unknown classification must stop or request inspection, not silently skip the audit.",
+        "alternative": "Initially require an independent stage audit after every approved batch, while retaining per-change review and final-audit bindings.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Use a same-path metadata-only criteria/permission change, an external-effect event without code diff, final closure with no new diff, and every mandatory trigger. Reject changed policy/evidence/criteria at unchanged head and same-model/different-worker or same-family final reviewers.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A6",
+      "title": "Budget comparison is reversed and attempt authority is incomplete",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The packet says lease budgets >= envelope budgets are refused, then says the envelope must fit inside the lease. The inequality is reversed. Counting host dispatch rows does not define direct-cost work, inner loop attempts, review dispatches, retries/reroutes, crash reservations or repeated-failure stopping. Token ceilings have no enforcement mechanism. The proposal omits the \u00a717 classification and same-material-failure-twice stop rule.",
+      "expected": "Reject an envelope that exceeds any remaining lease ceiling. Count all implementation attempts across corrections/reroutes. Do not count a reviewer launch as a new implementation attempt. Fail closed when a claimed hard ceiling is unmeasurable.",
+      "actual": "The packet says lease budgets >= envelope budgets are refused, then says the envelope must fit inside the lease. The inequality is reversed. Counting host dispatch rows does not define direct-cost work, inner loop attempts, review dispatches, retries/reroutes, crash reservations or repeated-failure stopping. Token ceilings have no enforcement mechanism. The proposal omits the \u00a717 classification and same-material-failure-twice stop rule.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:77-79,103-110,133; docs/architecture.md \u00a7\u00a710,17; external-snapshot/agent-memory/skills/verify-loop.md:25-33",
+          "observation": "The packet says lease budgets >= envelope budgets are refused, then says the envelope must fit inside the lease. The inequality is reversed. Counting host dispatch rows does not define direct-cost work, inner loop attempts, review dispatches, retries/reroutes, crash reservations or repeated-failure stopping. Token ceilings have no enforcement mechanism. The proposal omits the \u00a717 classification and same-material-failure-twice stop rule."
+        }
+      ],
+      "fix": {
+        "action": "Write componentwise envelope <= remaining lease constraints, including equality. Define an append-only attempt reservation/result identity and monotonic counters across restart and lease supersession. Account for direct work and nested attempts. Integrate \u00a717 classification/human confirmation and stop after two material failures on a route. Define reliable wall/token/cost enforcement, or refuse unsupported hard budgets.",
+        "why": "Reject an envelope that exceeds any remaining lease ceiling. Count all implementation attempts across corrections/reroutes. Do not count a reviewer launch as a new implementation attempt. Fail closed when a claimed hard ceiling is unmeasurable.",
+        "verification": [
+          {
+            "method": "For lease ceiling 5 accept envelope ceilings 4 and 5, refuse 6. Exercise crash before/after launch, resume, direct work, nested attempts, reviews, reroute and lease renewal. Assert no reset of spent authority, no third blind same-failure attempt, and refusal of unmetered paid/token routes.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Declared spend is a reservation, not observed provider billing. The exact maximum must be independently enforceable. Separate the arithmetic typo from the larger accounting design gap.",
+        "alternative": "Use only explicitly zero incremental-cost routes and finite runtime/attempt budgets for the first approved pilot; disclose unsupported token metrics.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "For lease ceiling 5 accept envelope ceilings 4 and 5, refuse 6. Exercise crash before/after launch, resume, direct work, nested attempts, reviews, reroute and lease renewal. Assert no reset of spent authority, no third blind same-failure attempt, and refusal of unmetered paid/token routes.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A7",
+      "title": "PARTIAL/ABORTED is not an equivalent completion of the approved outcome",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "P-6 offers PARTIAL/ABORTED plus eligible-for-closure as an alternative for Gate F. The approved goal requires human-gated verified closure and minimum proofs 3-6. Honest partial stopping is supported, but it does not meet that original outcome. D3 is unresolved. Gate B also needs a concrete clean-start strategy: the packet promises to commit preserved work with fixes after review, but requires a clean tree before the verify-loop runs.",
+      "expected": "Any scope reduction must be an explicit human change to acceptance criteria. A gate verdict or generic direction approval does not grant commit, release or future dispatch authority.",
+      "actual": "P-6 offers PARTIAL/ABORTED plus eligible-for-closure as an alternative for Gate F. The approved goal requires human-gated verified closure and minimum proofs 3-6. Honest partial stopping is supported, but it does not meet that original outcome. D3 is unresolved. Gate B also needs a concrete clean-start strategy: the packet promises to commit preserved work with fixes after review, but requires a clean tree before the verify-loop runs.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:80-83,166-169,26-30,136-137; approved handoff \u00a7\u00a75-6",
+          "observation": "P-6 offers PARTIAL/ABORTED plus eligible-for-closure as an alternative for Gate F. The approved goal requires human-gated verified closure and minimum proofs 3-6. Honest partial stopping is supported, but it does not meet that original outcome. D3 is unresolved. Gate B also needs a concrete clean-start strategy: the packet promises to commit preserved work with fixes after review, but requires a clean tree before the verify-loop runs."
+        }
+      ],
+      "fix": {
+        "action": "Rewrite D3 as an explicit scope decision with affected proof coverage. State either the authorized Phase B/release implementation or the approved incomplete deliverable. Resolve the Gate B review/commit/clean-loop order and D4 authority before execution. Preserve existing bytes and keep each commit within approved authority.",
+        "why": "Any scope reduction must be an explicit human change to acceptance criteria. A gate verdict or generic direction approval does not grant commit, release or future dispatch authority.",
+        "verification": [
+          {
+            "method": "Trace every minimum proof to a concrete phase and executable check. Refuse to label PARTIAL or eligible-for-closure as VERIFIED_SUCCESS. Demonstrate the chosen Gate B workflow can start the actual pinned verify-loop without unapproved commits or overwriting preexisting edits.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Scope resolution may change delivery time. It must not be hidden in a status label. Current audit dispatch satisfies current D2; it does not authorize all future work.",
+        "alternative": "Perform static/regression defect work first under explicit scope, independently review it, obtain authorized commit authority, then run a clean bounded loop and re-audit its exact result.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "closure_criterion": "Trace every minimum proof to a concrete phase and executable check. Refuse to label PARTIAL or eligible-for-closure as VERIFIED_SUCCESS. Demonstrate the chosen Gate B workflow can start the actual pinned verify-loop without unapproved commits or overwriting preexisting edits.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    },
+    {
+      "id": "A8",
+      "title": "Summary test plan does not establish all seven minimum proofs",
+      "kind": "gap",
+      "mode": "plan",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "The test summary names selected negative cases but supplies no acceptance-to-command/evidence matrix, real multi-iteration host test, approval forgery/replay isolation test, semantic criterion-drift test, deterministic finding/scorecard tests or complete release/terminal tests. It repeats the plan Gate F scenarios without an executable host adapter or explicit authority model for the real run.",
+      "expected": "Each approved minimum proof needs a positive case, material negative controls, exact revision/evidence and independent acceptance. Synthetic fixtures must remain labelled.",
+      "actual": "The test summary names selected negative cases but supplies no acceptance-to-command/evidence matrix, real multi-iteration host test, approval forgery/replay isolation test, semantic criterion-drift test, deterministic finding/scorecard tests or complete release/terminal tests. It repeats the plan Gate F scenarios without an executable host adapter or explicit authority model for the real run.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-15-gate-a-baseline.md:146-158; approved handoff \u00a76 minimum proofs 1-7",
+          "observation": "The test summary names selected negative cases but supplies no acceptance-to-command/evidence matrix, real multi-iteration host test, approval forgery/replay isolation test, semantic criterion-drift test, deterministic finding/scorecard tests or complete release/terminal tests. It repeats the plan Gate F scenarios without an executable host adapter or explicit authority model for the real run."
+        }
+      ],
+      "fix": {
+        "action": "Add the seven-row proof matrix in this report to the Gate A plan. Name test ownership, command, expected first refusal, frozen input/output digests and gate. Add N1/N2 and the full authority/retry/import/checkpoint negatives before declaring Gate A ready.",
+        "why": "Each approved minimum proof needs a positive case, material negative controls, exact revision/evidence and independent acceptance. Synthetic fixtures must remain labelled.",
+        "verification": [
+          {
+            "method": "Review the expanded matrix against proofs 1-7. Execute its bounded checks at their assigned gates and freeze raw results. Require final independent audit of the exact final revision; do not treat a synthetic 17-check run as proof of actual dispatch or human decisions.",
+            "expected": "Meet the expected behavior. Reject the negative controls without changing stored bytes."
+          }
+        ],
+        "tradeoffs": "Gate A can approve a sufficient executable plan before later implementation tests exist. It cannot claim those future proofs have passed.",
+        "alternative": "Narrow the deliverable only through an explicit human-approved acceptance revision, and mark every removed proof as out of the new scope.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "closure_criterion": "Review the expanded matrix against proofs 1-7. Execute its bounded checks at their assigned gates and freeze raw results. Require final independent audit of the exact final revision; do not treat a synthetic 17-check run as proof of actual dispatch or human decisions.",
+      "priority": "Before Gate B plan acceptance",
+      "fixed_revision": null
+    }
+  ],
+  "limitations": [
+    "Fresh auditor context. No implementer conversation, prior model reasoning or defense was supplied. The approved plan, baseline packet and reference audit are inherently author-written objects and were read as claims, after independent requirements reconstruction.",
+    "Isolation is isolated at the context level. Repository access was read-only by audit procedure, not an OS-enforced read-only mount. The worktree is shared and dirty. No HMA file or Git state was edited by this auditor. Start/end status, diff and per-file manifests are retained.",
+    "External AgentSystem verify-loop files changed during inspection: the later skill adds private-clone execution and the script gained matching code. The final external snapshot and hashes define the audited skill version. Earlier reads are not treated as a stable version. No AgentSystem dispatch, model API or network call was run.",
+    "Existing test/vet/dogfood checks passed. Eight independent audit probes intentionally failed expected safety assertions. The first probe build had an unused import, then the default Go cache refused writes. Both failed attempts are retained; corrected probes ran with GOCACHE in /tmp.",
+    "H3 reproduces a crash-window byte state, not a killed process or power-loss durability test. Concurrent writer corruption was not independently reproduced. M4 exploitability remains unproven.",
+    "N1 is independently reproduced at the host gate, not a complete unauthenticated stage transition. Existing transition.Apply still requires its trusted expected/presented approval inputs and legal current stage. No claim of cryptographic protection against a hostile trusted host or same-UID store rewrite is made.",
+    "No actual worker dispatch, route hi, real human challenge ceremony, release CI, token/billing metering, external effects or final verified-success flow was exercised. These would exceed this read-only audit or are not implemented. Baseline remote-origin equality and historical toolchain/test-count claims were not independently verified.",
+    "The HMA snapshot includes all 102 inventoried tracked/nonignored untracked files except .serena. Ignored artifacts, Git metadata and historical logs are not snapshotted. Directory modes and symlink metadata are not preserved by this byte snapshot; the targeted files are regular files.",
+    "Jev was not exposed through the host tool inventory. The auditor used the orchestrator/auditor decision path and did not substitute another model under the Jev identity."
+  ],
+  "phase1_frozen": true,
+  "phase1_freeze": {
+    "file": "PHASE1.json",
+    "timestamp": "2026-10-15T13:36:13.913606+00:00",
+    "sha256": "f2988561c8f8e9881c6cb40007b58fd994a3dfdb7ba817a22d4f2cd2bf1858a9"
+  },
+  "next_action": {
+    "action": "Ming revises the Gate A packet to resolve A1-A8 and include N1/N2 in Gate B, then submits the frozen revised packet for Liz review.",
+    "owner": "Ming",
+    "route": "Anthropic / Opus 5.5 / high, through the existing approved host route; exact access-service/runtime identity must be recorded before dispatch",
+    "permission_envelope": "Proposed documentation-only Gate A revision; no coding, Git writes, release or permission expansion from this audit",
+    "approval_required": "Human decisions on exact architecture/authority changes (D1), Phase B scope or explicit acceptance reduction (D3), and commit authority (D4) before dependent execution. Current dispatch authorizes only this Gate A audit.",
+    "stop_conditions": "Do not start Gate B while Gate A blockers remain. Stop for unavailable eligible review route, unresolved safety conflict or absent required human decision."
+  },
+  "packaging_addendum": {
+    "source_locator_correction": "N1 host.go locator corrected to 589-608 and 635-649; diagnosis, severity and verdict unchanged. PHASE1.json is preserved byte-for-byte.",
+    "target_verification": "target-verification.json confirms unchanged HMA HEAD, tracked diff, status and all 102 inventoried files.",
+    "report_validation": "validate_report.py passed; structural form only."
+  }
+}
