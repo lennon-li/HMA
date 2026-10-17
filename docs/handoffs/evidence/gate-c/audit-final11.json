@@ -1,0 +1,1124 @@
+{
+  "audit_id": "hma-gate-c-audit-20261017-final11",
+  "created_at": "2026-10-17T18:55:28.690766+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:527b7c5ff79090c558f5bbfed5ec87a85f06d1e5; working-tree-diff-sha256:2abaadf6cbdf68e314bfdbb5f95db7e2f1eb610d25f91d84fca2ed6570fefab0; untracked:freeze-start.json",
+  "branch": "main",
+  "isolation": "isolated",
+  "isolation_compromised": false,
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_rationale": "Two observed mandatory findings-import response-contract defects remain. No approval/blocker/criterion/terminal safety bypass was reproduced in the tested paths. PASS would overstate the documented output contract.",
+  "phase1_frozen": true,
+  "requirements": [
+    {
+      "id": "C01",
+      "requirement": "Generated immutable packet binds independently observed approved repository root/base/head/diff/worktree; exact plan/unit/core head/criteria/findings/waivers present within accepted boundary",
+      "source": "scope §1; v4 §5; architecture §§6,7,16",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Packets derive the artifact from Snapshot; they require the explicit one-time repository binding, the approved base, current core state, plan digest, projected criteria, owned/unowned findings, and active waivers. Wrong root/base and packet artifact controls pass.",
+      "evidence_refs": [
+        "E-CODE",
+        "E-BASE",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C02",
+      "requirement": "Fresh random 128-bit nonce, dispatch/run ID and packet digest must bind current independent read-only reviewer dispatch with valid exact preflight and half-open short launch interval",
+      "source": "scope §§1–2; v5 §§1–3; v6 §1",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "crypto/rand supplies 16-byte nonce and dispatch identity. Preflight, read-only capability, all-contribution independence, final family separation and half-open launch time checks are enforced.",
+      "evidence_refs": [
+        "E-CODE",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C03",
+      "requirement": "Receipt completed exit-zero review matches run, packet, launch artifact, canonical project root, worker/provider/model/effort and report bytes; no stale/other report imports",
+      "source": "scope §2; v4 §5; v5 §3; v6 §1",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Receipt mismatch controls refuse before append. They include wrong run/provider/effort/root, case variant mode, unlisted report, pre-issuance/expiry times, old nonce, invalid UTF-8, and missing report. Exact controls approve.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C04",
+      "requirement": "Total verdict mapping and independent-audit contract validation prevent invalid reports approving; final isolated only; independent against all retained implementations incl final family separation",
+      "source": "scope §§1–2; architecture §§12–13; v3 §4.3",
+      "status": "fail",
+      "gate_status": "PARTIAL",
+      "observation": "Review import maps and validates verdicts correctly. Independent validity parity covers 82 new cases; repository parity tests also pass. Final isolation and independence controls pass. J11-01: a subsequent findings snapshot loses the non-approving verdict in its next-action recommendation.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-CONTRACT",
+        "E-RESPONSE"
+      ]
+    },
+    {
+      "id": "C05",
+      "requirement": "Latest packet/current implementation only, single import and snapshot, exact live target/core binding; newer packets/failures invalidate prior approval; concurrency serializes",
+      "source": "scope §§2–4; architecture §§6,14–15",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Live tracked/untracked mutations refuse both import phases without store changes. Exactly one of two concurrent imports succeeds. A newer unanswered packet closes the gate and refuses the older snapshot. Any unrelated core append makes the review stale.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C06",
+      "requirement": "Additive snapshot semantics preserve legacy behavior; nonapproval cannot remove/weaken BLOCK or WAIVABLE; authentic current APPROVE may resolve exact own-unit findings; preserve other/unowned findings and waivers",
+      "source": "scope §3; v3 §4.2; architecture §§7,15,20",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Non-approving snapshots preserve BLOCK/WAIVABLE, including omitted IDs. Exact owners prevent cross-unit/prefix clearing. Unowned blockers survive. A current approval resolves its own findings. Baseline-written records load with unchanged anchors and migrate.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-BASE",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C07",
+      "requirement": "Imported labels/severity never fabricate blockers or acceptance credit; no import grants criterion PASSED or stages/launch/closure authority",
+      "source": "scope §0.1,§3; v3 §4.1; architecture §§4,9",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Imports never write criterion dispositions or stage-transition records. Unsupported kernel/budget labels remain advisory; a pass carrying a citation escalates. Criterion sentinels remain PENDING through import, snapshot, capture and migration.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-LIFECYCLE",
+        "E-CODE"
+      ]
+    },
+    {
+      "id": "C08",
+      "requirement": "verify-loop bridge verifies canonical envelope/run/unit/store/root and hook/stop; independently captures approved check without shell at bound pre/post target with retained stdout/stderr/truncation/digest",
+      "source": "v3 §3 evidence; scope §4; architecture §§7,14",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Canonical envelope and run/unit/store/root checks are present. HMA captures the executable itself and observes the pre/post snapshot. Independent shell/alias/shebang/residue controls pass. Both retained streams re-hash correctly; nonzero exit and the 1 MiB cap/truncation remain explicit.",
+      "evidence_refs": [
+        "E-LIFECYCLE",
+        "E-OUTPUT",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C09",
+      "requirement": "Closed/missing runs, wrong unit/route, wrong root/base and review-run reuse refuse before executing checks or writing evidence; core/host locking prevents terminal race",
+      "source": "architecture §§4,7,14–15; task14",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "Host then core locking spans terminal/route checks, execution, evidence append and host commit. Independent paused check serializes a concurrent ABORTED append after capture; a second call on the closed run executes nothing and changes no store bytes. Wrong root/base and review-run association controls pass.",
+      "evidence_refs": [
+        "E-AUDITOR",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C10",
+      "requirement": "Existing records/digests project compatibly; legacy mode explicit; first packet migrates permanently to imported reviews and refuses host-created packet/manual approval bypass",
+      "source": "scope §1; architecture §§12,15; Gate C consolidation objective",
+      "status": "fail",
+      "gate_status": "PARTIAL",
+      "observation": "Baseline core/host chains load with the original anchors. legacy_manual is visible and the first generated packet permanently moves the run to packet_import. Manual approval/packet bypass controls refuse. J11-02: findings-import omits the documented review_enforcement result field.",
+      "evidence_refs": [
+        "E-BASE",
+        "E-RESPONSE",
+        "E-TEST"
+      ]
+    },
+    {
+      "id": "C11",
+      "requirement": "Executable failure→linked remediation→fresh re-verification plus stale/self-review/no-report controls and Gate B guarantees remain intact",
+      "source": "scope §4; objective §§5–6; architecture §§6–7,17",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "go test, go vet and the full race suite pass on copied source. The 17-check host dogfood passes. An independently written failure→BUG finding→failed re-capture→scratch repair commit→new implementation→fresh passing re-capture→new review/snapshot fixture passes without criterion credit or stage advancement.",
+      "evidence_refs": [
+        "E-TEST",
+        "E-LIFECYCLE",
+        "E-DOGFOOD"
+      ]
+    },
+    {
+      "id": "C12",
+      "requirement": "Accepted Gate D rows remain recorded with exit tests; no Gate C bounded-execution/positive-credit/closure claim relies on deferred functionality",
+      "source": "scope §0.1; human decision 2026-10-17",
+      "status": "pass",
+      "gate_status": "MET",
+      "observation": "The accepted §0.1 scope retains Gate D requirements and named exit tests/reproduction conditions. Imported disposition, positive credit, reservations, lease/generation reconciliation, D5 admission and full contract inputs are not treated as implemented authority. This is Gate C evidence/import integration only.",
+      "evidence_refs": [
+        "E-SCOPE",
+        "E-CODE"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "J11-01",
+      "title": "A non-approving findings snapshot recommends stage continuation",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "After a receipt-bound fix-required review or blocked report (ESCALATE), findings-import returns next_action CONTINUE_HMA_TRANSITION when no BLOCK/WAIVABLE findings remain. The same run still fails the host Verification gate. runHostFindingsImport selects its next action only from finding dispositions and discards rr.Review.Verdict. Imported findings are advisory under the accepted boundary, so a normal failed audit can reach this output. This violates architecture §18 and the total-verdict escalation contract. The deterministic gate remains closed; this reproduction does not show an approval or stage bypass.",
+      "evidence": [
+        {
+          "source": "cmd/hma/review.go:482",
+          "observation": "Default continuation is replaced only when a finding is non-advisory; the review verdict is not considered."
+        },
+        {
+          "source": "logs/result-contract.log:21",
+          "observation": "fix-required snapshot returned CONTINUE_HMA_TRANSITION; the independent gate check failed."
+        },
+        {
+          "source": "logs/result-contract.log:31",
+          "observation": "blocked/ESCALATE snapshot returned CONTINUE_HMA_TRANSITION; the independent gate check failed."
+        }
+      ],
+      "requirements": [
+        "C04"
+      ],
+      "fix": {
+        "action": "In runHostFindingsImport, retain the latest imported review verdict and choose the result next_action from it first: ESCALATE returns ESCALATE_TO_HUMAN and REQUEST_CHANGES returns RECORD_FINDINGS_AND_REMEDIATE. For APPROVE, account for remaining blockers before recommending continuation. Keep all existing gate checks.",
+        "why": "The review verdict is the authoritative host review result; advisory-only snapshot contents cannot turn a failed review into a continuation recommendation.",
+        "verification": [
+          {
+            "method": "Run TestAuditNonApprovingSnapshotNextAction for fix-required and blocked, including empty and advisory-only snapshots.",
+            "expected": "REQUEST_CHANGES recommends remediation; ESCALATE recommends human escalation; both gates remain closed."
+          },
+          {
+            "method": "Run a current pass plus snapshot with no residual blocker.",
+            "expected": "Continuation remains recommended and the host gate passes; no criterion or stage is written."
+          }
+        ],
+        "tradeoffs": "Response guidance changes for callers that followed the incorrect continuation token. Persisted records and review provenance need no migration.",
+        "alternative": "Return only a neutral FINDINGS_RECORDED action and require another status command to compute the next step; this adds a host round trip and needs a documented contract change.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "closure_status": "OPEN"
+    },
+    {
+      "id": "J11-02",
+      "title": "findings-import omits its documented review enforcement label",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "low",
+      "confidence": "observed",
+      "diagnosis": "The real binary successfully writes a findings snapshot but its result has no review_enforcement member. host show --mode returns packet_import for the same run. findingsImportResult is a separate response type with no such field. The normative task14 contract says every write result reports review_enforcement. Import provenance and gate checks still enforce packet_import; this is an output-contract omission.",
+      "evidence": [
+        {
+          "source": "docs/task14-host-orchestration.md:158",
+          "observation": "Every write result and host show --mode must report the run review_enforcement."
+        },
+        {
+          "source": "cmd/hma/review.go:380",
+          "observation": "findingsImportResult contains recorded, core_sequence, core_head_anchor, findings and next_action only."
+        },
+        {
+          "source": "logs/result-contract.log:9",
+          "observation": "Successful real-binary findings-import result omitted review_enforcement; the subsequent show returned packet_import."
+        }
+      ],
+      "requirements": [
+        "C10"
+      ],
+      "fix": {
+        "action": "Add review_enforcement to findingsImportResult. Populate it from hoststate.ReviewEnforcementMode(history) while the findings import holds the host run lock.",
+        "why": "Use the same validated host history that authorized the snapshot so every successful write result exposes the documented mode.",
+        "verification": [
+          {
+            "method": "Run TestAuditFindingsResultModeContract against the real hma binary; compare its result with host show --mode.",
+            "expected": "The successful response includes review_enforcement=packet_import and agrees with show. Existing bind-repository and loop-evidence response checks still pass."
+          }
+        ],
+        "tradeoffs": "This is an additive response field; strict downstream JSON consumers may need to accept it. It does not alter core/host record digests.",
+        "alternative": "Amend the task14 contract to explicitly exclude findings-import, with human agreement; emitting the field is the smaller implementation change.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": 2,
+      "closure_status": "OPEN"
+    }
+  ],
+  "prior_findings": [
+    {
+      "id": "F01",
+      "title": "A failed review can downgrade an existing blocker by ID",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Strength matrix preserves BLOCK and WAIVABLE on same-ID downgrades and omissions for REQUEST_CHANGES/ESCALATE. Legitimate failed-review snapshots may append; no downgrade is applied.",
+      "closure_criteria": [
+        {
+          "method": "Run same-ID BLOCK->ADVISORY, BLOCK->WAIVABLE, and WAIVABLE->ADVISORY cases under REQUEST_CHANGES and ESCALATE; also test omitted IDs and a fresh approving resolution.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Imports accept stale core bindings and can erase newer blockers",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Imports compare exact current core anchor. Findings import uses expected sequence/predecessor on append; a later core record refuses stale import.",
+      "closure_criteria": [
+        {
+          "method": "Append a core finding, waiver, criterion record, and route rewind before each import; stale imports must preserve blockers and append nothing. A same-review snapshot remains allowed.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Replaying an old passing run overrides a newer failed review",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Only latest packet is answerable once. Concurrent duplicate imports accept exactly one; newer packet prevents older snapshot/gate reuse.",
+      "closure_criteria": [
+        {
+          "method": "Replay A after a newer failure and after a newer pass; concurrently import A twice. No new approval may supersede B. The first valid import must still work.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Generated packets do not bind the observed repository artifact",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Snapshot-derived target and approved root/base binding reject wrong artifacts and other repositories.",
+      "closure_criteria": [
+        {
+          "method": "Use repository B to review an artifact declared for repository A, and use a wrong head, diff, or dirty-content digest in A. All must fail; an exact target and complete evidence packet must pass.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Final-audit reason does not enforce final-review family separation",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "IssueFinal independently triggers provider/model-family separation even with FinalValidation=false.",
+      "closure_criteria": [
+        {
+          "method": "Final reason with same-provider/different-model and same-family routes must fail even when FinalValidation=false. Different families must pass. Ordinary review remains eligible under its normal rule.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Receipt import ignores provider and effort drift",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Receipt provider and effort must be present and exact; wrong/missing variants refuse without store change.",
+      "closure_criteria": [
+        {
+          "method": "Wrong and missing provider/effort must refuse; exact actual ledger fields must pass. Retain the current wrong-agent/model controls.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Invalid audit reports can approve and clear findings",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-CONTRACT"
+      ],
+      "assessment": "Invalid reports refuse or escalate. Failed/unknown requirements, missing evidence, unfrozen phase1 and malformed findings cannot approve.",
+      "closure_criteria": [
+        {
+          "method": "Reject trailing JSON, null/missing findings, absent target/requirements/evidence, and an approving report with failed requirements or unresolved high findings. Accept a structurally valid current report. Run the external validator against fixtures.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Unverified reference labels create new unwaivable blockers",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Negative labels are safe now: unreproduced references remain advisory and cited pass escalates. Reproduced kernel/budget positive paths require Gate D registry and budgets.",
+      "closure_criteria": [
+        {
+          "method": "Nonexistent kernel/budget IDs and references without reproduction must not create blockers. A reproduced actual kernel violation must BLOCK regardless of severity. A measured declared-budget exceedance must be WAIVABLE.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "The verify-loop evidence bridge is absent",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "Independent failure→finding→actual scratch repair→fresh re-capture→new review fixture passes; bridge grants no criterion, launch or stage authority.",
+      "closure_criteria": [
+        {
+          "method": "Import a real fixture journal and report with one failed check, linked repair, and fresh passing re-capture. Wrong target, changed journal/check, or unsupported criterion link must not credit a criterion. No reservation or lease authority may be fabricated.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "Review dispatches have no short validity interval",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Launch time must fall in the fixed packet half-open interval; before issuance, exact expiry and after expiry refuse. Core rewinds also invalidate bindings.",
+      "closure_criteria": [
+        {
+          "method": "Launch immediately before expiry, at expiry, after expiry, before issuance, and after rewind/renewal. Only the valid interval may import. Bind timestamps to the frozen record, not caller-supplied import time.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "title": "Reviewer independence checks only the latest implementation",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Every historical implementation contribution is checked, including distinct-worker/model/family and context requirements. Multi-route history controls pass.",
+      "closure_criteria": [
+        {
+          "method": "Use a valid multi-route implementation history where reviewer authored an earlier retained contribution. Refuse that reviewer; accept an independent route. Also test a fresh unit with no contribution by the reviewer.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "title": "Reservation checks assigned to Gate C are not implemented",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Reservation/admission/consumption/replay/reconciliation and v6/v7 validity tests are explicitly retained for Gate D; no execution-leash authority claimed.",
+      "closure_criteria": [
+        {
+          "method": "At Gate D, execute v6/v7 tests for charged unlaunched reservations, replay eligibility, one-to-one namespace association, half-open expiry and monotone generation revocation; require independent audit before execution/closure claims.",
+          "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "title": "New legacy manual-review writes bypass the consolidated import path",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-BASE"
+      ],
+      "assessment": "Actual HEAD-written chain loads; first packet permanently requires imported reviews; manual dispatch/approval provenance bypasses refuse. Unmigrated mode is visible.",
+      "closure_criteria": [
+        {
+          "method": "Migrate a legacy run, retain old history readability, then try the new manual-review override after an imported failure.",
+          "expected": "The migrated run refuses new manual approvals; an explicitly unmigrated compatibility run is visibly labelled and cannot be mistaken for full Gate C enforcement."
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "title": "Invalid audit reports approve, clear blockers, and satisfy the host Verification gate",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Independent invalid report matrix preserves existing BLOCK/WAIVABLE and keeps the host gate closed; valid own resolution control succeeds.",
+      "closure_criteria": [
+        {
+          "method": "Test every retained candidate and the complete valid control with HMA and the external validator.",
+          "expected": "Invalid candidates refuse or escalate and cannot clear findings; the valid control approves."
+        },
+        {
+          "method": "Repeat TestAuditorInvalidReportClearsAndSatisfiesGate.",
+          "expected": "The blocker remains and the host Verification gate remains closed."
+        }
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "An old live-target review can clear a blocker after the worktree changes",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Tracked and untracked live changes before either import refuse, preserve store bytes and preserve blockers.",
+      "closure_criteria": [
+        {
+          "method": "Repeat TestAuditorStaleLiveTargetFindings for tracked, untracked, dirty and clean-to-dirty changes.",
+          "expected": "Both stale imports refuse without removing the blocker."
+        },
+        {
+          "method": "Import the exact unchanged target as a negative control.",
+          "expected": "The authentic current snapshot remains accepted."
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "title": "Finding namespace prefixes allow a review to clear another unit blocker",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Explicit UnitID ownership preserves U1/sub blockers on U1 approval; prefix is not used as ownership.",
+      "closure_criteria": [
+        {
+          "method": "Repeat both unit-prefix probes and include slash characters in unit and finding IDs.",
+          "expected": "A U1 approval preserves every U1/sub blocker."
+        },
+        {
+          "method": "Test ordinary same-unit resolution and other-unit preservation.",
+          "expected": "Only the exact approved unit changes."
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "title": "HMA-generated review packets omit the contract and findings snapshot",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Current packet carries plan digest, criteria, core anchor, owned/unowned findings and waivers. Contract-dependent full fixed packet inputs remain human-deferred with R3-02 exit criteria.",
+      "closure_criteria": [
+        {
+          "method": "Repeat TestAuditorPacketContent and inspect the frozen packet.",
+          "expected": "The known blocker and all required packet sections or exact immutable references are present."
+        },
+        {
+          "method": "Change any packet source between assembly and dispatch commit.",
+          "expected": "The command refuses or regenerates a packet bound to the new exact core head."
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "title": "Existing unprefixed core findings have no import migration",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-BASE"
+      ],
+      "assessment": "Baseline-written unprefixed own finding is resolved only by current own-unit approval. Ambiguous last-source ownership stays unowned; imports do not drop waiver records.",
+      "closure_criteria": [
+        {
+          "method": "Repeat TestAuditorLegacyFindingMigration on baseline-written records.",
+          "expected": "An authentic current unit review resolves the migrated own finding, while other units remain unchanged."
+        },
+        {
+          "method": "Migrate ambiguous IDs with active waivers and references.",
+          "expected": "No finding or waiver is silently dropped, reassigned or weakened."
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "title": "Required disposition, criterion recheck and independent-credit integration are absent",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Reproduced kernel/budget disposition and positive independent criterion credit require accepted Gate D prerequisites. Current imports keep unsupported labels advisory and give no credit.",
+      "closure_criteria": [
+        {
+          "method": "Use low- and high-severity real kernel violations, fake links, criterion failures and measured budget overruns.",
+          "expected": "Only reproduced kernel violations become BLOCK; measured permitted overruns become WAIVABLE; unsupported links stay advisory; failed criteria get no credit."
+        },
+        {
+          "method": "Pair wrong-target, failing and successful recaptures with independent report criterion verification.",
+          "expected": "Only the successful exact-target independent pair can credit the approved criterion."
+        }
+      ]
+    },
+    {
+      "id": "A07",
+      "title": "Gate C launch-reconciliation integration is deferred in full",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Current envelope/run/unit/store/stop/hook checks pass. Lease namespace/replay/revocation reconciliation is human-deferred unchanged to Gate D.",
+      "closure_criteria": [
+        {
+          "method": "Repeat TestAuditorLoopEnvelopeDrift with a correct control.",
+          "expected": "Wrong hash/store refuses without evidence or host append; the genuine bound control recaptures."
+        },
+        {
+          "method": "Execute the v6/v7 namespace, reservation, half-open interval and monotone-generation matrix at the approved prerequisite gate.",
+          "expected": "No unregistered/reused/out-of-window run grants evidence authority or closure."
+        }
+      ]
+    },
+    {
+      "id": "A08",
+      "title": "loop-evidence executes verify argv before checking terminal state",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Independent concurrent terminal append serializes after a paused live check; subsequent closed-run capture executes nothing. Missing/terminal fixtures also pass.",
+      "closure_criteria": [
+        {
+          "method": "Repeat TestAuditorTerminalLoopExecutesBeforeRefusal and a missing-run case.",
+          "expected": "The command refuses before creating the marker or executing argv."
+        },
+        {
+          "method": "Race terminalization with recapture admission and test an open-run control.",
+          "expected": "No execution starts after terminal authority is recorded; the valid open-run capture succeeds without deadlock."
+        }
+      ]
+    },
+    {
+      "id": "A09",
+      "title": "Legacy compatibility runs do not expose an enforcement-mode label",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-BASE"
+      ],
+      "assessment": "Legacy status and migration mode are visible in host show --mode; migration refuses manual override. Findings-import output omission is separately J11-02.",
+      "closure_criteria": [
+        {
+          "method": "Load a baseline legacy run, inspect status, migrate it with an HMA packet, then inspect status and try a manual approval.",
+          "expected": "Legacy state is visibly labelled as not fully consolidated; migrated state reports enforcement and refuses the manual approval."
+        }
+      ]
+    },
+    {
+      "id": "R3-01",
+      "title": "A newer unanswered packet does not invalidate an older approving review",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "A newer unanswered packet prevents an earlier snapshot or gate approval. Host locking serializes single-use imports and dispatch updates.",
+      "closure_criteria": [
+        {
+          "method": "Run TestAuditorEarlierSnapshotAfterNewPacket with a prior BLOCK and a newer unanswered packet.",
+          "expected": "The old snapshot refuses; both chains and the blocker stay unchanged."
+        },
+        {
+          "method": "Run TestAuditorPendingFinalDispatchInvalidatesEarlierPass, then complete/import/snapshot the new valid final report.",
+          "expected": "The pending packet closes the host gate; its valid current report reopens the gate."
+        },
+        {
+          "method": "Repeat with two controllers under -race.",
+          "expected": "No snapshot or gate check can pass using a dispatch that ceased to be latest."
+        }
+      ]
+    },
+    {
+      "id": "R3-02",
+      "title": "The fixed review packet still omits mandatory review inputs",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Immutable request, full criterion definitions/non-goals/budgets/policy/evidence inputs need the acceptance contract. Human accepted Gate D deferral; existing R3-02/A04 reproduction criteria are retained.",
+      "closure_criteria": [
+        {
+          "method": "Generate a packet with sentinel request, non-goal, policy and required evidence artifacts; inspect or resolve every reference in a fresh read-only context.",
+          "expected": "Each required input is present with its exact digest; the known blocker is also present."
+        },
+        {
+          "method": "Omit criteria/plan/policy/evidence inputs, and separately change one between assembly and dispatch commit.",
+          "expected": "Generation refuses without a dispatch, or regenerates and binds the exact new state."
+        },
+        {
+          "method": "Run TestAuditorClosurePacketStandaloneInputs plus a nonempty approved-contract control.",
+          "expected": "The full fixed packet passes; incomplete inputs cannot obtain a usable review packet."
+        }
+      ]
+    },
+    {
+      "id": "R3-03",
+      "title": "The broader Gate C acceptance-boundary deferral is not approved and leaves design requirements incomplete",
+      "status": "DEFERRED-BY-HUMAN",
+      "evidence_refs": [
+        "E-SCOPE"
+      ],
+      "assessment": "Lennon explicitly accepted §0.1 on 2026-10-17. Required deferred rows and exit checks remain Gate D obligations, not Gate C success claims.",
+      "closure_criteria": [
+        {
+          "method": "Trace every original Gate C design/proof row to an implemented test or a human-approved deferred gate with unchanged acceptance criteria.",
+          "expected": "No row is dropped, renamed into success, or left without an owner and prerequisite."
+        },
+        {
+          "method": "Exercise real low/high-severity kernel violations, fake references, declared-budget overruns and exact-target independent criterion pairs at their approved gate.",
+          "expected": "Only reproduced kernel violations become BLOCK; only measured permitted excess becomes WAIVABLE; only the valid recapture/reviewer pair credits a criterion."
+        },
+        {
+          "method": "Execute the full v6/v7 reservation/namespace/replay/revocation matrix before any bounded-execution or closure claim.",
+          "expected": "Unauthorized, reused, unregistered and out-of-window launches never grant authority."
+        }
+      ]
+    },
+    {
+      "id": "C-F14",
+      "title": "Legacy dispatch input can impersonate an HMA-generated review packet",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "host dispatch refuses every caller-supplied Packet before append; manual review cannot supply import provenance; authentic review-packet/import controls pass.",
+      "closure_criteria": [
+        {
+          "method": "Run TestAuditorFinalManualPacketBoundary; repeat on a legacy run and on packet_import after a failed review. Fingerprint both chains before the request.",
+          "expected": "host dispatch refuses caller-supplied Packet before append; no blocker or chain changes; no report from that input can import."
+        },
+        {
+          "method": "Generate a real packet through review-packet and import an exact independent receipt/report, then its snapshot.",
+          "expected": "Valid current control still approves and satisfies only the host gate; an ordinary legacy packet cannot use review-import."
+        }
+      ]
+    },
+    {
+      "id": "C-F15",
+      "title": "Loop recapture discards the verification output",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-OUTPUT"
+      ],
+      "assessment": "Both streams persist after child exit, frame hashes recompute, exit/truncation match; mutating checks refuse append in repository controls.",
+      "closure_criteria": [
+        {
+          "method": "Run TestAuditorFinalRecaptureRetainsOutput with distinct stdout and stderr, a nonzero exit and a fresh random token. Resolve OutputRef after the process ends.",
+          "expected": "Both streams remain accessible; their framed digest equals OutputDigest; exit code and truncation status match."
+        },
+        {
+          "method": "Repeat with output above the cap and with a command that changes repository content.",
+          "expected": "Truncation is explicit and retained bytes are inspectable; mutating check still refuses evidence append."
+        }
+      ]
+    },
+    {
+      "id": "C-F16",
+      "title": "Go reads case-variant JSON keys that the Python contract ignores",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Exact-key decoder ignores case/Unicode fold variants recursively; independent trailing Verdict and isolation variants cannot approve or clear blockers.",
+      "closure_criteria": [
+        {
+          "method": "Import a contract-valid fix-required report with a trailing \"Verdict\":\"pass\" member against a unit with an existing BLOCK; then import its findings and check the gate.",
+          "expected": "The review is not APPROVE, the BLOCK stays, and the gate stays closed."
+        },
+        {
+          "method": "Repeat with Unicode case-fold variants (for example U+017F long s, U+212A Kelvin sign) and case variants of keys in receipts, nested findings, hma_binding, and verify-loop state.",
+          "expected": "Go reads exactly the keys Python reads; no variant changes an import result."
+        }
+      ]
+    },
+    {
+      "id": "C-F17",
+      "title": "Go and Python disagree on required nonempty report fields",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-CONTRACT"
+      ],
+      "assessment": "Information-separator strings cannot approve; repository full-code-point whitespace parity passes.",
+      "closure_criteria": [
+        {
+          "method": "Import a receipt-bound pass report whose required strings consist only of U+001C, U+001D, U+001E, or U+001F against a unit with an existing BLOCK; then import findings and check the gate. Compare the Go whitespace predicate with Python str.isspace over all code points.",
+          "expected": "No such report approves; the BLOCK stays; the gate stays closed; the predicates agree on every code point."
+        }
+      ]
+    },
+    {
+      "id": "C-F18",
+      "title": "Interrupted output-artifact writes are trusted as complete on retry",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "Independent partial artifact at the exact expected path refuses without store change. Repository empty/symlink/intact reuse controls pass; final filename uses complete synced bytes.",
+      "closure_criteria": [
+        {
+          "method": "Place an empty, partial, or symlinked file at the expected artifact path, then run loop-evidence. Also run it with an intact existing artifact.",
+          "expected": "Corrupt residue is refused before either append and is preserved; an intact artifact is reused; the final name never holds incomplete bytes."
+        }
+      ]
+    },
+    {
+      "id": "C-F19",
+      "title": "loop-evidence executes a shell command from an imported journal",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "Shells, wrappers, aliases and forbidden operation aliases refuse before append/execution; direct Capture negative controls pass in repository suite.",
+      "closure_criteria": [
+        {
+          "method": "Run loop-evidence with journals whose verify argv is sh -c, bash <script>, env sh -c, a symlink to a shell, or an operation verify-loop forbids (git push, curl, rm -r). Call evidence.Capture directly with shell entry points.",
+          "expected": "Every case is refused before execution and before either append; plain executables still run."
+        }
+      ]
+    },
+    {
+      "id": "C-F20",
+      "title": "Invalid UTF-8 report passes Go checks but fails the Python validator",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Exact decoder and report contract both reject invalid UTF-8; report/receipt/state paths share the decoder. Existing blocker-preservation fixture passes.",
+      "closure_criteria": [
+        {
+          "method": "Import a receipt-bound pass report containing an invalid UTF-8 byte against a unit with an existing BLOCK; import its findings; check the gate. Also give invalid UTF-8 to receipts and loop state.",
+          "expected": "No approval; the BLOCK stays; the gate stays closed; Go and Python agree."
+        }
+      ]
+    },
+    {
+      "id": "C-F21",
+      "title": "The shell filter refuses a shell name used as plain data",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "printf %s sh runs, retains sh output and grants no criterion. Shell/wrapper entry points still refuse.",
+      "closure_criteria": [
+        {
+          "method": "Run evidence capture with printf %s sh, and with shell entry points (sh -c, a wrapper such as env or xargs given a shell, a symlinked shell).",
+          "expected": "Plain data runs; every shell entry point is refused before execution."
+        }
+      ]
+    },
+    {
+      "id": "C-F22",
+      "title": "Executable shell scripts and wrapper aliases bypass the no-shell kernel",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "Independent shell-shebang, shell alias, env alias and xargs controls refuse. Repository nested/shebang/interpreter-alias controls pass. Arbitrary permitted programs spawning a shell remain a disclosed trusted-check limit.",
+      "closure_criteria": [
+        {
+          "method": "Run loop-evidence and evidence.Capture with a #!/bin/sh script, a #!/usr/bin/env sh script, env plus a symlink to sh, a symlink to env plus sh and a script, and a script whose interpreter is a symlinked shell.",
+          "expected": "Each is refused before execution and before either append; plain executables and shell names as data still run. Any residual limit is recorded, not claimed closed."
+        }
+      ]
+    },
+    {
+      "id": "C-F23",
+      "title": "A concurrent trusted core terminal append can precede loop check execution",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Core lock is held during capture; direct terminal append is serialized after check and evidence. No check runs on the subsequently closed run.",
+      "closure_criteria": [
+        {
+          "method": "Pause loop-evidence after its terminal check and attempt a direct core append (for example ABORTED), or probe the core run lock from inside the check.",
+          "expected": "The core lock is held from the terminal check through the core append; no check runs on a closed run."
+        }
+      ]
+    },
+    {
+      "id": "C-F24",
+      "title": "A review with a different approved base can clear the current unit blocker",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Approved root and exact approved base are required; alternate HEAD-as-base, other repository and clone roots refuse before usable packet.",
+      "closure_criteria": [
+        {
+          "method": "Generate review packets with base = HEAD in the approved root, with another repository root and base, and with a clone holding the approved base; then try review import and findings import against an existing BLOCK.",
+          "expected": "Each wrong base or root is refused with a named reason before a packet is usable; the BLOCK stays. Any residual root-identity limit is recorded, not claimed closed."
+        }
+      ]
+    },
+    {
+      "id": "J8-01",
+      "title": "First generated packet can adopt another checkout and clear the current blocker",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Explicit one-time host repository binding precedes the first packet; unbound/second-binding/clone controls refuse. Host supplies initial identity mapping; this is not independent root attestation.",
+      "closure_criteria": [
+        {
+          "method": "On a run with no prior packet, generate a packet for a clone holding the approved base (with a different committed artifact), import a receipt-bound pass, then import findings against an existing BLOCK. Also try a run without any repository binding, and a second binding.",
+          "expected": "The clone packet is refused before it is usable; an unbound run cannot generate or import; the binding is written once and not taken from a packet; the BLOCK stays."
+        }
+      ]
+    },
+    {
+      "id": "J8-02",
+      "title": "Slash-separated finding IDs collide across exact unit owners",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Slash source IDs are rejected and final snapshot duplicate global IDs are rejected before append; exact owner field remains authoritative.",
+      "closure_criteria": [
+        {
+          "method": "Import findings with id sub/F for unit U1 while unit U1/sub owns F; also attempt a snapshot that would contain a duplicate global id.",
+          "expected": "The colliding import is refused before any append; no duplicate global finding id is recorded."
+        }
+      ]
+    },
+    {
+      "id": "J8-03",
+      "title": "Loop recapture can attach another repository artifact to an anchored unit",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-TEST"
+      ],
+      "assessment": "Loop root, approved base, repository identity and journal repo.root must agree with the explicit run binding before execution.",
+      "closure_criteria": [
+        {
+          "method": "Run loop-evidence naming another repository root and base, the bound root with another base, and a journal whose repo.root names another root.",
+          "expected": "Each is refused before execution and before either append; the bound root at the approved base still records evidence."
+        }
+      ]
+    },
+    {
+      "id": "J9-01",
+      "title": "Executable aliases bypass the loop recapture operation filter",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-LIFECYCLE"
+      ],
+      "assessment": "Canonical executable is judged and executed. Independent git/rm aliases refuse; repository curl/direct/absolute aliases also pass.",
+      "closure_criteria": [
+        {
+          "method": "Run loop-evidence with rm -r, curl, and git push in direct, absolute-path, and symlink-alias forms.",
+          "expected": "Every form is refused before execution and before either append; the canonical executable is what runs for admitted checks."
+        }
+      ]
+    },
+    {
+      "id": "J10-01",
+      "title": "bind-repository returns an empty next action",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Real binary bind-repository emits nonempty GENERATE_REVIEW_PACKET_OR_IMPORT_LOOP_EVIDENCE.",
+      "closure_criteria": [
+        {
+          "method": "Run hma host bind-repository on the real binary and read next_action.",
+          "expected": "A non-empty next action that names the following step."
+        }
+      ]
+    },
+    {
+      "id": "J10-02",
+      "title": "loop-evidence omits the review enforcement label",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E-AUDITOR"
+      ],
+      "assessment": "Real binary loop-evidence emits review_enforcement and agrees with host show --mode. J11-02 is a different command.",
+      "closure_criteria": [
+        {
+          "method": "Run a successful hma host loop-evidence and read review_enforcement.",
+          "expected": "legacy_manual or packet_import, equal to hma host show --mode."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E-FREEZE",
+      "sources": [
+        "freeze-start.json",
+        "freeze-end.json",
+        "freeze-comparison.json",
+        "audited-file-manifest.json"
+      ],
+      "result": "main at 527b7c5ff79090c558f5bbfed5ec87a85f06d1e5; status, full binary diff digest and all 30 untracked file hashes unchanged."
+    },
+    {
+      "id": "E-SCOPE",
+      "sources": [
+        "requirements-sources.txt",
+        "derived-requirements.json",
+        "docs/handoffs/2026-10-16-gate-c-scope.md:1-86",
+        "/tmp/hma-gate-c-criteria/criteria-final11.json"
+      ],
+      "result": "Authoritative objective and allowed design sections derived before diff inspection. Gate D boundary accepted by Lennon on 2026-10-17."
+    },
+    {
+      "id": "E-CODE",
+      "sources": [
+        "audited-tracked.patch",
+        "cmd/hma/review.go",
+        "cmd/hma/loop.go",
+        "cmd/hma/repository.go",
+        "internal/host/review_import.go",
+        "internal/host/findings_import.go",
+        "internal/host/report_contract.go",
+        "internal/evidence/noshell.go",
+        "cmd/hma/transition.go"
+      ],
+      "result": "Static path and authority review; source references use the frozen working tree, not bare HEAD."
+    },
+    {
+      "id": "E-TEST",
+      "sources": [
+        "logs/go-test-copy.log",
+        "logs/go-vet.result.json",
+        "logs/go-race.log",
+        "logs/go-race.result.json"
+      ],
+      "result": "All 12 packages pass go test -count=1 and go test -race -count=1. go vet exits 0. This is the repository suite, before addition of the auditor tests."
+    },
+    {
+      "id": "E-DOGFOOD",
+      "sources": [
+        "logs/dogfood.log",
+        "logs/dogfood.result.json"
+      ],
+      "result": "Real HMA and hostinput binaries; 17 synthetic checks pass. No worker/model starts, no actual hi, no authentic human approval."
+    },
+    {
+      "id": "E-AUDITOR",
+      "sources": [
+        "auditor_negative_test.go",
+        "logs/auditor.log"
+      ],
+      "result": "9 independent top-level tests pass under -race: adverse report matrix, receipt/time/root/live target matrix, strength matrix, concurrent single-use import/newer packet, concurrent core terminal serialization, output, real-binary result controls, baseline migration and 82-case external parity."
+    },
+    {
+      "id": "E-BASE",
+      "sources": [
+        "baseline/cmd/hma/auditor_export_test.go",
+        "logs/baseline-export.log",
+        "baseline-metadata.json",
+        "baseline-original-run.jsonl",
+        "logs/auditor.log"
+      ],
+      "result": "Code exported from HEAD 527b7c5 writes synthetic baseline records. Current code loads their original core and host head anchors, labels legacy mode, migrates via generated packet, refuses manual override, resolves its own legacy finding and retains PENDING criterion."
+    },
+    {
+      "id": "E-CONTRACT",
+      "sources": [
+        "logs/auditor.log",
+        "internal/host/gatec_r3_parity_test.go",
+        "logs/go-test-copy.log"
+      ],
+      "result": "82 independently selected required-field/type cases agree with the actual Python validator. Repository tests additionally cover full-range Python whitespace parity, canonical hashes, exact JSON keys and invalid UTF-8."
+    },
+    {
+      "id": "E-RESPONSE",
+      "sources": [
+        "logs/result-contract.log",
+        "logs/result-contract.exit"
+      ],
+      "result": "Exit 1: exactly two top-level response-contract tests fail, with three failing cases. No approval, blocker-clear, criterion-credit or terminal-execution bypass is demonstrated by these failures."
+    },
+    {
+      "id": "E-LIFECYCLE",
+      "sources": [
+        "logs/lifecycle-shell.log",
+        "logs/lifecycle-shell.exit"
+      ],
+      "result": "8 shell/alias/corrupt-output/plain-data cases and independent code-repair lifecycle pass under -race. The journal green claim does not override re-capture failure."
+    },
+    {
+      "id": "E-OUTPUT",
+      "sources": [
+        "logs/retained-output.log",
+        "retained-output-37.json",
+        "retained-evidence-37.json",
+        "retained-output-1048629.json",
+        "retained-evidence-1048629.json"
+      ],
+      "result": "After the child check exits, raw stdout/stderr remain in retained artifacts. Length-framed digests match, exit is 7, and output above 1 MiB is explicitly truncated."
+    },
+    {
+      "id": "E-REPRO",
+      "sources": [
+        "reproduce.sh",
+        "logs/reproduce.log",
+        "/tmp/hma-gate-c-20261017-final11/repro.6QkhnP/baseline.log",
+        "/tmp/hma-gate-c-20261017-final11/repro.6QkhnP/auditor.log"
+      ],
+      "result": "Fresh baseline export and all 13 final auditor top-level tests re-executed under -race. Eleven pass. Only the two frozen response-contract tests fail; three failing cases. No DATA RACE diagnostic."
+    }
+  ],
+  "limitations": [
+    "Context isolation is isolated for Gate C: fresh evaluator context, no implementer conversation and no prior Gate C verdicts. The user-authorized criteria file was read before Phase 1. Primary source/test comments and the allowed Gate A v7 document contain historical reviewer names and Gate A judgments; these are disclosed incidental author text, not evidence of Gate C correctness.",
+    "Review access was procedural, not enforced by an operating-system read-only mount. No audited repository edits or Git writes were performed. The first test command mistakenly used the source cwd, with cache/temp paths in the output directory; its suite completed successfully. The required suite was independently repeated in the private copy. Start/end status, binary-diff SHA-256 and all untracked hashes match.",
+    "Only the source content permitted for the blind pass was shown to the evaluator. Snapshot copying and freeze hashing handled file bytes mechanically. Before Phase 1, scope note content was displayed only with sed -n 1,86p; TODO Gate C and scope §4a+ were not inspected. No forbidden prior-audit temporary directory was read.",
+    "Execution uses Linux and Go 1.27.1. Cross-platform behavior and actual model/reviewer reasoning were not tested. Receipts, route approvals and worker results are synthetic fixtures. No nested agent CLI or model API was invoked. The dogfood harness explicitly uses synthetic approvals and preflights.",
+    "Trusted-host threat model applies. These checks detect accident and drift, not a malicious same-UID host. The initial root/opaque-repository-identity mapping is asserted by the host binding step; packet checks enforce consistency with it. Arbitrary permitted executables that internally launch shells cannot be recognized by argv-name inspection.",
+    "Gate D leases/reservations/admission/namespace reconciliation/positive criterion credit/full contract packet inputs and Gate E/F final closure enforcement are not validated or claimed complete. Kernel/budget positive dispositions remain deferred. The report does not authorize stage progression or release.",
+    "Auditor test setup errors were corrected without changing product code: an incorrect constant, an assumed sha256: prefix on the raw evidence digest, and nil-vs-empty stderr artifact bytes. Earlier execution logs are retained. Only corrected passing controls and the independently reproduced product-response failures support the verdict.",
+    "Tests sample behavior and cannot prove the absence of all bypasses. Race checks found no data race in their exercised paths. Output paths created by t.TempDir are removed after tests; durable raw retained-output artifacts, logs, source and the reproduction script are separately kept.",
+    "Controlled unblinding occurred only after the Phase 1 digest was recorded. Later scope/TODO assertions did not change the frozen findings. No prior audit directory was opened."
+  ],
+  "scope_exclusions": [
+    ".serena/",
+    "docs/handoffs/2026-10-16-arch-amendment-*.md",
+    "accepted Gate D requirements; implementation assessed only for recorded exit tests and absence of Gate C reliance"
+  ],
+  "jev": "No approved callable Jev tool found in host tool inventory; model APIs forbidden. Orchestrator judgment used.",
+  "next_action": {
+    "action": "AUTHORIZE_BOUNDED_FINDINGS_IMPORT_RESPONSE_CORRECTION",
+    "owner": "Lennon (human gate owner)",
+    "rationale": "J11-01 and J11-02 have small, concrete remedies and independent failing controls.",
+    "proposed_execution_route": "Gate C implementer on a human-approved exact route; this audit did not dispatch or verify route availability.",
+    "permission_envelope": "Proposed correction is limited to findings-import response construction in cmd/hma/review.go and focused response tests. No safety-gate relaxation, Git publication, or stage approval is authorized.",
+    "exact_approval_required": "Human approval of that bounded correction unit and exact implementation/review routes before execution.",
+    "stop_conditions": "Stop if the correction changes snapshot provenance, reviewer eligibility, blocker handling, criterion credit, terminal-run checks, or requires broader scope.",
+    "escalation_conditions": "Return any authority/schema change or failed independent control to the human gate owner."
+  },
+  "phase1_sha256": "bb9fccd7a352a4f39767244ddc348c60883ffd62550e6d4228fb034945753855",
+  "finalized_at": "2026-10-17T18:57:14.119517+00:00",
+  "controlled_unblinding": {
+    "phase1_sha256": "bb9fccd7a352a4f39767244ddc348c60883ffd62550e6d4228fb034945753855",
+    "sources_read_after_freeze": [
+      "docs/handoffs/2026-10-16-gate-c-scope.md:87-123",
+      "TODO.md:149-171"
+    ],
+    "observations": [
+      "Scope §4b explicitly discloses the compiled-program/no-shell inspection limit and defers accepted-plan argv binding to Gate D.",
+      "Scope §4c discloses host-written initial repository identity mapping and defers plan tying to Gate D.",
+      "TODO leaves reservations and the independent Gate C audit/commit open. It does not claim Gate D reservations, positive criterion credit or bounded closure as implemented.",
+      "TODO references prior Gate C failures. Those judgments were first exposed only after the Phase 1 SHA-256 was recorded; they were not used as test evidence."
+    ],
+    "change_to_findings": "None. The two frozen response findings and FAIL verdict remain.",
+    "change_to_scope": "None. Accepted Gate D obligations remain deferred."
+  },
+  "reproduction_directory": "/tmp/hma-gate-c-20261017-final11/repro.6QkhnP"
+}

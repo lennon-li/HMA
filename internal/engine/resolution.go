@@ -44,7 +44,10 @@ func ProjectResolutionState(records []model.Record) ResolutionState {
 		if len(r.Criteria) > 0 {
 			state.Criteria = r.Criteria
 		}
-		if len(r.Findings) > 0 {
+		if r.FindingsSnapshot {
+			// A snapshot replaces the findings, even with none.
+			state.Findings = append([]model.Finding(nil), r.Findings...)
+		} else if len(r.Findings) > 0 {
 			state.Findings = r.Findings
 		}
 		for _, w := range r.Waivers {

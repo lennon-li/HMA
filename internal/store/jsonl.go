@@ -243,6 +243,40 @@ func atomicWrite(path string, data []byte) error {
 	return syncDir(filepath.Dir(path))
 }
 
+// Transact holds the run's exclusive lock while fn runs against the committed
+// chain and lets fn append through the given callback under that same lock,
+// so nothing else can append between fn's checks, its work, and its append.
+// A run with no files is reported as empty, as Load does, and refuses
+// appends: Transact never creates a run.
+func (s *Store) Transact(runID string, fn func(records []model.Record, appendLocked func(*model.Record) error) error) error {
+	if !safeRunID(runID) {
+		return errors.New("invalid run id")
+	}
+	p := s.paths(runID)
+	if !exists(p.stream) && !exists(p.head) && !exists(p.pending) {
+		return fn(nil, func(*model.Record) error { return errors.New("run does not exist") })
+	}
+	lock, err := lockRun(p.lock)
+	if err != nil {
+		return err
+	}
+	defer unlockRun(lock)
+	existing, err := s.loadLocked(runID)
+	if err != nil {
+		return err
+	}
+	return fn(existing, func(r *model.Record) error {
+		if r == nil || r.Metadata.RunID != runID {
+			return errors.New("invalid record")
+		}
+		if err := s.appendLocked(p, existing, r); err != nil {
+			return err
+		}
+		existing = append(existing, *r)
+		return nil
+	})
+}
+
 // Append commits one record under an exclusive per-run lock.
 func (s *Store) Append(r *model.Record) error {
 	if r == nil || !safeRunID(r.Metadata.RunID) {
@@ -262,6 +296,13 @@ func (s *Store) Append(r *model.Record) error {
 	if err != nil {
 		return err
 	}
+	return s.appendLocked(p, existing, r)
+}
+
+// appendLocked appends r after existing; the caller holds the run lock and
+// read existing under it.
+func (s *Store) appendLocked(p runPaths, existing []model.Record, r *model.Record) error {
+	var err error
 	wantSeq := int64(len(existing) + 1)
 	prev := ""
 	if len(existing) > 0 {

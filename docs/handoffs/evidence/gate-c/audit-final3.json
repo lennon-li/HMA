@@ -1,0 +1,634 @@
+{
+  "audit_id": "hma-gate-c-audit-20261017-final3",
+  "date": "2026-10-17T14:23:06.900888+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:527b7c5ff79090c558f5bbfed5ec87a85f06d1e5+worktree:746a8568b14f9339ca3f42f07a57ff2fb075b4820a3d187958904c2b217c045c",
+  "isolation": "isolated",
+  "isolation_compromised": false,
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_mapping": "FAIL is serialized as fix-required by the independent-audit report contract. These are the same decision.",
+  "phase1_frozen": true,
+  "auditor_route": {
+    "declared_worker": "liz",
+    "declared_model": "gpt-6.1-sol",
+    "declared_effort": "high",
+    "access_service": "current host session; no new dispatch",
+    "permission_envelope": "Read-only on /home/yeli/repos/HMA; audit artifacts and synthetic execution only under /tmp",
+    "attestation_limit": "The requested route is declared in the dispatch. No dispatcher receipt attesting actual model/runtime was supplied to this audit."
+  },
+  "requirements": [
+    {
+      "id": "C01",
+      "requirement": "HMA generates a fixed exact-target packet with unique dispatch identity and nonce; manual packet injection is refused.",
+      "source": "scope \u00a71; v4 \u00a75; v6 \u00a71",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E05"
+      ],
+      "observation": "HMA creates and hashes exact-target packets and unique nonce bindings. Caller Packet injection is rejected on both legacy and migrated runs."
+    },
+    {
+      "id": "C02",
+      "requirement": "Import verifies current/latest dispatch, core/artifact target, exact receipt identity/route/namespace/validity and report byte/binding provenance.",
+      "source": "scope \u00a72; v4 \u00a75; v5 \u00a73; normative task14",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E05"
+      ],
+      "observation": "Receipt identity, provider/effort, root, nonce, exact report bytes, half-open launch interval, latest dispatch, current implementation, core head and live-target checks hold in exercised cases."
+    },
+    {
+      "id": "C03",
+      "requirement": "Total verdict mapping and independent-audit structural/semantic validation prevent false approval; final review isolation and family separation hold.",
+      "source": "v3 \u00a74.3; v5 \u00a73; architecture \u00a7\u00a712-13,16",
+      "status": "fail",
+      "gate_c_status": "PARTIAL",
+      "evidence_refs": [
+        "E01",
+        "E03"
+      ],
+      "observation": "Normal invalid reports escalate/refuse. U+001C..U+001F-only required fields pass Go but fail Python; these reports approve and open the host gate. Final family/isolation guards otherwise hold."
+    },
+    {
+      "id": "C04",
+      "requirement": "Findings snapshots preserve blockers on unsuccessful review and other-unit findings; only authentic current approval resolves the exact unit.",
+      "source": "v3 \u00a74.1-4.2; architecture \u00a7\u00a77,9",
+      "status": "fail",
+      "gate_c_status": "PARTIAL",
+      "evidence_refs": [
+        "E01",
+        "E03",
+        "E05"
+      ],
+      "observation": "Failed/escalated snapshots preserve strong findings and exact ownership. The C-F17 invalid approving report still clears an existing own-unit BLOCK."
+    },
+    {
+      "id": "C05",
+      "requirement": "Existing core/host records remain readable, finding ownership migration is conservative, and migrated runs cannot create new manual approvals.",
+      "source": "original \u00a75 Gate C compatibility; scope \u00a71; task14",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E05",
+        "E06"
+      ],
+      "observation": "Records generated using the baseline 527b7c5 model/store load with unchanged anchors. Own legacy findings resolve; ambiguous findings and active waivers remain. Packet mode blocks new manual approvals."
+    },
+    {
+      "id": "C06",
+      "requirement": "Verify-loop bridge independently recaptures exact-target argv/output and binds journal/envelope/run/unit/store without criterion or launch authority.",
+      "source": "original \u00a75 Gate C; v3 \u00a73.2; architecture \u00a714; accepted scope \u00a70.1",
+      "status": "fail",
+      "gate_c_status": "PARTIAL",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05"
+      ],
+      "observation": "Bridge rechecks argv and target, binds envelope/run/unit/store and retains normal/truncated streams without criterion credit. C-F18 accepts an incomplete existing output artifact."
+    },
+    {
+      "id": "C07",
+      "requirement": "Closed/missing runs refuse commands before executing checks; atomicity/locking, current route and terminal guarantees from Gate B remain intact.",
+      "source": "architecture \u00a7\u00a75-7,14-15; task14",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E05"
+      ],
+      "observation": "Gate B suite and dogfood pass. Missing/terminal runs refuse before argv. A queued recapture after terminal commit refuses under the host-lock protocol. No stage approval is generated."
+    },
+    {
+      "id": "C08",
+      "requirement": "Executable failure\u2192linked remediation\u2192fresh verification fixtures and independent negative controls reproduce acceptance and review separation.",
+      "source": "original \u00a75 Gate C, \u00a76 minimum proofs 4,6,7; scope \u00a74",
+      "status": "fail",
+      "gate_c_status": "PARTIAL",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E04"
+      ],
+      "observation": "Delivered failure/remediation/reverification fixtures pass. Independent negative controls expose two unresolved defects, so the full Gate C acceptance set does not pass."
+    },
+    {
+      "id": "C09",
+      "requirement": "Human-deferred requirements retain Gate D exit tests; Gate C makes no bounded execution, independent criterion credit, or closure claim based on them.",
+      "source": "accepted human scope \u00a70.1; criteria note",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E07"
+      ],
+      "observation": "Accepted scope \u00a70.1 records Gate D prerequisites and exit tests. Gate C imports grant no criterion credit, launch authority, or terminal closure. Full contract packet inputs and reservation matrix are deferred by the human."
+    }
+  ],
+  "prior_findings": [
+    {
+      "id": "F01",
+      "title": "A failed review can downgrade an existing blocker by ID",
+      "status": "FIXED",
+      "observation": "Nonapproving snapshot mapping preserves same-ID BLOCK/WAIVABLE strength and omitted strong findings. The safe snapshot may append retained findings; it does not apply a downgrade.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Imports accept stale core bindings and can erase newer blockers",
+      "status": "FIXED",
+      "observation": "Both import paths bind the exact core head; any intervening record fails stale binding, with only the own imported snapshot allowed at the host gate.",
+      "evidence_refs": [
+        "E02",
+        "E03"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Replaying an old passing run overrides a newer failed review",
+      "status": "FIXED",
+      "observation": "One-use latest-dispatch checks prevent old review replay. Concurrent import admits exactly one; a newer unanswered packet blocks older snapshots/gates.",
+      "evidence_refs": [
+        "E02",
+        "E03"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Generated packets do not bind the observed repository artifact",
+      "status": "FIXED",
+      "observation": "Packet generation observes and derives the artifact; wrong declared artifact and receipt root/head/worktree refuse; later tracked/untracked/dirty-content changes refuse findings import.",
+      "evidence_refs": [
+        "E02",
+        "E03"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Final-audit reason does not enforce final-review family separation",
+      "status": "FIXED",
+      "observation": "Final issuing reason invokes strong family separation even without FinalValidation; normal and independent controls pass.",
+      "evidence_refs": [
+        "E02",
+        "E06"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Receipt import ignores provider and effort drift",
+      "status": "FIXED",
+      "observation": "Missing/wrong provider and effort refuse with both chains unchanged; exact route controls pass.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Invalid audit reports can approve and clear findings",
+      "status": "PARTIAL",
+      "observation": "Common malformed/inconsistent candidates refuse or escalate. C-F17 still approves a Python-invalid report and clears BLOCK.",
+      "evidence_refs": [
+        "E01",
+        "E03"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Unverified reference labels create new unwaivable blockers",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Positive reproduced-kernel and measured-budget mappings are Gate D under accepted \u00a70.1. Negative fake/unreproduced references stay ADVISORY; cited pass escalates.",
+      "evidence_refs": [
+        "E02",
+        "E07"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "The verify-loop evidence bridge is absent",
+      "status": "FIXED",
+      "observation": "The bridge exists and independently recaptures rather than trusting green; failing/passing checks, envelope drift and mutation controls pass without criterion or launch credit. Output-retention failure is tracked separately as C-F18/C-F15.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04"
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "Review dispatches have no short validity interval",
+      "status": "FIXED",
+      "observation": "Launch interval is frozen and half-open. At start and just-before-end controls pass; before, at end, after and missing time refuse. Core-head staleness prevents post-rewind reuse. Lease generation work remains deferred.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E07"
+      ]
+    },
+    {
+      "id": "F11",
+      "title": "Reviewer independence checks only the latest implementation",
+      "status": "FIXED",
+      "observation": "Independence loops over every retained implementation contribution for the unit. Earlier-worker and earlier-model cases refuse; independent-of-both passes.",
+      "evidence_refs": [
+        "E06"
+      ]
+    },
+    {
+      "id": "F12",
+      "title": "Reservation checks assigned to Gate C are not implemented",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Reservations, charged unlaunched attempts, replay eligibility and lease generations move unchanged to Gate D with exit tests. No Gate C execution/closure claim uses them.",
+      "evidence_refs": [
+        "E07"
+      ]
+    },
+    {
+      "id": "F13",
+      "title": "New legacy manual-review writes bypass the consolidated import path",
+      "status": "FIXED",
+      "observation": "Packet mode is sticky for the run. New manual review/dispatch paths refuse after migration; legacy compatibility remains labelled.",
+      "evidence_refs": [
+        "E02",
+        "E05"
+      ]
+    },
+    {
+      "id": "A01",
+      "title": "Invalid audit reports approve, clear blockers, and satisfy the host Verification gate",
+      "status": "PARTIAL",
+      "observation": "Standard contract failures preserve BLOCK and keep gate closed, but C-F17 reproduces the same unsafe outcome with control-only required text.",
+      "evidence_refs": [
+        "E01",
+        "E03"
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "An old live-target review can clear a blocker after the worktree changes",
+      "status": "FIXED",
+      "observation": "Both imports re-snapshot live artifact; own tracked, untracked, and dirty-content cases retain blocker and chains. Current exact target control passes.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "A03",
+      "title": "Finding namespace prefixes allow a review to clear another unit blocker",
+      "status": "FIXED",
+      "observation": "Ownership uses UnitID rather than ID prefix. U1/sub and unowned blockers survive U1 approval; nonapproving same-ID cases preserve strength.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "A04",
+      "title": "HMA-generated review packets omit the contract and findings snapshot",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Known blocker, bound core head, route, plan digest and projected state are present. Full contract-dependent packet inputs are explicitly deferred to Gate D by the human.",
+      "evidence_refs": [
+        "E02",
+        "E07"
+      ]
+    },
+    {
+      "id": "A05",
+      "title": "Existing unprefixed core findings have no import migration",
+      "status": "FIXED",
+      "observation": "A genuine baseline-written record loads with its original anchor. Unit-owned legacy finding resolution works; ambiguous IDs and active finding waiver remain visible.",
+      "evidence_refs": [
+        "E05"
+      ]
+    },
+    {
+      "id": "A06",
+      "title": "Required disposition, criterion recheck and independent-credit integration are absent",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Positive disposition/criterion-credit integration needs Gate D registries, budgets and approved acceptance contract. Gate C has no credit path.",
+      "evidence_refs": [
+        "E07"
+      ]
+    },
+    {
+      "id": "A07",
+      "title": "Gate C launch-reconciliation integration is deferred in full",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Gate C envelope hash/store/hook/stop checks are exercised and pass. Namespace/reservation reconciliation matrix is Gate D by accepted scope.",
+      "evidence_refs": [
+        "E03",
+        "E05",
+        "E07"
+      ]
+    },
+    {
+      "id": "A08",
+      "title": "loop-evidence executes verify argv before checking terminal state",
+      "status": "FIXED",
+      "observation": "Missing/terminal admission refuses before marker execution; a terminal writer holding host lock wins before queued recapture and no argv starts. Open control captures output without deadlock.",
+      "evidence_refs": [
+        "E03",
+        "E05"
+      ]
+    },
+    {
+      "id": "A09",
+      "title": "Legacy compatibility runs do not expose an enforcement-mode label",
+      "status": "FIXED",
+      "observation": "Write results and host show --mode expose legacy_manual versus packet_import. New manual approvals are refused after a packet.",
+      "evidence_refs": [
+        "E02",
+        "E05"
+      ]
+    },
+    {
+      "id": "R3-01",
+      "title": "A newer unanswered packet does not invalidate an older approving review",
+      "status": "FIXED",
+      "observation": "Concurrent import allows one result. A newer pending packet prevents old snapshot and gate acceptance; its current valid report+snapshot reopens the host gate.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "R3-02",
+      "title": "The fixed review packet still omits mandatory review inputs",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Full fixed request/criteria/non-goals/budgets/evidence/policy inputs depend on the acceptance contract and are explicitly moved to Gate D. Current blocker/state binding remains in scope and implemented.",
+      "evidence_refs": [
+        "E07"
+      ]
+    },
+    {
+      "id": "R3-03",
+      "title": "The broader Gate C acceptance-boundary deferral is not approved and leaves design requirements incomplete",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Lennon accepted \u00a70.1 on 2026-10-17. Preserve the full original design exit matrix for Gate D; this audit makes no reservation, independent-credit or closure claim.",
+      "evidence_refs": [
+        "E07"
+      ]
+    },
+    {
+      "id": "C-F14",
+      "title": "Legacy dispatch input can impersonate an HMA-generated review packet",
+      "status": "FIXED",
+      "observation": "Caller-supplied Dispatch.Packet refuses before append on both legacy and packet_import runs. Genuine packet/import controls pass.",
+      "evidence_refs": [
+        "E03",
+        "E05"
+      ]
+    },
+    {
+      "id": "C-F15",
+      "title": "Loop recapture discards the verification output",
+      "status": "PARTIAL",
+      "observation": "Normal and capped stdout/stderr remain accessible and reproduce framed digest, including nonzero exits. C-F18 accepts an empty artifact left at the final name by an interrupted write.",
+      "evidence_refs": [
+        "E03",
+        "E04"
+      ]
+    },
+    {
+      "id": "C-F16",
+      "title": "Go reads case-variant JSON keys that the Python contract ignores",
+      "status": "FIXED",
+      "observation": "Exact key decoding ignores ASCII and Unicode case variants in reports, receipts, nested bindings and loop state; safe report verdict is retained. Whitespace parity in C-F17 is a separate defect.",
+      "evidence_refs": [
+        "E03",
+        "E05",
+        "E06"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-F17",
+      "title": "Go and Python disagree on required nonempty report fields; invalid reports can approve and clear BLOCK",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "requirements": [
+        "C03",
+        "C04",
+        "C08"
+      ],
+      "related_prior_findings": [
+        "F07",
+        "A01"
+      ],
+      "diagnosis": "internal/host/report_contract.go:22 uses strings.TrimSpace. Python validate_report.py uses str.strip, which additionally treats U+001C through U+001F as whitespace. A current, receipt-bound pass report with audit_id, target, requirement id and evidence reference consisting only of each such character fails the authoritative Python validator but has no Go violations. review-import records APPROVE; findings-import removes PRIOR/BLOCK; requireHostTransitionGate returns nil. This satisfies the host gate only; no actual stage transition or human approval was fabricated.",
+      "evidence": [
+        {
+          "source": "auditor-probes.log:10-65; auditor-probes-race.log:10-65",
+          "observation": "Four subcases reproduce Python exit 1, Go violations=[], APPROVE, empty findings, and gate=<nil>."
+        },
+        {
+          "source": "internal/host/report_contract.go:22; internal/host/review_import.go:183-206; cmd/hma/review.go:427-430",
+          "observation": "The nonempty predicate is reused across contract fields. Its false acceptance feeds the approval map and approving findings replacement."
+        },
+        {
+          "source": "invalid-report-U001C.json; whitespace-result-U001C.json",
+          "observation": "Retained exact invalid report plus host/core records show the prior BLOCK and its replacement."
+        }
+      ],
+      "fix": {
+        "action": "In internal/host/report_contract.go, use one nonempty predicate with the authoritative Python strip whitespace set, including U+001C..U+001F. Extend parity tests across all nonempty fields and route approval tests through each invalid report. Keep invalid reports ESCALATE or refused, and preserve blockers.",
+        "why": "The imported report contract must have the same field semantics in Go and Python before pass can authorize an approving snapshot.",
+        "verification": [
+          {
+            "method": "Run auditor TestAuditorReportWhitespaceParity for U+001C..U+001F, with the existing valid current report control.",
+            "expected": "Every Python-invalid report refuses or escalates, retains PRIOR/BLOCK, and leaves the host gate closed. Valid current report still approves."
+          },
+          {
+            "method": "Differentially test nonempty fields using ASCII whitespace, U+0085, U+00A0, U+2007, U+202F, the four controls, and mixed real text.",
+            "expected": "Go and Python accept and reject the same inputs."
+          }
+        ],
+        "tradeoffs": "A report with previously accepted control-only fields will no longer approve. This is a small compatibility restriction on invalid reports. No schema or stage semantics need to change.",
+        "alternative": "Call the canonical Python validator before approval. This avoids the port gap but adds a runtime dependency to the standalone Go integration.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": 1
+    },
+    {
+      "id": "C-F18",
+      "title": "Interrupted output-artifact writes are trusted as complete on retry",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "medium",
+      "confidence": "observed",
+      "requirements": [
+        "C06",
+        "C08"
+      ],
+      "related_prior_findings": [
+        "C-F15"
+      ],
+      "diagnosis": "retainOutput creates the final digest-named path with O_EXCL before writing bytes. An interrupted process can leave that final path empty or partial. On retry, os.ErrExist returns its reference without reading or validating it. An auditor fixture places an empty file at the exact expected path, representing a crash between OpenFile and Write. loop-evidence then reports EVIDENCE_RECORDED and appends both records with a reference to 0 bytes instead of the required 99-byte output artifact. No same-UID adversary is needed for this failure state. The test simulates crash residue; it does not claim to have killed a process at that instruction.",
+      "evidence": [
+        {
+          "source": "auditor-output-crash.log:2-6; interrupted-output-result.json",
+          "observation": "loop-evidence accepts with exit 0; output_ref resolves to 0 bytes, expected 99; OutputDigest=c7d386429b24fec97b446d8e2b50a23942057ca5ab8b8a9839776f0ca443fd16 cannot be reconstructed from that artifact."
+        },
+        {
+          "source": "cmd/hma/loop.go:288-299",
+          "observation": "The final name is created before Write/Sync, and the existing-file branch returns without validating content."
+        }
+      ],
+      "fix": {
+        "action": "In retainOutput, validate the exact bytes/digest and regular-file type of an existing artifact before returning a reference. Publish new artifacts only after a complete temporary file is written and synced, with atomic no-clobber publication and directory sync. Refuse a corrupt existing artifact before either evidence append; preserve it for diagnosis.",
+        "why": "A final digest-named path must identify complete bytes, including after interruption. Filename existence alone does not prove content integrity.",
+        "verification": [
+          {
+            "method": "Run TestAuditorOutputInterruptedArtifact with empty, truncated and wrong-byte existing artifacts, plus a valid existing-artifact control.",
+            "expected": "Incomplete/corrupt artifacts never produce accepted evidence. Valid existing artifacts reproduce both streams and OutputDigest."
+          },
+          {
+            "method": "Interrupt artifact publication before and after sync/publish, restart and repeat capture.",
+            "expected": "Every accepted output_ref is complete and verifiable. No partial final artifact is trusted; both chains remain unchanged on corrupt-artifact refusal."
+          }
+        ],
+        "tradeoffs": "Existing-artifact reuse adds a bounded read/hash. Atomic no-clobber publication needs platform-aware handling. Recovery must not silently rewrite evidence history.",
+        "alternative": "Keep exclusive final-path writes but validate existing bytes and fail closed on mismatch; this contains false evidence while leaving manual recovery for crash residue.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": 2
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E00",
+      "sources": [
+        "freeze-start.json",
+        "start-status.txt",
+        "start-diff.binary",
+        "requirements-derived.json"
+      ],
+      "observation": "Neutral target freeze and requirement reconstruction before diff inspection."
+    },
+    {
+      "id": "E01",
+      "sources": [
+        "auditor-probes.log",
+        "auditor-probes-race.log",
+        "invalid-report-U001C.json",
+        "invalid-report-U001D.json",
+        "invalid-report-U001E.json",
+        "invalid-report-U001F.json",
+        "whitespace-result-U001C.json"
+      ],
+      "observation": "Independent Python/Go report parity counterexample; invalid approval, BLOCK clearance and host gate acceptance."
+    },
+    {
+      "id": "E02",
+      "sources": [
+        "go-test-isolated.log",
+        "go-race-isolated.log",
+        "go-vet.log",
+        "host-dogfood.log"
+      ],
+      "observation": "Repository suites pass in isolated copy; synthetic host dogfood passes 17 checks. Initial environmental failures retained in go-test.log/go-race.log."
+    },
+    {
+      "id": "E03",
+      "sources": [
+        "auditor_probes_test.go",
+        "overlay.json",
+        "auditor-probes.log",
+        "auditor-probes-race.log"
+      ],
+      "observation": "Auditor matrices for report safety, receipt route/window, exact ownership, concurrent import/pending packet, live target mutation, closed/missing runs, retained and capped output."
+    },
+    {
+      "id": "E04",
+      "sources": [
+        "auditor_output_crash_test.go",
+        "overlay-output.json",
+        "auditor-output-crash.log",
+        "interrupted-output-result.json"
+      ],
+      "observation": "Independent simulated interrupted-artifact test accepts a zero-byte referenced output artifact."
+    },
+    {
+      "id": "E05",
+      "sources": [
+        "auditor_supplement_test.go",
+        "overlay-supplement.json",
+        "auditor-supplement.log",
+        "legacy-store/legacy.jsonl",
+        "baseline/scripts/auditorlegacy/main.go"
+      ],
+      "observation": "Genuine baseline record load/migration, exact waiver retention, both-mode manual-packet rejection, queued terminal race and loop aliases pass under -race."
+    },
+    {
+      "id": "E06",
+      "sources": [
+        "interface-parity.log",
+        "internal/host/gatec_r3_parity_test.go",
+        "internal/host/gatec_r2_test.go"
+      ],
+      "observation": "Delivered Python/Go canonical-hash and report corpus parity tests pass; earlier-implementer independence tests pass. Corpus does not include C-F17."
+    },
+    {
+      "id": "E07",
+      "sources": [
+        "docs/handoffs/2026-10-16-gate-c-scope.md:16-35",
+        "/tmp/hma-gate-c-criteria/criteria-final3.json",
+        "docs/task14-host-orchestration.md:137-237"
+      ],
+      "observation": "Human-approved Gate D boundary retains original exit tests and prohibits reliance for Gate C credit/launch/closure."
+    }
+  ],
+  "limitations": [
+    "Fresh audit context contains original objective, approved source sections and the sanitized closure criteria only. The required v7 source header contains a historical Gate A verdict; source artifacts and comments naturally contain author claims. No prior Gate C verdict or implementer conversation was read before Phase 1. This is context isolation, not an OS-enforced read-only mount or proof of hidden system routing.",
+    "All execution used a copied repository or Go overlays under this output directory. Audit permissions, rather than an OS-enforced read-only filesystem, protected the original repository. No target edits, Git mutations on the target, nested agent CLIs or model APIs were used. Existing tests create and mutate synthetic Git fixtures outside the target.",
+    "Fixtures use synthetic receipts, route approvals and host preflight telemetry. No live worker, exact-route hi, authentic human stage transition, or final outcome closure was executed. This is the Gate C integration audit, not Gate F real-worker dogfood.",
+    "Gate D reservations, leases/generations, independent criterion credit, reproduced kernel/budget dispositions and full contract-dependent packet inputs are excluded by explicit human decision. Their exit tests remain required before later claims.",
+    "The first full normal/race suites failed one unchanged dogfood-helper test because the repository copy was under os.TempDir. Both complete suites passed after giving tests a separate TMPDIR; both initial logs remain available.",
+    "Independent probes reuse repository fixture setup helpers but define their own test inputs, adverse cases and assertions. Tests are finite; passed suites are not proof over all possible concurrency schedules or filesystems.",
+    "Crash residue was simulated at the artifact filename boundary. No real power loss or storage-failure injection was performed.",
+    "No approved Jev tool is exposed. Auditor decisions use the permitted fallback; no model/API substitution was made."
+  ],
+  "scope_exclusions": [
+    ".serena/",
+    "docs/handoffs/2026-10-16-arch-amendment-*.md"
+  ],
+  "recommendation": {
+    "next_action": "RETURN_TO_IMPLEMENTATION",
+    "owner": "Human Gate C coordinator",
+    "route": "Human to select an eligible implementer route; independent auditor retest follows repairs.",
+    "permission_envelope": "This audit grants no repository write or stage authority. Proposed work is limited to report predicate parity and safe output-artifact reuse/publication with regression probes.",
+    "approval_required": "Human authorization for the bounded repair unit and exact implementer route. No HMA stage-transition approval is supplied by this report.",
+    "rationale": "C-F17 permits invalid approval/BLOCK clearance; C-F18 records evidence without retained output. Gate C acceptance cannot pass.",
+    "stop_conditions": "Stop if repair needs changed criteria, wider permissions, or design changes; escalate to the human. Do not advance Gate C until both reproductions pass independently."
+  },
+  "improvement_opportunities": [],
+  "phase1_sha256": "5cf5fe74fcabd798070ec139cfd37a50d49c4c8f018a58a1b47f22f23271781f",
+  "phase1_path": "PHASE1.json",
+  "controlled_unblinding": {
+    "time": "2026-10-17T14:23:06.900763+00:00",
+    "after_phase1_sha256": "5cf5fe74fcabd798070ec139cfd37a50d49c4c8f018a58a1b47f22f23271781f",
+    "read": [
+      "docs/handoffs/2026-10-16-gate-c-scope.md \u00a74a-\u00a75",
+      "TODO.md Gate C section and its diff"
+    ],
+    "observation": "The scope addendum describes guards independently exercised in Phase 1. TODO still leaves independent Gate C audit/commit open and records accepted reservation deferral. No observed Gate C launch, criterion-credit or closure claim relies on Gate D. Historical completion checkboxes do not overturn the two executable failures. No verdict or finding changed.",
+    "finding_changes": []
+  },
+  "target_unchanged": true,
+  "source_inventory": "source-inventory.json",
+  "execution_ledger": "execution-ledger.json"
+}

@@ -548,7 +548,7 @@ func TestGateBClosureTransitionHoldsHostLock(t *testing.T) {
 
 func appendHostRecordForTest(d string) error {
 	in := bDecisionPlain(d)
-	_, err := appendHostRecord(d, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil, func([]hoststate.Record, []model.Record) error { return nil })
+	_, err := appendHostRecord(d, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil, nil, func([]hoststate.Record, []model.Record) error { return nil })
 	return err
 }
 

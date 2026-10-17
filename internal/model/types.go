@@ -145,10 +145,20 @@ type Criterion struct {
 	Disposition CriterionDisposition `json:"disposition"`
 }
 
+// FindingsSource binds a findings snapshot to the host review record and the
+// report bytes it was imported from.
+type FindingsSource struct {
+	ReviewRecordDigest string `json:"review_record_digest"`
+	ReportDigest       string `json:"report_digest"`
+}
+
 // Finding is a validator finding with its disposition. Advisory is used only
 // when Disposition is ADVISORY.
 type Finding struct {
-	ID          string              `json:"id"`
+	ID string `json:"id"`
+	// UnitID (Gate C, additive) is the unit that owns an imported finding.
+	// Empty for findings recorded before ownership existed.
+	UnitID      string              `json:"unit_id,omitempty"`
 	Disposition FindingDisposition  `json:"disposition"`
 	Advisory    AdvisoryDisposition `json:"advisory,omitempty"`
 }
@@ -297,10 +307,16 @@ type Record struct {
 	Control        StageControlState `json:"control,omitempty"`
 	Criteria       []Criterion       `json:"criteria,omitempty"`
 	Findings       []Finding         `json:"findings,omitempty"`
-	Waivers        []Waiver          `json:"waivers,omitempty"`
-	Outcome        TerminalOutcome   `json:"outcome,omitempty"`
-	Approval       *ApprovalBinding  `json:"approval,omitempty"`
-	Evidence       *EvidenceRef      `json:"evidence,omitempty"`
+	// FindingsSnapshot (Gate C, additive) makes Findings replace the previous
+	// findings even when empty. FindingsSource names the imported review and
+	// report the snapshot came from. Without the flag a record with no
+	// findings changes nothing, as before.
+	FindingsSnapshot bool             `json:"findings_snapshot,omitempty"`
+	FindingsSource   *FindingsSource  `json:"findings_source,omitempty"`
+	Waivers          []Waiver         `json:"waivers,omitempty"`
+	Outcome          TerminalOutcome  `json:"outcome,omitempty"`
+	Approval         *ApprovalBinding `json:"approval,omitempty"`
+	Evidence         *EvidenceRef     `json:"evidence,omitempty"`
 
 	WaiverOperation *WaiverOperation            `json:"waiver_operation,omitempty"`
 	FindingOverride *FindingDispositionOverride `json:"finding_override,omitempty"`

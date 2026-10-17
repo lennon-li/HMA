@@ -32,7 +32,11 @@ hma host decision  --input <file> --store <directory>
 hma host preflight --input <file> --store <directory>
 hma host dispatch  --input <file> --store <directory>
 hma host review    --input <file> --store <directory>
-hma host show      --store <directory> --run_id <id>
+hma host review-packet   --input <file> --store <directory> --out <packet file>
+hma host review-import   --input <file> --store <directory>
+hma host findings-import --input <file> --store <directory>
+hma host loop-evidence   --input <file> --store <directory>
+hma host show      --store <directory> --run_id <id> [--mode]
 ```
 
 Each write input has `run_id`, `actor`, and an RFC3339 `timestamp`, plus exactly
@@ -124,7 +128,96 @@ may not be silently replaced.
 
 The review result binds the exact implementation record, review-dispatch record,
 artifact digest, fixed review packet, reviewer identity, verdict, and optional
-findings digest. Verdict is `APPROVE` or `BLOCK`.
+findings digest. A host-written review verdict is `APPROVE` or `BLOCK`.
+
+### Imported reviews (Gate C)
+
+`hma host review-packet` makes HMA generate the review packet. HMA takes its
+own snapshot of the repository (`repository_root`, `base_revision`, and
+uncommitted content only if `dirty_worktree_approved`), derives the review
+`artifact_digest` from it (a host-named digest that differs is refused), and
+records the canonical project root and the agent-dispatch launch digests it
+expects (`launch_head`, `launch_worktree_sha256`, computed as
+`agent-run-ledger` does). It creates a fresh 128-bit `review_nonce` and a
+`review_dispatch_id`, writes the packet outside the repository, and appends
+the review dispatch through the normal dispatch checks. The reviewer must
+launch within one hour (`[dispatch time, valid_until)`), with
+`agent-dispatch --run-id <dispatch_run_id>`, and copies `hma_binding`
+{`packet_sha256`, `review_dispatch_id`, `review_nonce`} into its report. A
+final audit (`issuing_reason: final`) needs provider- and model-family
+separation, as high or critical risk, disputed, and final validation do. The
+reviewer must be independent of every implementation of the unit, not only
+the latest. Once a run has any HMA-generated packet, host-written review
+dispatches and reviews are refused (`HOST_REVIEW_IMPORT_REQUIRED`).
+`hma host dispatch` never accepts a `packet` binding; only `review-packet`
+creates one.
+
+The packet also carries the bound HMA state it reviews against: the core head,
+the unit's approved route and `accepted_plan_digest` (refused if missing),
+the projected criteria, the unit's current and unowned findings, and active
+waivers. Every write result and `hma host show --mode` report the run's
+`review_enforcement`: `legacy_manual` until the run's first HMA-generated
+packet, `packet_import` after it.
+
+`hma host review-import` answers only the unit's latest packet, once, and only
+while the core head is the one the packet bound. It reads the receipt at
+`<ledger_dir>/runs/<dispatch_run_id>/receipt.json` and imports only if: the run
+id, `mode: review`, `state: completed`, and `exit_code: 0` match; the receipt
+packet digest, launch digests, and project root equal the recorded values;
+the receipt agent, model, provider, and effort equal the review route;
+`started_at` is inside the packet's validity interval; the report bytes hash
+to a `report_files` entry and are one JSON document with a `findings` array;
+the live repository still equals the packet's artifact (`HOST_REVIEW_TARGET_CHANGED`);
+the report `hma_binding` equals the packet; and, for a final audit or final
+validation, an approving report has `isolation: isolated`. Otherwise it refuses
+with `HOST_REVIEW_RECEIPT_MISMATCH`, `HOST_REVIEW_REPORT_MISMATCH`,
+`HOST_FINDINGS_IMPORT_INVALID`, `HOST_REVIEW_PACKET_MISMATCH`,
+`HOST_CORE_BINDING_STALE`, or `HOST_REVIEW_ISOLATION_INSUFFICIENT` and
+appends nothing. The verdict map is total: `pass` is `APPROVE`,
+`fix-required` is `REQUEST_CHANGES`, and any other or missing verdict is
+`ESCALATE` (next action `ESCALATE_TO_HUMAN`). The report is checked against
+the full independent-audit report contract (a Go port of
+`validate_report.py`, kept equal by a parity test); a report that breaks it
+is recorded as `ESCALATE`, as is a `pass` that carries an HMA citation in
+`hma_ref`. Under the trusted-host model the receipt is
+host-written, so these checks detect drift and accident, not forgery.
+
+`hma host findings-import` writes one core `finding` record with
+`findings_snapshot: true` and `findings_source` from the latest imported review
+of the current implementation and its exact report bytes, only while the core
+head is the one the review bound (one snapshot per review) and the live
+repository still equals the packet's artifact. Each imported finding records
+its owning unit in `unit_id` (ids are also namespaced `<unit>/<id>`);
+ownership is that field, never the prefix. Other units' findings are kept. A
+legacy finding without `unit_id` belongs to the unit of the pre-snapshot core
+record that last set it; if that record names no unit, the finding stays in
+force until a human decides its ownership. Severity
+never sets disposition, and HMA has no kernel-rule registry or plan budgets
+yet, so every imported finding is `ADVISORY` (`PARK`); a citation cannot create
+an unwaivable blocker by label alone. A snapshot from a non-approving review
+keeps every earlier `BLOCK` and `WAIVABLE` finding of the unit and never
+weakens one with the same id; an approving review's snapshot replaces the
+unit's findings. An imported review satisfies the Verification gate only
+after its snapshot is recorded (`HOST_FINDINGS_SNAPSHOT_MISSING`); any other
+core record after the review makes it stale. No import path writes
+acceptance-criterion dispositions.
+
+`hma host loop-evidence` imports a verify-loop `state.json` whose envelope
+`hma` block names this run, unit, and store, whose `envelope_sha256` equals
+the canonical hash of the envelope (as verify-loop computes it), and whose
+envelope names an `authority_hook` and `escalate_to: stop`. It holds the host
+run lock throughout, refuses a terminal run or a unit without an approved
+route before running anything, and refuses an attempt id equal to a review
+launch's run id. HMA does not use the loop's own result:
+it re-runs the loop's targeted `verify.argv` itself, without a shell, through
+the CI evidence capture, against the snapshot it observes before and after
+(a check that changes the worktree is refused), appends that as a core
+`evidence` record, and appends a host `loop_evidence` record binding the state
+bytes, the envelope digest, each attempt's `dispatch_run_id`, and the core
+record. The captured stdout and stderr are kept as a content-addressed artifact
+under `<store>/artifacts/`, named by the evidence `output_ref`, from which the
+evidence `output_digest` can be recomputed. It credits no criterion and authorizes no launch; launch
+reconciliation of those ids is Gate D.
 
 Direct work by the interactive orchestrator is implementation for this rule and
 therefore still requires an eligible independent reviewer.

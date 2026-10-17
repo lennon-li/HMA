@@ -27,6 +27,14 @@ const (
 	KindPreflight RecordKind = "route_preflight"
 	KindDispatch  RecordKind = "dispatch"
 	KindReview    RecordKind = "independent_review"
+	// KindLoopEvidence records an imported verify-loop run and HMA's own
+	// re-capture of its check (Gate C). It is evidence only: it grants no
+	// launch, review, or criterion credit.
+	KindLoopEvidence RecordKind = "loop_evidence"
+	// KindRepositoryBinding records, once per run, the canonical repository
+	// root and identity the run works on. Review packets and loop evidence
+	// must name it; it is never taken from a packet or a journal.
+	KindRepositoryBinding RecordKind = "repository_binding"
 
 	DecisionDelegate            DecisionMode = "DELEGATE"
 	DecisionDirectCostException DecisionMode = "DIRECT_COST_EXCEPTION"
@@ -42,32 +50,48 @@ const (
 
 	ReviewApprove ReviewVerdict = "APPROVE"
 	ReviewBlock   ReviewVerdict = "BLOCK"
+	// Imported reviews only (Gate C): a report asking for fixes, and a
+	// report whose verdict grants nothing and needs a human decision.
+	ReviewRequestChanges ReviewVerdict = "REQUEST_CHANGES"
+	ReviewEscalate       ReviewVerdict = "ESCALATE"
 )
 
 const (
-	ReasonDecisionMissing            = "HOST_ORCHESTRATION_DECISION_MISSING"
-	ReasonDecisionSupersession       = "HOST_DECISION_SUPERSESSION_INVALID"
-	ReasonDirectCostNotCheaper       = "HOST_DIRECT_COST_EXCEPTION_NOT_JUSTIFIED"
-	ReasonRouteMismatch              = "HOST_ROUTE_MISMATCH"
-	ReasonPermissionWidened          = "HOST_PERMISSION_WIDENED"
-	ReasonPreflightMissing           = "HOST_PREFLIGHT_MISSING"
-	ReasonPreflightUnavailable       = "HOST_PREFLIGHT_UNAVAILABLE"
-	ReasonPreflightStale             = "HOST_PREFLIGHT_STALE"
-	ReasonImplementationMissing      = "HOST_IMPLEMENTATION_RECORD_MISSING"
-	ReasonReviewMissing              = "HOST_INDEPENDENT_REVIEW_MISSING"
-	ReasonReviewerNotIndependent     = "HOST_REVIEWER_NOT_INDEPENDENT"
-	ReasonReviewPacketMismatch       = "HOST_REVIEW_PACKET_MISMATCH"
-	ReasonInvalidHostRecord          = "HOST_RECORD_INVALID"
-	ReasonCoreRunMissing             = "HOST_CORE_RUN_MISSING"
-	ReasonConcurrentWrite            = "HOST_CONCURRENT_WRITE"
-	ReasonHostChainCorrupt           = "HOST_CHAIN_CORRUPT"
-	ReasonHostHeadMismatch           = "HOST_HEAD_MISMATCH"
-	ReasonImplementationAlreadyBound = "HOST_IMPLEMENTATION_ALREADY_BOUND"
-	ReasonCoreBindingStale           = "HOST_CORE_BINDING_STALE"
-	ReasonRouteApprovalMissing       = "HOST_ROUTE_APPROVAL_MISSING"
-	ReasonRouteApprovalMismatch      = "HOST_ROUTE_APPROVAL_MISMATCH"
-	ReasonCoreRunTerminal            = "HOST_CORE_RUN_TERMINAL"
-	ReasonReviewArtifactMismatch     = "HOST_REVIEW_ARTIFACT_MISMATCH"
+	ReasonDecisionMissing             = "HOST_ORCHESTRATION_DECISION_MISSING"
+	ReasonDecisionSupersession        = "HOST_DECISION_SUPERSESSION_INVALID"
+	ReasonDirectCostNotCheaper        = "HOST_DIRECT_COST_EXCEPTION_NOT_JUSTIFIED"
+	ReasonRouteMismatch               = "HOST_ROUTE_MISMATCH"
+	ReasonPermissionWidened           = "HOST_PERMISSION_WIDENED"
+	ReasonPreflightMissing            = "HOST_PREFLIGHT_MISSING"
+	ReasonPreflightUnavailable        = "HOST_PREFLIGHT_UNAVAILABLE"
+	ReasonPreflightStale              = "HOST_PREFLIGHT_STALE"
+	ReasonImplementationMissing       = "HOST_IMPLEMENTATION_RECORD_MISSING"
+	ReasonReviewMissing               = "HOST_INDEPENDENT_REVIEW_MISSING"
+	ReasonReviewerNotIndependent      = "HOST_REVIEWER_NOT_INDEPENDENT"
+	ReasonReviewPacketMismatch        = "HOST_REVIEW_PACKET_MISMATCH"
+	ReasonInvalidHostRecord           = "HOST_RECORD_INVALID"
+	ReasonCoreRunMissing              = "HOST_CORE_RUN_MISSING"
+	ReasonConcurrentWrite             = "HOST_CONCURRENT_WRITE"
+	ReasonHostChainCorrupt            = "HOST_CHAIN_CORRUPT"
+	ReasonHostHeadMismatch            = "HOST_HEAD_MISMATCH"
+	ReasonImplementationAlreadyBound  = "HOST_IMPLEMENTATION_ALREADY_BOUND"
+	ReasonCoreBindingStale            = "HOST_CORE_BINDING_STALE"
+	ReasonRouteApprovalMissing        = "HOST_ROUTE_APPROVAL_MISSING"
+	ReasonRouteApprovalMismatch       = "HOST_ROUTE_APPROVAL_MISMATCH"
+	ReasonCoreRunTerminal             = "HOST_CORE_RUN_TERMINAL"
+	ReasonReviewArtifactMismatch      = "HOST_REVIEW_ARTIFACT_MISMATCH"
+	ReasonReviewImportRequired        = "HOST_REVIEW_IMPORT_REQUIRED"
+	ReasonReviewReceiptMismatch       = "HOST_REVIEW_RECEIPT_MISMATCH"
+	ReasonReviewReportMismatch        = "HOST_REVIEW_REPORT_MISMATCH"
+	ReasonReviewIsolationInsufficient = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
+	ReasonFindingsSnapshotMissing     = "HOST_FINDINGS_SNAPSHOT_MISSING"
+	ReasonReviewTargetChanged         = "HOST_REVIEW_TARGET_CHANGED"
+	ReasonRepositoryBindingMissing    = "HOST_REPOSITORY_BINDING_MISSING"
+	ReasonRepositoryBindingExists     = "HOST_REPOSITORY_BINDING_EXISTS"
+	ReasonRepositoryMismatch          = "HOST_REPOSITORY_MISMATCH"
+	ReasonReviewRepositoryMismatch    = "HOST_REVIEW_REPOSITORY_MISMATCH"
+	ReasonEvidenceArtifactCorrupt     = "HOST_EVIDENCE_ARTIFACT_CORRUPT"
+	ReasonLoopEvidenceInvalid         = "HOST_LOOP_EVIDENCE_INVALID"
 )
 
 // Route is host orchestration telemetry. The portable route-policy identity
@@ -130,7 +154,44 @@ type Dispatch struct {
 	Risk                       model.RouteRiskLevel `json:"risk,omitempty"`
 	Disputed                   bool                 `json:"disputed,omitempty"`
 	FinalValidation            bool                 `json:"final_validation,omitempty"`
+	// HMA-generated review packets only (Gate C). A review dispatch either
+	// carries all of these or none (a host-written legacy packet).
+	Packet *ReviewPacketBinding `json:"packet,omitempty"`
 }
+
+// IssuingReason says why a review was dispatched.
+type IssuingReason string
+
+const (
+	IssuePerChange  IssuingReason = "per_change"
+	IssueCheckpoint IssuingReason = "checkpoint"
+	IssueFinal      IssuingReason = "final"
+)
+
+// ReviewPacketBinding binds a review dispatch to the packet HMA generated and
+// to the agent-dispatch run expected to carry it. ReviewNonce is fresh random
+// per packet, so a report written for any other packet cannot match.
+type ReviewPacketBinding struct {
+	ReviewDispatchID       string        `json:"review_dispatch_id"`
+	ReviewNonce            string        `json:"review_nonce"`
+	DispatchRunID          string        `json:"dispatch_run_id"`
+	IssuingReason          IssuingReason `json:"issuing_reason"`
+	ExpectedLaunchHead     string        `json:"expected_launch_head"`
+	ExpectedLaunchWorktree string        `json:"expected_launch_worktree_sha256"`
+	// The artifact HMA observed when it generated the packet. ArtifactDigest
+	// on the dispatch is derived from these, never taken from the host.
+	ProjectRoot    string `json:"project_root"`
+	BaseRevision   string `json:"base_revision"`
+	ProducedHead   string `json:"produced_head"`
+	DiffDigest     string `json:"diff_digest"`
+	WorktreeDigest string `json:"worktree_digest,omitempty"`
+	// The reviewer must launch in [dispatch record time, ValidUntil).
+	ValidUntil string `json:"valid_until"`
+}
+
+// ReviewDispatchTTL bounds how long after HMA generates a review packet the
+// reviewer may launch (Gate A v5 §2, "a fixed short TTL").
+const ReviewDispatchTTL = time.Hour
 
 type IndependentReview struct {
 	UnitID                     string        `json:"unit_id"`
@@ -141,6 +202,12 @@ type IndependentReview struct {
 	ReviewerID                 string        `json:"reviewer_id"`
 	Verdict                    ReviewVerdict `json:"verdict"`
 	FindingsDigest             string        `json:"findings_digest,omitempty"`
+	// Set only by review import (Gate C): digests of the agent-dispatch
+	// receipt and the report, and the report's isolation and raw verdict.
+	ReceiptDigest string `json:"receipt_digest,omitempty"`
+	ReportDigest  string `json:"report_digest,omitempty"`
+	Isolation     string `json:"isolation,omitempty"`
+	ReportVerdict string `json:"report_verdict,omitempty"`
 }
 
 type Record struct {
@@ -157,6 +224,51 @@ type Record struct {
 	Preflight       *RoutePreflight        `json:"preflight,omitempty"`
 	Dispatch        *Dispatch              `json:"dispatch,omitempty"`
 	Review          *IndependentReview     `json:"review,omitempty"`
+	LoopEvidence    *LoopEvidence          `json:"loop_evidence,omitempty"`
+	Repository      *RepositoryBinding     `json:"repository_binding,omitempty"`
+}
+
+// RepositoryBinding is the run's one repository: its canonical root (symlinks
+// resolved) and the repository identity its core approvals bind.
+type RepositoryBinding struct {
+	Root               string `json:"repository_root"`
+	RepositoryIdentity string `json:"repository_identity"`
+}
+
+// RunRepository returns the run's repository binding, or nil.
+func RunRepository(records []Record) *RepositoryBinding {
+	for i := range records {
+		if records[i].Kind == KindRepositoryBinding && records[i].Repository != nil {
+			return records[i].Repository
+		}
+	}
+	return nil
+}
+
+// LoopEvidence binds a verify-loop state file to the HMA run and unit it
+// declares, and to the core evidence record of HMA's re-capture of the
+// loop's targeted check. Attempt dispatch ids are recorded for launch
+// reconciliation (Gate D); they authorize nothing here.
+type LoopEvidence struct {
+	UnitID              string        `json:"unit_id"`
+	ControllerRunID     string        `json:"controller_run_id"`
+	EnvelopeSHA256      string        `json:"envelope_sha256"`
+	StateSHA256         string        `json:"state_sha256"`
+	LoopStatus          string        `json:"loop_status"`
+	Attempts            []LoopAttempt `json:"attempts"`
+	RecaptureRecord     string        `json:"recapture_record"`
+	RecaptureExitCode   int           `json:"recapture_exit_code"`
+	RecaptureArgvSHA256 string        `json:"recapture_argv_sha256"`
+	LedgerNamespace     string        `json:"ledger_namespace"`
+}
+
+// LoopAttempt is one verify-loop attempt as the loop reported it.
+type LoopAttempt struct {
+	N               int    `json:"n"`
+	DispatchRunID   string `json:"dispatch_run_id"`
+	VerifyExit      *int   `json:"verify_exit,omitempty"`
+	VerifySignature string `json:"verify_signature,omitempty"`
+	RegressionExit  *int   `json:"regression_exit,omitempty"`
 }
 
 func validDecisionMode(v DecisionMode) bool {
@@ -173,7 +285,76 @@ func validPreflightStatus(v PreflightStatus) bool {
 	return false
 }
 
-func validVerdict(v ReviewVerdict) bool { return v == ReviewApprove || v == ReviewBlock }
+func validVerdict(v ReviewVerdict) bool {
+	return v == ReviewApprove || v == ReviewBlock || v == ReviewRequestChanges || v == ReviewEscalate
+}
+
+// Review enforcement modes reported to the host (Gate C, F13/A09).
+const (
+	EnforcementPacketImport = "packet_import"
+	EnforcementLegacyManual = "legacy_manual"
+)
+
+// ReviewEnforcementMode reports how reviews are enforced in a run: once any
+// HMA-generated packet exists, only imported reviews count (packet_import);
+// before that the run is in legacy compatibility mode, where host-written
+// reviews are still accepted (legacy_manual).
+func ReviewEnforcementMode(records []Record) string {
+	if packetMode(records) {
+		return EnforcementPacketImport
+	}
+	return EnforcementLegacyManual
+}
+
+// packetMode reports whether the run uses HMA-generated review packets: once
+// any exists, every later review in the run must be generated and imported.
+func packetMode(records []Record) bool {
+	for _, r := range records {
+		if r.Kind == KindDispatch && r.Dispatch != nil && r.Dispatch.Role == RoleReview && r.Dispatch.Packet != nil {
+			return true
+		}
+	}
+	return false
+}
+
+type contribution struct {
+	route   Route
+	context string
+}
+
+// implementationContributions lists every implementation route and work
+// context recorded for the unit in the run: delegated implementation
+// dispatches and direct-cost-exception decisions.
+func implementationContributions(records []Record, unitID string) []contribution {
+	var out []contribution
+	for _, r := range records {
+		if r.Kind == KindDispatch && r.Dispatch != nil && r.Dispatch.Role == RoleImplementation && r.Dispatch.UnitID == unitID {
+			out = append(out, contribution{r.Dispatch.Route, r.Dispatch.WorkContextDigest})
+		}
+		if r.Kind == KindDecision && r.Decision != nil && r.Decision.UnitID == unitID && r.Decision.Mode == DecisionDirectCostException {
+			out = append(out, contribution{r.Decision.Route, r.Decision.WorkContextDigest})
+		}
+	}
+	return out
+}
+
+func validIssuingReason(v IssuingReason) bool {
+	return v == IssuePerChange || v == IssueCheckpoint || v == IssueFinal
+}
+
+func validatePacketBinding(p *ReviewPacketBinding) error {
+	if p == nil {
+		return nil
+	}
+	if p.ReviewDispatchID == "" || len(p.ReviewNonce) != 32 || p.DispatchRunID == "" || !validIssuingReason(p.IssuingReason) || p.ExpectedLaunchHead == "" ||
+		p.ProjectRoot == "" || p.BaseRevision == "" || p.ProducedHead == "" || p.DiffDigest == "" {
+		return errors.New("invalid review packet binding")
+	}
+	if _, err := parseTime(p.ValidUntil); err != nil {
+		return errors.New("invalid review packet binding")
+	}
+	return nil
+}
 
 func noDuplicates(values []string) bool {
 	seen := map[string]bool{}
@@ -339,7 +520,7 @@ func validateDispatch(d *Dispatch) error {
 		return err
 	}
 	if d.Role == RoleImplementation {
-		if d.ImplementationRecordDigest != "" || d.ArtifactDigest != "" || d.ReviewPacketDigest != "" || d.Risk != "" || d.Disputed || d.FinalValidation {
+		if d.ImplementationRecordDigest != "" || d.ArtifactDigest != "" || d.ReviewPacketDigest != "" || d.Risk != "" || d.Disputed || d.FinalValidation || d.Packet != nil {
 			return errors.New("implementation dispatch contains review-only fields")
 		}
 		if !contains(d.Route.CapabilityClasses, model.CapabilityBoundedImplementation) {
@@ -354,6 +535,12 @@ func validateDispatch(d *Dispatch) error {
 		}
 		if !contains(d.Route.PermissionClasses, model.PermissionReadOnly) || contains(d.Route.PermissionClasses, model.PermissionBoundedWrite) {
 			return errors.New("review route is not read-only")
+		}
+		if err := validatePacketBinding(d.Packet); err != nil {
+			return err
+		}
+		if p := d.Packet; p != nil && d.ArtifactDigest != ReviewArtifactDigest(p.ProducedHead, p.DiffDigest, p.WorktreeDigest) {
+			return errors.New(ReasonReviewArtifactMismatch)
 		}
 	}
 	return nil
@@ -393,6 +580,12 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	if r.Review != nil {
 		set++
 	}
+	if r.LoopEvidence != nil {
+		set++
+	}
+	if r.Repository != nil {
+		set++
+	}
 	if set != 1 {
 		return errors.New(ReasonInvalidHostRecord)
 	}
@@ -417,6 +610,17 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 			return errors.New(ReasonInvalidHostRecord)
 		}
 		return validateReview(r.Review)
+	case KindLoopEvidence:
+		l := r.LoopEvidence
+		if l == nil || l.UnitID == "" || l.ControllerRunID == "" || l.EnvelopeSHA256 == "" || l.StateSHA256 == "" || l.RecaptureRecord == "" || l.RecaptureArgvSHA256 == "" {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindRepositoryBinding:
+		if r.Repository == nil || r.Repository.Root == "" || r.Repository.RepositoryIdentity == "" {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
 	default:
 		return errors.New(ReasonInvalidHostRecord)
 	}
@@ -573,15 +777,33 @@ func EvaluateDispatch(records []Record, d Dispatch, at time.Time) error {
 	if currentImplementation != d.ImplementationRecordDigest {
 		return errors.New(ReasonImplementationAlreadyBound)
 	}
-	implRoute, implContext, err := implementationRoute(records, d.ImplementationRecordDigest)
-	if err != nil {
+	if d.Packet == nil && packetMode(records) {
+		// Once HMA generated a packet for this implementation, a host-written
+		// review dispatch cannot stand beside it.
+		return errors.New(ReasonReviewImportRequired)
+	}
+	if d.Packet != nil {
+		// A packet's ids name one review launch; reuse would let one
+		// agent-dispatch run stand for two reviews.
+		for _, r := range records {
+			if r.Kind == KindDispatch && r.Dispatch != nil && r.Dispatch.Packet != nil &&
+				(r.Dispatch.Packet.ReviewDispatchID == d.Packet.ReviewDispatchID || r.Dispatch.Packet.DispatchRunID == d.Packet.DispatchRunID || r.Dispatch.Packet.ReviewNonce == d.Packet.ReviewNonce) {
+				return errors.New(ReasonReviewPacketMismatch)
+			}
+		}
+	}
+	if _, _, err := implementationRoute(records, d.ImplementationRecordDigest); err != nil {
 		return err
 	}
-	if d.Route.WorkerID == implRoute.WorkerID || d.Route.Model == implRoute.Model || d.WorkContextDigest == implContext {
-		return errors.New(ReasonReviewerNotIndependent)
-	}
-	if d.Risk == model.RouteRiskHigh || d.Risk == model.RouteRiskCritical || d.Disputed || d.FinalValidation {
-		if d.Route.ProviderFamily == implRoute.ProviderFamily || d.Route.ModelFamily == implRoute.ModelFamily {
+	strong := d.Risk == model.RouteRiskHigh || d.Risk == model.RouteRiskCritical || d.Disputed || d.FinalValidation ||
+		(d.Packet != nil && d.Packet.IssuingReason == IssueFinal)
+	// The reviewer must be independent of every implementation contribution
+	// to the unit, not only the latest one.
+	for _, c := range implementationContributions(records, d.UnitID) {
+		if d.Route.WorkerID == c.route.WorkerID || d.Route.Model == c.route.Model || d.WorkContextDigest == c.context {
+			return errors.New(ReasonReviewerNotIndependent)
+		}
+		if strong && (d.Route.ProviderFamily == c.route.ProviderFamily || d.Route.ModelFamily == c.route.ModelFamily) {
 			return errors.New(ReasonReviewerNotIndependent)
 		}
 	}
@@ -606,6 +828,20 @@ func EvaluateReview(records []Record, review IndependentReview) error {
 	d := dispatchRecord.Dispatch
 	if d.UnitID != review.UnitID || d.ImplementationRecordDigest != review.ImplementationRecordDigest || d.ArtifactDigest != review.ArtifactDigest || d.ReviewPacketDigest != review.ReviewPacketDigest || d.Route.WorkerID != review.ReviewerID {
 		return errors.New(ReasonReviewPacketMismatch)
+	}
+	imported := review.ReceiptDigest != "" || review.ReportDigest != "" || review.Isolation != "" || review.ReportVerdict != ""
+	if d.Packet != nil && (review.ReceiptDigest == "" || review.ReportDigest == "" || review.Isolation == "" || review.ReportVerdict == "") {
+		// An HMA-generated packet is answered only by an imported report.
+		return errors.New(ReasonReviewImportRequired)
+	}
+	if d.Packet == nil && imported {
+		return errors.New(ReasonInvalidHostRecord)
+	}
+	if d.Packet == nil && packetMode(records) {
+		return errors.New(ReasonReviewImportRequired)
+	}
+	if !imported && (review.Verdict == ReviewRequestChanges || review.Verdict == ReviewEscalate) {
+		return errors.New(ReasonInvalidHostRecord)
 	}
 	return nil
 }
@@ -662,6 +898,9 @@ func RequireApprovedReview(records []Record, unitID string) error {
 	for i := len(records) - 1; i >= 0; i-- {
 		r := records[i]
 		if r.Kind == KindReview && r.Review != nil && r.Review.UnitID == unitID && r.Review.ImplementationRecordDigest == implementation {
+			if !AnswersLatestReviewDispatch(records, *r.Review) {
+				return errors.New(ReasonReviewMissing)
+			}
 			if r.Review.Verdict == ReviewApprove {
 				return nil
 			}
@@ -669,4 +908,21 @@ func RequireApprovedReview(records []Record, unitID string) error {
 		}
 	}
 	return errors.New(ReasonReviewMissing)
+}
+
+// AnswersLatestReviewDispatch reports whether review answers the unit's
+// latest review dispatch. In a packet-import run a newer packet (pending or
+// answered) supersedes every earlier review, so an older approval can neither
+// pass the gate nor feed a findings snapshot.
+func AnswersLatestReviewDispatch(records []Record, review IndependentReview) bool {
+	if !packetMode(records) {
+		return true
+	}
+	latest := ""
+	for _, r := range records {
+		if r.Kind == KindDispatch && r.Dispatch != nil && r.Dispatch.Role == RoleReview && r.Dispatch.UnitID == review.UnitID {
+			latest = r.HeadAnchor
+		}
+	}
+	return latest != "" && latest == review.ReviewDispatchDigest
 }

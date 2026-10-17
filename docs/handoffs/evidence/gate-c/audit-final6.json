@@ -1,0 +1,703 @@
+{
+  "audit_id": "hma-gate-c-audit-20261017-final6",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:527b7c5ff79090c558f5bbfed5ec87a85f06d1e5;worktree-diff-sha256:1805d9769b3ab5ab23a63b30aacf7a0a148418d1e49a8edabfcd638cbf837916;untracked:freeze-start.json",
+  "isolation": "isolated",
+  "verdict": "fix-required",
+  "gate_c_verdict": "FAIL",
+  "verdict_mapping": "FAIL is the single audit verdict; independent-audit contract serialization is fix-required.",
+  "requirements": [
+    {
+      "id": "C01",
+      "requirement": "Generate exact live-target, nonce-bound fixed review packets with approved route/plan, findings and waivers.",
+      "source": "scope \u00a71; v4 \u00a75; v6 \u00a71",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E11",
+        "E12"
+      ],
+      "observations": [
+        "Live head/diff/worktree and launch digests derived by HMA; packet external to repository; fresh 128-bit nonce and dispatch ID; core plan/route/finding/waiver snapshot bound. Full request/criteria definitions/budgets/policy/evidence inputs are human-deferred."
+      ]
+    },
+    {
+      "id": "C02",
+      "requirement": "Import only receipt-bound current latest one-use review with exact route, artifact, run, launch interval, report hash and nonce.",
+      "source": "scope \u00a72; v4 \u00a75; v5 \u00a73; v6 \u00a71",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E06",
+        "E07",
+        "E12"
+      ],
+      "observations": [
+        "Own receipt matrix rejects wrong/missing provider and effort, agent/model/run/mode/state/exit, missing report, launch before issuance and at expiry, case variant and invalid UTF-8. Current valid control imports. Core finding/criterion/waiver/rewind, newer pending packet and live tracked/untracked drift refuse without changing chain heads. Concurrent import appends exactly one review."
+      ]
+    },
+    {
+      "id": "C03",
+      "requirement": "Enforce independent reviewer across retained implementations and family separation for final/disputed/high risk.",
+      "source": "architecture \u00a713; v5 \u00a71; task14 \u00a74",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E04",
+        "E12"
+      ],
+      "observations": [
+        "Full-suite final reason and family separation tests pass; implementationContributions checks every recorded same-unit delegated/direct route and context. Normal exact-model/worker/context separation remains active."
+      ]
+    },
+    {
+      "id": "C04",
+      "requirement": "Validate external audit contract without replacing audit methodology; total verdict mapping; final pass requires isolated.",
+      "source": "scope \u00a72; independent-audit report contract",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E06",
+        "E07",
+        "E08",
+        "E12"
+      ],
+      "observations": [
+        "Own invalid report candidates retain blocker and close gate; valid pass plus snapshot clears only own findings. Full external validator parity and all-codepoint whitespace check pass. Nonpass/missing verdict escalates or requests changes; no semantic audit methodology replaced."
+      ]
+    },
+    {
+      "id": "C05",
+      "requirement": "Snapshots preserve blockers on nonapproval, isolate exact unit ownership, reject stale state, and allow authentic current approved resolution.",
+      "source": "scope \u00a73; v3 \u00a74.2; architecture \u00a7\u00a77,15",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E12"
+      ],
+      "observations": [
+        "BLOCK/WAIVABLE preserved on nonapproval; exact UnitID ownership preserves U1/sub and unowned findings. Current approval resolves own blockers. Own snapshots from stale heads/targets or superseded packets refuse; snapshot required for imported approval gate."
+      ]
+    },
+    {
+      "id": "C06",
+      "requirement": "Maintain baseline finding/waiver compatibility and explicit legacy/manual vs packet-import enforcement.",
+      "source": "objective \u00a75 Gate C; scope; task14 \u00a74",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E05",
+        "E06",
+        "E12"
+      ],
+      "observations": [
+        "Legacy non-snapshot behavior preserved. Unambiguous legacy owner derives from pre-snapshot source; ambiguous findings and active waiver remain. Legacy mode readable and labelled; migrated mode refuses caller packet/manual approval."
+      ]
+    },
+    {
+      "id": "C07",
+      "requirement": "Re-capture verify-loop checks through exact-target no-shell evidence capture, retain output, refuse closed/missing runs before execution.",
+      "source": "v3 \u00a73.2; architecture \u00a7\u00a77.1,14; task14 \u00a74",
+      "status": "fail",
+      "gate_c_status": "PARTIAL",
+      "evidence_refs": [
+        "E06",
+        "E09",
+        "E10",
+        "E13",
+        "E14"
+      ],
+      "observations": [
+        "Recapture, target drift, retained/truncated output, corrupt-artifact refusal and closed/missing-run initial checks work. No-shell kernel fails for three explicit shell forms. A trusted core terminal append can land before argv starts. See C-F22 and C-F23."
+      ]
+    },
+    {
+      "id": "C08",
+      "requirement": "No imported evidence or finding grants criterion credit, stage approval, launch or closure authority.",
+      "source": "scope \u00a7\u00a70.1,3; architecture \u00a7\u00a74,6",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E05",
+        "E06",
+        "E11",
+        "E12"
+      ],
+      "observations": [
+        "No findings or loop import writes criterion PASSED or stage approval; journal green is not accepted as execution result. Host review gate does not replace a human challenge-bound transition. Launch/closure authority remains deferred."
+      ]
+    },
+    {
+      "id": "C09",
+      "requirement": "Failure\u2192linked repair\u2192fresh re-verification fixtures; stale/no-report/self-review refusal; Gate B regression checks.",
+      "source": "objective \u00a7\u00a75\u20136; scope \u00a74; v3 \u00a76",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E02",
+        "E04",
+        "E05",
+        "E06"
+      ],
+      "observations": [
+        "Failure/remediation/re-review fixture, stale/no-report/self-review checks, Gate B suite and synthetic CLI dogfood executed. New untested-by-existing-suite terminal interleaving is separately reported under C07/C-F23."
+      ]
+    },
+    {
+      "id": "C10",
+      "requirement": "Record all human-deferred requirements and exit tests; make no Gate C claim depend on them.",
+      "source": "human scope decision; scope \u00a70.1",
+      "status": "pass",
+      "gate_c_status": "MET",
+      "evidence_refs": [
+        "E11",
+        "E16"
+      ],
+      "observations": [
+        "Accepted scope note records unchanged Gate D reservation/replay/reconciliation/half-open interval/generation/controller-hook/criterion-credit/disposition prerequisites and exit tests. No deferred feature used as proof of current Gate C authority. Post-freeze claim inspection pending.",
+        "Post-freeze Gate C checklist and scope addendum do not claim that deferred Gate D execution/credit/closure authority is implemented. The no-shell claim is contradicted by C-F22, not used as evidence."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-F22",
+      "title": "Executable shell scripts and wrapper aliases bypass the no-shell kernel",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "loop-evidence executes an absolute executable whose first line is #!/bin/sh, env plus a symlink to sh, and a symlink to env plus sh and a script. Each independent case creates a marker, returns success, and changes both core and host heads. evidence.Capture also directly executes the shell script. RejectShell checks names only, does not inspect the script interpreter, does not resolve wrapper operands, and does not use the resolved wrapper identity. This violates architecture \u00a7\u00a77.1 and 14. It requires no same-UID tampering with stored authority.",
+      "evidence": [
+        {
+          "source": "independent-final.json; independent-final.log; auditor-final6-suite-frozen.go.txt",
+          "observation": "Auditor suite under -race: four failing leaf cases (three loop shell entry points and direct Capture); 46 passing subtests plus standalone checks. No data race warnings. Unmodified product source; independent tests added only to copy."
+        },
+        {
+          "source": "internal/evidence/noshell.go:36-55; internal/evidence/capture.go:120-151; cmd/hma/loop.go:143-180",
+          "observation": "Shell check uses executable names and argument basenames; no shebang inspection; wrapper operands not symlink-resolved. Successful Capture appends loop evidence."
+        }
+      ],
+      "fix": {
+        "action": "In internal/evidence/noshell.go, resolve the actual executable and any explicit command operand of supported wrappers. Reject shell interpreters reached by shebang (including env shebang forms) or symlinks before cmd.Run. Use that shared check for loop admission and Capture. For wrappers whose command operand cannot be identified safely, reject that wrapper at capture admission. Keep ordinary data arguments outside command-position checks.",
+        "why": "The kernel must classify the explicit execution entry point, including its interpreter and wrapper command, rather than trust a filename.",
+        "verification": [
+          {
+            "method": "Run TestAuditorFinal6ShellEntrypoints and TestAuditorFinal6CaptureShellScript with -race; include #!/bin/sh, #!/usr/bin/env sh, symlinked command operands and aliased env. Fingerprint both chains and marker before request.",
+            "expected": "All shell entry points refuse before marker creation and before either append; printf %s sh, a normal executable, and an allowed non-shell interpreter remain usable."
+          }
+        ],
+        "tradeoffs": "Shell-based verification scripts must be replaced with explicit non-shell checks. Wrapper command parsing needs an explicit supported grammar. This is not a general sandbox for arbitrary descendant processes.",
+        "alternative": "Use a verified allowlist of native executables and explicit non-shell interpreters, and refuse command wrappers and executable scripts until their entry points can be classified. This is simpler but reduces compatibility.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "related_prior_findings": [
+        "C-F19",
+        "C-F21"
+      ],
+      "gate_c_requirements": [
+        "C07"
+      ]
+    },
+    {
+      "id": "C-F23",
+      "title": "A concurrent trusted core terminal append can precede loop check execution",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "runHostLoopEvidence calls core Load, checks Terminal, then executes outside the core lock. The host lock serializes CLI transitions but does not serialize the trusted direct core append used in Gate B regression tests. An unchanged production path paused at its first snapshot Git call accepts a core ABORTED record. When resumed, it executes touch and creates the marker. Only afterwards does s.Append reject record chain discontinuity. No evidence or host record is accepted, but the check starts on a closed run. This fails A08 and the Gate B core/host ordering guarantee.",
+      "evidence": [
+        {
+          "source": "core-terminal-schedule.json; core-terminal-schedule.log; probes/cmd/hma/auditor_final6_test.go:237",
+          "observation": "Unmodified production path: Git helper pauses first snapshot Git call after core Load. Trusted bTerminal core append records ABORTED. Marker absent before release. After release the check creates marker; append fails record chain discontinuity; zero host records."
+        },
+        {
+          "source": "cmd/hma/loop.go:115-143,162-169; cmd/hma/host.go:117-151; cmd/hma/gateb_r2_test.go:276-287; internal/store/jsonl.go:154-173,247-268",
+          "observation": "Loop releases core lock after Load and holds only host lock during execution; other host append paths hold both locks; Gate B already tests trusted concurrent core appends."
+        }
+      ],
+      "fix": {
+        "action": "Add a core-store transaction API that loads and appends under one existing core run lock. In runHostLoopEvidence, acquire host then core lock; check terminal/route, capture, retain output, append core evidence, and commit the host binding before releasing the core lock. Use a locked append callback; do not call the current locking Append recursively.",
+        "why": "The terminal check and execution admission must share the lock used by every trusted core append. A final optimistic predecessor check protects accepted records but cannot undo executed argv.",
+        "verification": [
+          {
+            "method": "Run TestAuditorFinal6CoreTerminalBeforeExecution under -race with the scheduling helper; also run TestAuditorFinal6TerminalAdmissionRace and an already-terminal/missing-run matrix.",
+            "expected": "If terminal authority commits first, no marker is created. If capture admission locks first, the terminal append waits until capture and binding finish. Valid open-run capture completes without deadlock."
+          },
+          {
+            "method": "Repeat the schedule with an approved route rewind instead of ABORTED, and run all Gate B and Gate C tests, vet and dogfood.",
+            "expected": "A core revocation cannot land between authorization check and argv start; both chains remain coherent."
+          }
+        ],
+        "tradeoffs": "Holding the core lock across a check delays terminal and resolution writes; enforce bounded command duration and cancellation in the existing execution envelope. A transaction API is needed to avoid recursive-lock deadlock. Cross-chain crash recovery remains a separate concern; this finding does not claim new corruption.",
+        "alternative": "Introduce a durable execution-admission operation that every core authority-revoking writer must honor. This can reduce lock hold time but adds state and is larger than the existing host-then-core transaction pattern.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "related_prior_findings": [
+        "A08"
+      ],
+      "gate_c_requirements": [
+        "C07"
+      ]
+    }
+  ],
+  "prior_findings": [
+    {
+      "id": "F01",
+      "title": "A failed review can downgrade an existing blocker by ID",
+      "status": "FIXED",
+      "observation": "Nonapproval preserves the stronger prior same-ID and omitted BLOCK/WAIVABLE. Safe snapshots may append the preserved result rather than reject the whole report.",
+      "evidence_refs": [
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Imports accept stale core bindings and can erase newer blockers",
+      "status": "FIXED",
+      "observation": "Independent pre-review and pre-snapshot core finding, criterion, waiver and rewind drift refuse without changing heads.",
+      "evidence_refs": [
+        "E06"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Replaying an old passing run overrides a newer failed review",
+      "status": "FIXED",
+      "observation": "Latest one-use packet rule and concurrent import control prevent replay overriding later review.",
+      "evidence_refs": [
+        "E02",
+        "E06"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Generated packets do not bind the observed repository artifact",
+      "status": "FIXED",
+      "observation": "HMA observes artifact; wrong declared artifact and wrong receipt root fail; live imports compare head/diff/worktree.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Final-audit reason does not enforce final-review family separation",
+      "status": "FIXED",
+      "observation": "Final issuing reason enters strong provider/model-family rule even without final_validation.",
+      "evidence_refs": [
+        "E02",
+        "E12"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Receipt import ignores provider and effort drift",
+      "status": "FIXED",
+      "observation": "Own wrong/missing provider and effort matrix refuses; exact control imports.",
+      "evidence_refs": [
+        "E06"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Invalid audit reports can approve and clear findings",
+      "status": "FIXED",
+      "observation": "Contract-invalid candidates do not approve or clear blockers; malformed documents refuse.",
+      "evidence_refs": [
+        "E06",
+        "E07",
+        "E08"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Unverified reference labels create new unwaivable blockers",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Unverified references remain advisory and cited passes escalate. Positive reproduced BLOCK and measured WAIVABLE paths are approved Gate D work.",
+      "evidence_refs": [
+        "E02",
+        "E11",
+        "E12"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "The verify-loop evidence bridge is absent",
+      "status": "FIXED",
+      "observation": "Loop bridge independently recaptures passing/failing checks, binds state/attempts, retains output, and credits no criterion. Remaining runner violations are C-F22/C-F23.",
+      "evidence_refs": [
+        "E02",
+        "E06"
+      ]
+    },
+    {
+      "id": "F10",
+      "title": "Review dispatches have no short validity interval",
+      "status": "FIXED",
+      "observation": "Half-open review launch TTL enforced; own before-start/at-expiry controls refuse; valid receipt imports. Generation-wide reconciliation remains Gate D.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E11"
+      ]
+    },
+    {
+      "id": "F11",
+      "title": "Reviewer independence checks only the latest implementation",
+      "status": "FIXED",
+      "observation": "Every implementation contribution is checked; full-suite retained-history tests pass.",
+      "evidence_refs": [
+        "E02",
+        "E12"
+      ]
+    },
+    {
+      "id": "F12",
+      "title": "Reservation checks assigned to Gate C are not implemented",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Reservations, replay, namespace association, revocation and generation rules retain Gate D exit tests.",
+      "evidence_refs": [
+        "E11"
+      ]
+    },
+    {
+      "id": "F13",
+      "title": "New legacy manual-review writes bypass the consolidated import path",
+      "status": "FIXED",
+      "observation": "Run-wide packet mode rejects new manual overrides; compatibility remains explicitly legacy_manual.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "A01",
+      "title": "Invalid audit reports approve, clear blockers, and satisfy the host Verification gate",
+      "status": "FIXED",
+      "observation": "Own invalid report candidates preserve blocker and close host gate; external validator used.",
+      "evidence_refs": [
+        "E06",
+        "E07",
+        "E08"
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "An old live-target review can clear a blocker after the worktree changes",
+      "status": "FIXED",
+      "observation": "Independent tracked/untracked live drift refuses current snapshot; exact target control clears own blocker.",
+      "evidence_refs": [
+        "E06"
+      ]
+    },
+    {
+      "id": "A03",
+      "title": "Finding namespace prefixes allow a review to clear another unit blocker",
+      "status": "FIXED",
+      "observation": "UnitID ownership preserves U1/sub blocker when U1 snapshot imports; unowned records remain.",
+      "evidence_refs": [
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "A04",
+      "title": "HMA-generated review packets omit the contract and findings snapshot",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Gate C packet includes core head, plan/route, findings and waivers; full acceptance-contract packet inputs are explicitly accepted Gate D deferral.",
+      "evidence_refs": [
+        "E02",
+        "E11",
+        "E12"
+      ]
+    },
+    {
+      "id": "A05",
+      "title": "Existing unprefixed core findings have no import migration",
+      "status": "FIXED",
+      "observation": "Legacy source ownership is conservative; ambiguous records and active waiver preserved in own probe; valid approving review clears unambiguous own legacy finding.",
+      "evidence_refs": [
+        "E02",
+        "E06"
+      ]
+    },
+    {
+      "id": "A06",
+      "title": "Required disposition, criterion recheck and independent-credit integration are absent",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Reproduction-based disposition and exact-target independent criterion credit remain unchanged Gate D prerequisites.",
+      "evidence_refs": [
+        "E11"
+      ]
+    },
+    {
+      "id": "A07",
+      "title": "Gate C launch-reconciliation integration is deferred in full",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Current envelope/store hash and hook checks work; reservation/namespace/reconciliation matrix moves to Gate D.",
+      "evidence_refs": [
+        "E02",
+        "E11"
+      ]
+    },
+    {
+      "id": "A08",
+      "title": "loop-evidence executes verify argv before checking terminal state",
+      "status": "PARTIAL",
+      "observation": "Already-terminal and missing runs refuse; CLI host-lock race control passes. Trusted core append race still starts check after ABORTED (C-F23).",
+      "evidence_refs": [
+        "E06",
+        "E09",
+        "E10"
+      ]
+    },
+    {
+      "id": "A09",
+      "title": "Legacy compatibility runs do not expose an enforcement-mode label",
+      "status": "FIXED",
+      "observation": "legacy_manual and packet_import mode exposed; manual caller packet refuses in both independent controls.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "R3-01",
+      "title": "A newer unanswered packet does not invalidate an older approving review",
+      "status": "FIXED",
+      "observation": "New pending packet refuses old snapshot; own pending final closes gate and fresh completed/imported/snapshotted final reopens it. Concurrent duplicate import is one-use under -race.",
+      "evidence_refs": [
+        "E02",
+        "E06"
+      ]
+    },
+    {
+      "id": "R3-02",
+      "title": "The fixed review packet still omits mandatory review inputs",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Full immutable request, criterion definitions, non-goals, budgets, required evidence and policy packet inputs accepted for Gate D. Existing core snapshot remains required.",
+      "evidence_refs": [
+        "E11",
+        "E12"
+      ]
+    },
+    {
+      "id": "R3-03",
+      "title": "The broader Gate C acceptance-boundary deferral is not approved and leaves design requirements incomplete",
+      "status": "DEFERRED-BY-HUMAN",
+      "observation": "Lennon 2026-10-17 explicitly accepted the scope boundary. Deferred rows retain prerequisites and exit tests; no bounded-execution or closure proof claimed.",
+      "evidence_refs": [
+        "E11"
+      ]
+    },
+    {
+      "id": "C-F14",
+      "title": "Legacy dispatch input can impersonate an HMA-generated review packet",
+      "status": "FIXED",
+      "observation": "Own legacy and post-failure packet-mode controls reject caller Packet before changing either chain or blocker. Genuine generated/imported/snapshot control works.",
+      "evidence_refs": [
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "C-F15",
+      "title": "Loop recapture discards the verification output",
+      "status": "FIXED",
+      "observation": "Own random-token stdout, distinct stderr, exit 7 and >1 MiB output are retained with explicit truncation and matching framed digest.",
+      "evidence_refs": [
+        "E06"
+      ]
+    },
+    {
+      "id": "C-F16",
+      "title": "Go reads case-variant JSON keys that the Python contract ignores",
+      "status": "FIXED",
+      "observation": "Exact-key decoder ignores case variants; own verdict/long-s/binding and receipt matrix preserves blockers; full suite includes nested exact-key tests.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E08"
+      ]
+    },
+    {
+      "id": "C-F17",
+      "title": "Go and Python disagree on required nonempty report fields",
+      "status": "FIXED",
+      "observation": "Own separator-only candidate escalates; all 1114112 code points agree with Python isspace (29 whitespace code points).",
+      "evidence_refs": [
+        "E06",
+        "E07",
+        "E08"
+      ]
+    },
+    {
+      "id": "C-F18",
+      "title": "Interrupted output-artifact writes are trusted as complete on retry",
+      "status": "FIXED",
+      "observation": "Own empty/partial/symlink artifact residue refuses before appends and preserves residue; intact control reused. Atomic temporary-write/link path inspected.",
+      "evidence_refs": [
+        "E06",
+        "E12"
+      ]
+    },
+    {
+      "id": "C-F19",
+      "title": "loop-evidence executes a shell command from an imported journal",
+      "status": "PARTIAL",
+      "observation": "Named shells, direct shell symlink and forbidden loop operations refuse in existing tests. Three further explicit shell entry points still run and append (C-F22).",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E13"
+      ]
+    },
+    {
+      "id": "C-F20",
+      "title": "Invalid UTF-8 report passes Go checks but fails the Python validator",
+      "status": "FIXED",
+      "observation": "Own invalid UTF-8 report and receipt refuse without clearing blocker; exact decoder rejects UTF-8 before parsing report/receipt/loop state.",
+      "evidence_refs": [
+        "E02",
+        "E06",
+        "E08"
+      ]
+    },
+    {
+      "id": "C-F21",
+      "title": "The shell filter refuses a shell name used as plain data",
+      "status": "PARTIAL",
+      "observation": "Plain printf %s sh succeeds. Full shell-entry-point negative control remains incomplete through C-F22.",
+      "evidence_refs": [
+        "E06",
+        "E13"
+      ]
+    }
+  ],
+  "evidence_ledger": {
+    "E01": {
+      "source": "freeze-start.json; start-status.txt; start-diff.binary",
+      "observation": "Frozen main at 527b7c5ff79090c558f5bbfed5ec87a85f06d1e5; dirty tracked diff and every untracked file hashed."
+    },
+    "E02": {
+      "source": "go-test.json; go-test.log",
+      "observation": "go test -count=1 ./... exited 0 in audit copy (12 packages)."
+    },
+    "E03": {
+      "source": "go-vet.json; go-vet.log",
+      "observation": "go vet ./... exited 0."
+    },
+    "E04": {
+      "source": "go-race.json; go-race.log",
+      "observation": "go test -race -count=1 ./... exited 0."
+    },
+    "E05": {
+      "source": "host-dogfood.json; host-dogfood.log",
+      "observation": "Synthetic CLI host dogfood exited 0; 17 checks; no actual worker or authentic human approval."
+    },
+    "E06": {
+      "source": "independent-final.json; independent-final.log; auditor-final6-suite-frozen.go.txt",
+      "observation": "Auditor suite under -race: four failing leaf cases (three loop shell entry points and direct Capture); 46 passing subtests plus standalone checks. No data race warnings. Unmodified product source; independent tests added only to copy."
+    },
+    "E07": {
+      "source": "interface-parity.json; interface-parity.log",
+      "observation": "External audit validator parity, Python canonical hash, all-codepoint whitespace parity, and actual ledger launch-digest parity passed without skips."
+    },
+    "E08": {
+      "source": "external-validator-candidates.json; candidates/",
+      "observation": "11 retained report candidates independently checked with external validator. Verdict case variant and binding-only variant remain contract-valid, but exact HMA binding/verdict checks reject unsafe authority. Invalid UTF-8 and trailing JSON fail load."
+    },
+    "E09": {
+      "source": "terminal-race.json; terminal-race.log",
+      "observation": "Host-lock-respecting terminal controller waits for admitted check; later capture refuses. Positive control for shared host locking."
+    },
+    "E10": {
+      "source": "core-terminal-schedule.json; core-terminal-schedule.log; probes/cmd/hma/auditor_final6_test.go:237",
+      "observation": "Unmodified production path: Git helper pauses first snapshot Git call after core Load. Trusted bTerminal core append records ABORTED. Marker absent before release. After release the check creates marker; append fails record chain discontinuity; zero host records."
+    },
+    "E11": {
+      "source": "authoritative-design-excerpts.txt; source-digests.json; docs/handoffs/2026-10-16-gate-c-scope.md:9-37",
+      "observation": "Authorized design excerpts and human acceptance boundary. Deferred reservation/generation, criterion-credit, disposition-reproduction and full acceptance-contract packet inputs retained as Gate D prerequisites."
+    },
+    "E12": {
+      "source": "cmd/hma/review.go:86-119,274-450; internal/host/review_import.go:116-230; internal/host/findings_import.go:68-151; cmd/hma/transition.go:43-114",
+      "observation": "Static trace: latest/single-use packet, live target, core-head binding, exact route/receipt/report checks; same-review snapshot exception; other/unowned finding preservation; no import criterion credit."
+    },
+    "E13": {
+      "source": "internal/evidence/noshell.go:36-55; internal/evidence/capture.go:120-151; cmd/hma/loop.go:143-180",
+      "observation": "Shell check uses executable names and argument basenames; no shebang inspection; wrapper operands not symlink-resolved. Successful Capture appends loop evidence."
+    },
+    "E14": {
+      "source": "cmd/hma/loop.go:115-143,162-169; cmd/hma/host.go:117-151; cmd/hma/gateb_r2_test.go:276-287; internal/store/jsonl.go:154-173,247-268",
+      "observation": "Loop releases core lock after Load and holds only host lock during execution; other host append paths hold both locks; Gate B already tests trusted concurrent core appends."
+    },
+    "E15": {
+      "source": "freeze-end.json; end-status.txt; copy-source-verification.json",
+      "observation": "Target unchanged at end. Main and full HEAD match; status digest, binary diff digest and all 29 untracked hashes match. Baseline and probe product source bytes match target."
+    },
+    "E16": {
+      "source": "docs/handoffs/2026-10-16-gate-c-scope.md:87-end; TODO.md:Gate C (read after PHASE1 sha256 freeze)",
+      "observation": "No change to findings. Deferred Gate D rows stay recorded; scope still claims no-shell recapture, contradicted by independent tests."
+    }
+  },
+  "limitations": [
+    "Fresh user-dispatched auditor context; no implementer conversation or prior Gate C verdict was read. Only status-stripped prior criteria were used before Phase 1. Authorized v7 contains incidental historical Gate A judgments; primary source/test comments also contain author interpretations, which were not treated as proof.",
+    "Repository was writable at the OS permission layer. Read-only was an audited behavior, not an OS-enforced mount. All audit writes and tests ran under /tmp/hma-gate-c-20261017-final6. Final HEAD, branch, status, binary diff SHA-256 and hashes of all 29 untracked files equal the start freeze. All 186 evaluated source/supplied-test files in audit copies match the source; see copy-source-verification.json.",
+    "Tests use synthetic host receipts, routes and approvals. No worker CLI, nested agent, model API or live production approval was invoked. External interfaces were inspected as contracts; no real end-to-end worker launch was performed.",
+    "Core terminal schedule uses the same trusted core Append fixture primitive as Gate B and a Git helper executable that only pauses and forwards unchanged arguments/output to /usr/bin/git. It does not alter production source. Host-lock-respecting CLI terminalization passes the separate positive control.",
+    "Gate D deferred behavior was not tested as implemented. Gate C does not certify bounded execution, positive criterion credit, reproduced finding dispositions or closure.",
+    "No approved Jev tool was exposed. Tool metadata search found none. Auditor/orchestrator decision fallback was recorded; no other model was presented as Jev.",
+    "Initial combined source outputs were truncated by the tool. Relevant authoritative excerpts and code were re-read in bounded calls; raw authoritative excerpts and source hashes are retained. Full TODO Gate C and scope \u00a74a onward remain unread before this freeze.",
+    "Audit copies do not preserve real external side effects, production quotas or provider identity attestations. The trusted-host model excludes malicious same-UID forgery. Passing tests do not prove absence of all bugs."
+  ],
+  "phase1_frozen": true,
+  "phase1_frozen_at": "2026-10-17T15:14:42.070759+00:00",
+  "unblinding": {
+    "phase1_sha256": "bae21e4de28174c927c58626c47fedcdd4023718d8ad82284e0cfbd49699d4d3",
+    "read_after_freeze": [
+      "docs/handoffs/2026-10-16-gate-c-scope.md:87-end",
+      "TODO.md:Gate C section only"
+    ],
+    "observations": [
+      "The scope addendum claims the targeted check runs without a shell. C-F22 directly contradicts that claim.",
+      "The TODO items are implementer completion checkboxes. They do not establish acceptance. Its Gate D reservation row remains open and records the human decision.",
+      "Neither post-freeze artifact supplies contrary execution evidence or changes the two findings. No forbidden prior audit directory was opened."
+    ],
+    "verdict_changed": false
+  },
+  "next_action": {
+    "action": "REMEDIATE",
+    "owner": "Ming / human implementation owner",
+    "route": "Proposed original implementer route: Ming / Anthropic / claude-opus-5-5. Effort, access service and eligibility require host verification before any new dispatch. No dispatch authorized by this report.",
+    "permission_envelope": "A separately human-approved bounded change to evidence shell-entry classification and loop/core execution transaction, with tests. This audit remains read-only on /home/yeli/repos.",
+    "approval_required": "Human approval of the specific corrective plan unit and exact implementer/reviewer routes before coding; no Gate C acceptance or stage advance follows from this audit.",
+    "rationale": "Two reproduced high kernel defects prevent Gate C acceptance.",
+    "stop_conditions": "Stop on permission widening, stale approval, unavailable eligible independent reviewer, or repeat material failure. Escalate to the human."
+  },
+  "phase1_sha256": "bae21e4de28174c927c58626c47fedcdd4023718d8ad82284e0cfbd49699d4d3",
+  "reported_at": "2026-10-17T15:16:25.735421+00:00",
+  "repository_unchanged": true,
+  "repository_freeze_end": "freeze-end.json",
+  "environment": "environment.json",
+  "copy_verification": "copy-source-verification.json"
+}

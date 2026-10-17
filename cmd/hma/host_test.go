@@ -28,10 +28,37 @@ func cliRoute(worker, provider, providerFamily, modelName, modelFamily, approval
 
 func seedRouteAuthorization(t *testing.T, dir, runID, unitID, digest string) *store.Store {
 	t.Helper()
+	return seedRouteAuthorizationAt(t, dir, runID, unitID, digest, "base")
+}
+
+// bindRepository records the run's repository binding.
+func bindRepository(t *testing.T, dir, runID, root, identity string) {
+	t.Helper()
+	input := filepath.Join(t.TempDir(), "bind.json")
+	writeJSON(t, input, hostBindRepositoryInput{hostEnvelope: hostEnvelope{RunID: runID, Actor: "fury", Timestamp: "2026-09-16T11:30:00Z"},
+		RepositoryRoot: root, RepositoryIdentity: identity})
+	if err := run([]string{"host", "bind-repository", "--input", input, "--store", dir}); err != nil {
+		t.Fatalf("bind-repository: %v", err)
+	}
+}
+
+// seedLoopRun creates a repository, a route approval binding its base, and
+// the run's repository binding.
+func seedLoopRun(t *testing.T, dir string) (string, string) {
+	t.Helper()
+	root, base, _, _ := ciRepo(t)
+	seedRouteAuthorizationAt(t, dir, "run", "U1", "approved-route", base)
+	bindRepository(t, dir, "run", root, "repo")
+	return root, base
+}
+
+// seedRouteAuthorizationAt seeds a route approval that binds base.
+func seedRouteAuthorizationAt(t *testing.T, dir, runID, unitID, digest, base string) *store.Store {
+	t.Helper()
 	s := store.New(dir)
 	a := &model.ApprovalBinding{UnitID: unitID, RunID: runID, TransitionDigest: digest,
 		CurrentStage: model.StageRouteSelection, ProposedTargetStage: model.StageImplementationAuthorization,
-		RepositoryIdentityDigest: "repo", BaseRevisionDigest: "base", StageTimeDigest: "head:1",
+		RepositoryIdentityDigest: "repo", BaseRevisionDigest: base, StageTimeDigest: "head:1",
 		AcceptedPlanDigest: "plan", ChallengeNonce: "nonce-route", Approver: "human", Timestamp: "2026-09-16T11:00:00Z"}
 	rec := model.Record{UnitID: unitID, Kind: model.KindStageTransition, Version: 1,
 		Metadata: model.RecordMetadata{RunID: runID, Sequence: 1, Timestamp: "2026-09-16T11:00:00Z", Actor: "human"},

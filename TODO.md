@@ -64,7 +64,7 @@ Open before interactive-host MVP conformance:
 - [ ] Add client-neutral adapter hooks and conformance coverage for an
   interactive CLI host; the HMA core must remain non-dispatching.
 
-### Gate B — 2026-10-14 audit defect remediation (pending independent audit)
+### Gate B — 2026-10-14 audit defect remediation (closure r7 PASS, committed 527b7c5)
 
 Plan: `docs/handoffs/2026-10-15-outcome-consolidation-opus-liz.md`; design:
 `docs/handoffs/2026-10-15-gate-a-v3.md` to `-v7.md`. Each item has a failing-first
@@ -144,7 +144,29 @@ regression test (`*/gateb_regression_test.go` and named tests).
 - [ ] F05/C04/R3-03 plan-derived dependent invalidation (deferred to Gate D by Lennon, 2026-10-16;
   conservative all-units invalidation stays in force until then) (current rule is conservative: any unit's return to Planning
   or earlier invalidates every unit's route approval): Gate D.
-- [ ] Independent Gate B re-audit (Liz) and commit.
+- [x] Independent Gate B re-audit (Liz, closure r7 PASS) and commit (527b7c5).
+
+### Gate C — review provenance and finding import (scope: docs/handoffs/2026-10-16-gate-c-scope.md)
+
+- [x] C1 `hma host review-packet`: HMA-generated packet, nonce, review dispatch id, expected launch digests.
+- [x] C2 `hma host review-import`: receipt and report checks, total verdict map, final isolation rule.
+- [x] C3 `findings_snapshot` core field; `hma host findings-import` with §9 import mapping.
+- [x] C4 fixtures: failure -> remediation -> re-verification, stale and rewritten reports, same-run reuse.
+- [x] Gate C r1 (Liz FAIL, 13 findings; Argie extra review) remediation: artifact derived from HMA snapshot,
+  1h review TTL, receipt provider/effort/root, latest-packet-once, run-wide packet mode, current-core-head
+  imports, final-audit family separation, independence against every implementation, report contract,
+  advisory-only imported findings, per-unit no-downgrade snapshots, `hma host loop-evidence` bridge.
+- [x] Gate C r2 (Liz hit usage limit; Jax backup FAIL, A01-A09) remediation: full report-contract port with
+  parity test, live-target recheck at both imports, explicit finding ownership plus legacy migration, packet
+  carries bound core state, loop envelope/store/hook checks under the host lock, enforcement-mode label.
+- [x] Gate C r3 (Jax FAIL) R3-01: a newer review packet supersedes older approvals at the gate and for
+  findings snapshots (`AnswersLatestReviewDispatch`). R3-02 (packet lacks criterion definitions, non-goals,
+  budgets, required evidence, policy) and R3-03 (boundary) need the Gate D acceptance contract / Lennon.
+- [x] Gate C final audit (Liz, FAIL) C-F14: `hma host dispatch` refuses a caller-supplied packet binding;
+  C-F15: loop re-capture keeps stdout/stderr as a content-addressed store artifact (`output_ref`).
+- [ ] Reservations (`hma host attempt`, admission, launch reconciliation) moved to Gate D with leases;
+  exit tests listed in the scope note §0.1. Boundary accepted by Lennon 2026-10-17.
+- [ ] Independent Gate C audit (Liz) and commit.
 
 
 ### Post-MVP — learned decision-provider integration (optional)

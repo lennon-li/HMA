@@ -85,7 +85,13 @@ func requireHostTransitionGateIn(storePath string, in transition.Input, history 
 		record := history[i]
 		if record.Kind == hoststate.KindReview && record.Review != nil && record.Review.UnitID == in.ExpectedApproval.UnitID && record.Review.ImplementationRecordDigest == implementationDigest {
 			if record.CoreHeadAnchor != currentCoreHead {
-				return errors.New(hoststate.ReasonCoreBindingStale)
+				if err := requireOnlyOwnSnapshotsSince(storePath, in.RunID, record.CoreHeadAnchor, record.HeadAnchor); err != nil {
+					return err
+				}
+			} else if record.Review.ReportDigest != "" {
+				// An imported review counts only after its findings
+				// snapshot is in the core chain.
+				return errors.New(hoststate.ReasonFindingsSnapshotMissing)
 			}
 			// The review must name the exact artifact this transition records.
 			// The worktree part is the host-declared dirty content, which the
@@ -309,6 +315,32 @@ func requireCoreRunOpen(storePath, runID string) error {
 	}
 	if engine.ProjectStageState(core).Terminal {
 		return errors.New(hoststate.ReasonCoreRunTerminal)
+	}
+	return nil
+}
+
+// requireOnlyOwnSnapshotsSince allows the core chain to have moved past the
+// review's bound head only by findings snapshots imported from that same
+// review (hma host findings-import). Any other core record since the review
+// makes it stale.
+func requireOnlyOwnSnapshotsSince(storePath, runID, boundHead, reviewDigest string) error {
+	core, err := store.New(storePath).Load(runID)
+	if err != nil {
+		return err
+	}
+	at := -1
+	for i, r := range core {
+		if r.Metadata.HeadAnchor == boundHead {
+			at = i
+		}
+	}
+	if at < 0 {
+		return errors.New(hoststate.ReasonCoreBindingStale)
+	}
+	for _, r := range core[at+1:] {
+		if r.Kind != model.KindFinding || !r.FindingsSnapshot || r.FindingsSource == nil || r.FindingsSource.ReviewRecordDigest != reviewDigest {
+			return errors.New(hoststate.ReasonCoreBindingStale)
+		}
 	}
 	return nil
 }

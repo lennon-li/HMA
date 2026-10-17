@@ -47,7 +47,10 @@ type hostResult struct {
 	HeadAnchor      string               `json:"head_anchor"`
 	CoreHeadAnchor  string               `json:"core_head_anchor"`
 	DispatchAllowed bool                 `json:"dispatch_allowed,omitempty"`
-	NextAction      string               `json:"next_action"`
+	// ReviewEnforcement labels the run's review mode after this record
+	// (packet_import or legacy_manual).
+	ReviewEnforcement string `json:"review_enforcement,omitempty"`
+	NextAction        string `json:"next_action"`
 }
 
 func decodeStrictFile(path string, v any) error {
@@ -111,7 +114,7 @@ type hostCheck func(history []hoststate.Record, core []model.Record) error
 // append, so an execution-authorizing host record is never appended after
 // the core withdrew its authority. Lock order across HMA is always host then
 // core; hma transition takes them in the same order.
-func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.RecordKind, decision *hoststate.OrchestrationDecision, preflight *hoststate.RoutePreflight, dispatch *hoststate.Dispatch, review *hoststate.IndependentReview, check hostCheck) (hostResult, error) {
+func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.RecordKind, decision *hoststate.OrchestrationDecision, preflight *hoststate.RoutePreflight, dispatch *hoststate.Dispatch, review *hoststate.IndependentReview, loop *hoststate.LoopEvidence, check hostCheck) (hostResult, error) {
 	var rec hoststate.Record
 	err := hoststate.NewStore(storePath).Transact(envelope.RunID, func(history []hoststate.Record, commit func(*hoststate.Record) error) error {
 		return store.New(storePath).WithRunLock(envelope.RunID, func(core []model.Record) error {
@@ -138,6 +141,7 @@ func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.Re
 				Preflight:      preflight,
 				Dispatch:       dispatch,
 				Review:         review,
+				LoopEvidence:   loop,
 			}
 			if hostAppendHook != nil {
 				hostAppendHook()
@@ -150,7 +154,7 @@ func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.Re
 	if err != nil {
 		return hostResult{}, err
 	}
-	return hostResult{Recorded: true, Kind: kind, Sequence: rec.Sequence, HeadAnchor: rec.HeadAnchor, CoreHeadAnchor: rec.CoreHeadAnchor}, nil
+	return hostResultFor(storePath, rec), nil
 }
 
 func hostCommandFlags(name string, args []string) (string, string, error) {
@@ -178,7 +182,7 @@ func runHostDecision(args []string) error {
 	if _, err := validateHostEnvelope(in.hostEnvelope); err != nil {
 		return err
 	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil, func(history []hoststate.Record, core []model.Record) error {
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil, nil, func(history []hoststate.Record, core []model.Record) error {
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Decision.UnitID, in.Decision.Route.RouteApprovalDigest); err != nil {
 			return err
 		}
@@ -204,7 +208,7 @@ func runHostPreflight(args []string) error {
 	if err != nil {
 		return err
 	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindPreflight, nil, &in.Preflight, nil, nil, func(history []hoststate.Record, core []model.Record) error {
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindPreflight, nil, &in.Preflight, nil, nil, nil, func(history []hoststate.Record, core []model.Record) error {
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Preflight.UnitID, in.Preflight.Route.RouteApprovalDigest); err != nil {
 			return err
 		}
@@ -235,7 +239,12 @@ func runHostDispatch(args []string) error {
 	if err != nil {
 		return err
 	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDispatch, nil, nil, &in.Dispatch, nil, func(history []hoststate.Record, core []model.Record) error {
+	// Packet provenance is created only by hma host review-packet; a
+	// caller-supplied packet binding would impersonate an HMA-generated one.
+	if in.Dispatch.Packet != nil {
+		return errors.New(hoststate.ReasonReviewImportRequired)
+	}
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDispatch, nil, nil, &in.Dispatch, nil, nil, func(history []hoststate.Record, core []model.Record) error {
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Route.RouteApprovalDigest); err != nil {
 			return err
 		}
@@ -261,7 +270,11 @@ func runHostReview(args []string) error {
 	if _, err := validateHostEnvelope(in.hostEnvelope); err != nil {
 		return err
 	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindReview, nil, nil, nil, &in.Review, func(history []hoststate.Record, core []model.Record) error {
+	// Import provenance fields are set only by hma host review-import.
+	if r := in.Review; r.ReceiptDigest != "" || r.ReportDigest != "" || r.Isolation != "" || r.ReportVerdict != "" {
+		return errors.New(hoststate.ReasonReviewImportRequired)
+	}
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindReview, nil, nil, nil, &in.Review, nil, func(history []hoststate.Record, core []model.Record) error {
 		// A review continues the coding path only while the unit's route
 		// approval is still in force in the core chain it binds.
 		if _, err := approvedCoreRouteDigestIn(core, in.RunID, in.Review.UnitID); err != nil {
@@ -280,22 +293,26 @@ func runHostShow(args []string) error {
 	fs := flag.NewFlagSet("show", flag.ContinueOnError)
 	storePath := fs.String("store", "", "HMA store directory")
 	runID := fs.String("run_id", "", "run id")
+	mode := fs.Bool("mode", false, "print only the run's review enforcement mode")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if *storePath == "" || *runID == "" || fs.NArg() != 0 {
-		return errors.New("usage: hma host show --store <directory> --run_id <id>")
+		return errors.New("usage: hma host show --store <directory> --run_id <id> [--mode]")
 	}
 	records, err := hoststate.NewStore(*storePath).Load(*runID)
 	if err != nil {
 		return err
+	}
+	if *mode {
+		return json.NewEncoder(os.Stdout).Encode(map[string]string{"review_enforcement": hoststate.ReviewEnforcementMode(records)})
 	}
 	return json.NewEncoder(os.Stdout).Encode(records)
 }
 
 func runHost(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hma host [decision|preflight|dispatch|review|show] ...")
+		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|show] ...")
 	}
 	switch args[0] {
 	case "decision":
@@ -306,9 +323,29 @@ func runHost(args []string) error {
 		return runHostDispatch(args[1:])
 	case "review":
 		return runHostReview(args[1:])
+	case "review-packet":
+		return runHostReviewPacket(args[1:])
+	case "review-import":
+		return runHostReviewImport(args[1:])
+	case "findings-import":
+		return runHostFindingsImport(args[1:])
+	case "bind-repository":
+		return runHostBindRepository(args[1:])
+	case "loop-evidence":
+		return runHostLoopEvidence(args[1:])
 	case "show":
 		return runHostShow(args[1:])
 	default:
-		return errors.New("usage: hma host [decision|preflight|dispatch|review|show] ...")
+		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|show] ...")
 	}
+}
+
+// hostResultFor reports a committed host record and the run's review
+// enforcement mode after it.
+func hostResultFor(storePath string, rec hoststate.Record) hostResult {
+	res := hostResult{Recorded: true, Kind: rec.Kind, Sequence: rec.Sequence, HeadAnchor: rec.HeadAnchor, CoreHeadAnchor: rec.CoreHeadAnchor}
+	if history, err := hoststate.NewStore(storePath).Load(rec.RunID); err == nil {
+		res.ReviewEnforcement = hoststate.ReviewEnforcementMode(history)
+	}
+	return res
 }

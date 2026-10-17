@@ -280,6 +280,12 @@ func ValidateRecord(r *Record) error {
 			return fmt.Errorf("criterion %d unknown disposition %q", i, d)
 		}
 	}
+	if r.FindingsSnapshot || r.FindingsSource != nil {
+		if r.Kind != KindFinding || !r.FindingsSnapshot || r.FindingsSource == nil ||
+			r.FindingsSource.ReviewRecordDigest == "" || r.FindingsSource.ReportDigest == "" {
+			return errors.New("findings snapshot needs kind finding and a findings source")
+		}
+	}
 	for i := range r.Findings {
 		f := r.Findings[i]
 		if !ValidFindingDisposition(f.Disposition) {

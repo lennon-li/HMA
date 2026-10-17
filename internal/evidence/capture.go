@@ -117,6 +117,9 @@ func Capture(ctx context.Context, req Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	if reason := RejectShell(req.Executable, resolved, req.Argv); reason != "" {
+		return Result{}, fmt.Errorf("no-shell policy: %s", reason)
+	}
 	if len(req.AllowedExecutables) > 0 {
 		permitted := false
 		for _, allowed := range req.AllowedExecutables {

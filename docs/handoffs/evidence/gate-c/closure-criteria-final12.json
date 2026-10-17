@@ -1,0 +1,513 @@
+{
+ "note": "Closure criteria for prior Gate C findings F01-F13, A01-A09, R3-01..R3-03; statuses and verdicts removed. HUMAN DECISION (Lennon, 2026-10-17): the acceptance boundary in docs/handoffs/2026-10-16-gate-c-scope.md \u00a70.1 is ACCEPTED. Items that depend only on that boundary (F12, A06, F08 positive paths, A04/R3-02 contract-dependent packet inputs, R3-03) are DEFERRED-TO-GATE-D by human decision: judge only that they are recorded with exit tests and that no claim relies on them.",
+ "findings": [
+  {
+   "id": "F01",
+   "title": "A failed review can downgrade an existing blocker by ID",
+   "closure_check": [
+    {
+     "method": "Run same-ID BLOCK->ADVISORY, BLOCK->WAIVABLE, and WAIVABLE->ADVISORY cases under REQUEST_CHANGES and ESCALATE; also test omitted IDs and a fresh approving resolution.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F02",
+   "title": "Imports accept stale core bindings and can erase newer blockers",
+   "closure_check": [
+    {
+     "method": "Append a core finding, waiver, criterion record, and route rewind before each import; stale imports must preserve blockers and append nothing. A same-review snapshot remains allowed.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F03",
+   "title": "Replaying an old passing run overrides a newer failed review",
+   "closure_check": [
+    {
+     "method": "Replay A after a newer failure and after a newer pass; concurrently import A twice. No new approval may supersede B. The first valid import must still work.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F04",
+   "title": "Generated packets do not bind the observed repository artifact",
+   "closure_check": [
+    {
+     "method": "Use repository B to review an artifact declared for repository A, and use a wrong head, diff, or dirty-content digest in A. All must fail; an exact target and complete evidence packet must pass.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F05",
+   "title": "Final-audit reason does not enforce final-review family separation",
+   "closure_check": [
+    {
+     "method": "Final reason with same-provider/different-model and same-family routes must fail even when FinalValidation=false. Different families must pass. Ordinary review remains eligible under its normal rule.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F06",
+   "title": "Receipt import ignores provider and effort drift",
+   "closure_check": [
+    {
+     "method": "Wrong and missing provider/effort must refuse; exact actual ledger fields must pass. Retain the current wrong-agent/model controls.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F07",
+   "title": "Invalid audit reports can approve and clear findings",
+   "closure_check": [
+    {
+     "method": "Reject trailing JSON, null/missing findings, absent target/requirements/evidence, and an approving report with failed requirements or unresolved high findings. Accept a structurally valid current report. Run the external validator against fixtures.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F08",
+   "title": "Unverified reference labels create new unwaivable blockers",
+   "closure_check": [
+    {
+     "method": "Nonexistent kernel/budget IDs and references without reproduction must not create blockers. A reproduced actual kernel violation must BLOCK regardless of severity. A measured declared-budget exceedance must be WAIVABLE.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F09",
+   "title": "The verify-loop evidence bridge is absent",
+   "closure_check": [
+    {
+     "method": "Import a real fixture journal and report with one failed check, linked repair, and fresh passing re-capture. Wrong target, changed journal/check, or unsupported criterion link must not credit a criterion. No reservation or lease authority may be fabricated.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "title": "Review dispatches have no short validity interval",
+   "closure_check": [
+    {
+     "method": "Launch immediately before expiry, at expiry, after expiry, before issuance, and after rewind/renewal. Only the valid interval may import. Bind timestamps to the frozen record, not caller-supplied import time.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "title": "Reviewer independence checks only the latest implementation",
+   "closure_check": [
+    {
+     "method": "Use a valid multi-route implementation history where reviewer authored an earlier retained contribution. Refuse that reviewer; accept an independent route. Also test a fresh unit with no contribution by the reviewer.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F12",
+   "title": "Reservation checks assigned to Gate C are not implemented",
+   "closure_check": [
+    {
+     "method": "At Gate D, execute v6/v7 tests for charged unlaunched reservations, replay eligibility, one-to-one namespace association, half-open expiry and monotone generation revocation; require independent audit before execution/closure claims.",
+     "expected": "The unsafe case is refused without changing either chain or weakening a finding. The valid current control still works."
+    }
+   ]
+  },
+  {
+   "id": "F13",
+   "title": "New legacy manual-review writes bypass the consolidated import path",
+   "closure_check": [
+    {
+     "method": "Migrate a legacy run, retain old history readability, then try the new manual-review override after an imported failure.",
+     "expected": "The migrated run refuses new manual approvals; an explicitly unmigrated compatibility run is visibly labelled and cannot be mistaken for full Gate C enforcement."
+    }
+   ]
+  },
+  {
+   "id": "A01",
+   "title": "Invalid audit reports approve, clear blockers, and satisfy the host Verification gate",
+   "closure_check": [
+    {
+     "method": "Test every retained candidate and the complete valid control with HMA and the external validator.",
+     "expected": "Invalid candidates refuse or escalate and cannot clear findings; the valid control approves."
+    },
+    {
+     "method": "Repeat TestAuditorInvalidReportClearsAndSatisfiesGate.",
+     "expected": "The blocker remains and the host Verification gate remains closed."
+    }
+   ]
+  },
+  {
+   "id": "A02",
+   "title": "An old live-target review can clear a blocker after the worktree changes",
+   "closure_check": [
+    {
+     "method": "Repeat TestAuditorStaleLiveTargetFindings for tracked, untracked, dirty and clean-to-dirty changes.",
+     "expected": "Both stale imports refuse without removing the blocker."
+    },
+    {
+     "method": "Import the exact unchanged target as a negative control.",
+     "expected": "The authentic current snapshot remains accepted."
+    }
+   ]
+  },
+  {
+   "id": "A03",
+   "title": "Finding namespace prefixes allow a review to clear another unit blocker",
+   "closure_check": [
+    {
+     "method": "Repeat both unit-prefix probes and include slash characters in unit and finding IDs.",
+     "expected": "A U1 approval preserves every U1/sub blocker."
+    },
+    {
+     "method": "Test ordinary same-unit resolution and other-unit preservation.",
+     "expected": "Only the exact approved unit changes."
+    }
+   ]
+  },
+  {
+   "id": "A04",
+   "title": "HMA-generated review packets omit the contract and findings snapshot",
+   "closure_check": [
+    {
+     "method": "Repeat TestAuditorPacketContent and inspect the frozen packet.",
+     "expected": "The known blocker and all required packet sections or exact immutable references are present."
+    },
+    {
+     "method": "Change any packet source between assembly and dispatch commit.",
+     "expected": "The command refuses or regenerates a packet bound to the new exact core head."
+    }
+   ]
+  },
+  {
+   "id": "A05",
+   "title": "Existing unprefixed core findings have no import migration",
+   "closure_check": [
+    {
+     "method": "Repeat TestAuditorLegacyFindingMigration on baseline-written records.",
+     "expected": "An authentic current unit review resolves the migrated own finding, while other units remain unchanged."
+    },
+    {
+     "method": "Migrate ambiguous IDs with active waivers and references.",
+     "expected": "No finding or waiver is silently dropped, reassigned or weakened."
+    }
+   ]
+  },
+  {
+   "id": "A06",
+   "title": "Required disposition, criterion recheck and independent-credit integration are absent",
+   "closure_check": [
+    {
+     "method": "Use low- and high-severity real kernel violations, fake links, criterion failures and measured budget overruns.",
+     "expected": "Only reproduced kernel violations become BLOCK; measured permitted overruns become WAIVABLE; unsupported links stay advisory; failed criteria get no credit."
+    },
+    {
+     "method": "Pair wrong-target, failing and successful recaptures with independent report criterion verification.",
+     "expected": "Only the successful exact-target independent pair can credit the approved criterion."
+    }
+   ]
+  },
+  {
+   "id": "A07",
+   "title": "Gate C launch-reconciliation integration is deferred in full",
+   "closure_check": [
+    {
+     "method": "Repeat TestAuditorLoopEnvelopeDrift with a correct control.",
+     "expected": "Wrong hash/store refuses without evidence or host append; the genuine bound control recaptures."
+    },
+    {
+     "method": "Execute the v6/v7 namespace, reservation, half-open interval and monotone-generation matrix at the approved prerequisite gate.",
+     "expected": "No unregistered/reused/out-of-window run grants evidence authority or closure."
+    }
+   ]
+  },
+  {
+   "id": "A08",
+   "title": "loop-evidence executes verify argv before checking terminal state",
+   "closure_check": [
+    {
+     "method": "Repeat TestAuditorTerminalLoopExecutesBeforeRefusal and a missing-run case.",
+     "expected": "The command refuses before creating the marker or executing argv."
+    },
+    {
+     "method": "Race terminalization with recapture admission and test an open-run control.",
+     "expected": "No execution starts after terminal authority is recorded; the valid open-run capture succeeds without deadlock."
+    }
+   ]
+  },
+  {
+   "id": "A09",
+   "title": "Legacy compatibility runs do not expose an enforcement-mode label",
+   "closure_check": [
+    {
+     "method": "Load a baseline legacy run, inspect status, migrate it with an HMA packet, then inspect status and try a manual approval.",
+     "expected": "Legacy state is visibly labelled as not fully consolidated; migrated state reports enforcement and refuses the manual approval."
+    }
+   ]
+  },
+  {
+   "id": "R3-01",
+   "title": "A newer unanswered packet does not invalidate an older approving review",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorEarlierSnapshotAfterNewPacket with a prior BLOCK and a newer unanswered packet.",
+     "expected": "The old snapshot refuses; both chains and the blocker stay unchanged."
+    },
+    {
+     "method": "Run TestAuditorPendingFinalDispatchInvalidatesEarlierPass, then complete/import/snapshot the new valid final report.",
+     "expected": "The pending packet closes the host gate; its valid current report reopens the gate."
+    },
+    {
+     "method": "Repeat with two controllers under -race.",
+     "expected": "No snapshot or gate check can pass using a dispatch that ceased to be latest."
+    }
+   ]
+  },
+  {
+   "id": "R3-02",
+   "title": "The fixed review packet still omits mandatory review inputs",
+   "closure_check": [
+    {
+     "method": "Generate a packet with sentinel request, non-goal, policy and required evidence artifacts; inspect or resolve every reference in a fresh read-only context.",
+     "expected": "Each required input is present with its exact digest; the known blocker is also present."
+    },
+    {
+     "method": "Omit criteria/plan/policy/evidence inputs, and separately change one between assembly and dispatch commit.",
+     "expected": "Generation refuses without a dispatch, or regenerates and binds the exact new state."
+    },
+    {
+     "method": "Run TestAuditorClosurePacketStandaloneInputs plus a nonempty approved-contract control.",
+     "expected": "The full fixed packet passes; incomplete inputs cannot obtain a usable review packet."
+    }
+   ]
+  },
+  {
+   "id": "R3-03",
+   "title": "The broader Gate C acceptance-boundary deferral is not approved and leaves design requirements incomplete",
+   "closure_check": [
+    {
+     "method": "Trace every original Gate C design/proof row to an implemented test or a human-approved deferred gate with unchanged acceptance criteria.",
+     "expected": "No row is dropped, renamed into success, or left without an owner and prerequisite."
+    },
+    {
+     "method": "Exercise real low/high-severity kernel violations, fake references, declared-budget overruns and exact-target independent criterion pairs at their approved gate.",
+     "expected": "Only reproduced kernel violations become BLOCK; only measured permitted excess becomes WAIVABLE; only the valid recapture/reviewer pair credits a criterion."
+    },
+    {
+     "method": "Execute the full v6/v7 reservation/namespace/replay/revocation matrix before any bounded-execution or closure claim.",
+     "expected": "Unauthorized, reused, unregistered and out-of-window launches never grant authority."
+    }
+   ]
+  },
+  {
+   "id": "C-F14",
+   "title": "Legacy dispatch input can impersonate an HMA-generated review packet",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorFinalManualPacketBoundary; repeat on a legacy run and on packet_import after a failed review. Fingerprint both chains before the request.",
+     "expected": "host dispatch refuses caller-supplied Packet before append; no blocker or chain changes; no report from that input can import."
+    },
+    {
+     "method": "Generate a real packet through review-packet and import an exact independent receipt/report, then its snapshot.",
+     "expected": "Valid current control still approves and satisfies only the host gate; an ordinary legacy packet cannot use review-import."
+    }
+   ]
+  },
+  {
+   "id": "C-F15",
+   "title": "Loop recapture discards the verification output",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorFinalRecaptureRetainsOutput with distinct stdout and stderr, a nonzero exit and a fresh random token. Resolve OutputRef after the process ends.",
+     "expected": "Both streams remain accessible; their framed digest equals OutputDigest; exit code and truncation status match."
+    },
+    {
+     "method": "Repeat with output above the cap and with a command that changes repository content.",
+     "expected": "Truncation is explicit and retained bytes are inspectable; mutating check still refuses evidence append."
+    }
+   ]
+  },
+  {
+   "id": "C-F16",
+   "title": "Go reads case-variant JSON keys that the Python contract ignores",
+   "closure_check": [
+    {
+     "method": "Import a contract-valid fix-required report with a trailing \"Verdict\":\"pass\" member against a unit with an existing BLOCK; then import its findings and check the gate.",
+     "expected": "The review is not APPROVE, the BLOCK stays, and the gate stays closed."
+    },
+    {
+     "method": "Repeat with Unicode case-fold variants (for example U+017F long s, U+212A Kelvin sign) and case variants of keys in receipts, nested findings, hma_binding, and verify-loop state.",
+     "expected": "Go reads exactly the keys Python reads; no variant changes an import result."
+    }
+   ]
+  },
+  {
+   "id": "C-F17",
+   "title": "Go and Python disagree on required nonempty report fields",
+   "closure_check": [
+    {
+     "method": "Import a receipt-bound pass report whose required strings consist only of U+001C, U+001D, U+001E, or U+001F against a unit with an existing BLOCK; then import findings and check the gate. Compare the Go whitespace predicate with Python str.isspace over all code points.",
+     "expected": "No such report approves; the BLOCK stays; the gate stays closed; the predicates agree on every code point."
+    }
+   ]
+  },
+  {
+   "id": "C-F18",
+   "title": "Interrupted output-artifact writes are trusted as complete on retry",
+   "closure_check": [
+    {
+     "method": "Place an empty, partial, or symlinked file at the expected artifact path, then run loop-evidence. Also run it with an intact existing artifact.",
+     "expected": "Corrupt residue is refused before either append and is preserved; an intact artifact is reused; the final name never holds incomplete bytes."
+    }
+   ]
+  },
+  {
+   "id": "C-F19",
+   "title": "loop-evidence executes a shell command from an imported journal",
+   "closure_check": [
+    {
+     "method": "Run loop-evidence with journals whose verify argv is sh -c, bash <script>, env sh -c, a symlink to a shell, or an operation verify-loop forbids (git push, curl, rm -r). Call evidence.Capture directly with shell entry points.",
+     "expected": "Every case is refused before execution and before either append; plain executables still run."
+    }
+   ]
+  },
+  {
+   "id": "C-F20",
+   "title": "Invalid UTF-8 report passes Go checks but fails the Python validator",
+   "closure_check": [
+    {
+     "method": "Import a receipt-bound pass report containing an invalid UTF-8 byte against a unit with an existing BLOCK; import its findings; check the gate. Also give invalid UTF-8 to receipts and loop state.",
+     "expected": "No approval; the BLOCK stays; the gate stays closed; Go and Python agree."
+    }
+   ]
+  },
+  {
+   "id": "C-F21",
+   "title": "The shell filter refuses a shell name used as plain data",
+   "closure_check": [
+    {
+     "method": "Run evidence capture with printf %s sh, and with shell entry points (sh -c, a wrapper such as env or xargs given a shell, a symlinked shell).",
+     "expected": "Plain data runs; every shell entry point is refused before execution."
+    }
+   ]
+  },
+  {
+   "id": "C-F22",
+   "title": "Executable shell scripts and wrapper aliases bypass the no-shell kernel",
+   "closure_check": [
+    {
+     "method": "Run loop-evidence and evidence.Capture with a #!/bin/sh script, a #!/usr/bin/env sh script, env plus a symlink to sh, a symlink to env plus sh and a script, and a script whose interpreter is a symlinked shell.",
+     "expected": "Each is refused before execution and before either append; plain executables and shell names as data still run. Any residual limit is recorded, not claimed closed."
+    }
+   ]
+  },
+  {
+   "id": "C-F23",
+   "title": "A concurrent trusted core terminal append can precede loop check execution",
+   "closure_check": [
+    {
+     "method": "Pause loop-evidence after its terminal check and attempt a direct core append (for example ABORTED), or probe the core run lock from inside the check.",
+     "expected": "The core lock is held from the terminal check through the core append; no check runs on a closed run."
+    }
+   ]
+  },
+  {
+   "id": "C-F24",
+   "title": "A review with a different approved base can clear the current unit blocker",
+   "closure_check": [
+    {
+     "method": "Generate review packets with base = HEAD in the approved root, with another repository root and base, and with a clone holding the approved base; then try review import and findings import against an existing BLOCK.",
+     "expected": "Each wrong base or root is refused with a named reason before a packet is usable; the BLOCK stays. Any residual root-identity limit is recorded, not claimed closed."
+    }
+   ]
+  },
+  {
+   "id": "J8-01",
+   "title": "First generated packet can adopt another checkout and clear the current blocker",
+   "closure_check": [
+    {
+     "method": "On a run with no prior packet, generate a packet for a clone holding the approved base (with a different committed artifact), import a receipt-bound pass, then import findings against an existing BLOCK. Also try a run without any repository binding, and a second binding.",
+     "expected": "The clone packet is refused before it is usable; an unbound run cannot generate or import; the binding is written once and not taken from a packet; the BLOCK stays."
+    }
+   ]
+  },
+  {
+   "id": "J8-02",
+   "title": "Slash-separated finding IDs collide across exact unit owners",
+   "closure_check": [
+    {
+     "method": "Import findings with id sub/F for unit U1 while unit U1/sub owns F; also attempt a snapshot that would contain a duplicate global id.",
+     "expected": "The colliding import is refused before any append; no duplicate global finding id is recorded."
+    }
+   ]
+  },
+  {
+   "id": "J8-03",
+   "title": "Loop recapture can attach another repository artifact to an anchored unit",
+   "closure_check": [
+    {
+     "method": "Run loop-evidence naming another repository root and base, the bound root with another base, and a journal whose repo.root names another root.",
+     "expected": "Each is refused before execution and before either append; the bound root at the approved base still records evidence."
+    }
+   ]
+  },
+  {
+   "id": "J9-01",
+   "title": "Executable aliases bypass the loop recapture operation filter",
+   "closure_check": [
+    {
+     "method": "Run loop-evidence with rm -r, curl, and git push in direct, absolute-path, and symlink-alias forms.",
+     "expected": "Every form is refused before execution and before either append; the canonical executable is what runs for admitted checks."
+    }
+   ]
+  },
+  {
+   "id": "J10-01",
+   "title": "bind-repository returns an empty next action",
+   "closure_check": [
+    {
+     "method": "Run hma host bind-repository on the real binary and read next_action.",
+     "expected": "A non-empty next action that names the following step."
+    }
+   ]
+  },
+  {
+   "id": "J10-02",
+   "title": "loop-evidence omits the review enforcement label",
+   "closure_check": [
+    {
+     "method": "Run a successful hma host loop-evidence and read review_enforcement.",
+     "expected": "legacy_manual or packet_import, equal to hma host show --mode."
+    }
+   ]
+  },
+  {
+   "id": "J11-01",
+   "title": "A non-approving findings snapshot recommends stage continuation",
+   "closure_check": [
+    {
+     "method": "Run findings-import after a receipt-bound fix-required review and after an ESCALATE review, with no BLOCK or WAIVABLE findings left.",
+     "expected": "next_action is RECORD_FINDINGS_AND_REMEDIATE for REQUEST_CHANGES and ESCALATE_TO_HUMAN for ESCALATE; only APPROVE with no blocker gives CONTINUE_HMA_TRANSITION."
+    }
+   ]
+  },
+  {
+   "id": "J11-02",
+   "title": "findings-import omits the review enforcement label",
+   "closure_check": [
+    {
+     "method": "Run a successful findings-import on the real binary.",
+     "expected": "review_enforcement is present and equals hma host show --mode."
+    }
+   ]
+  }
+ ]
+}
