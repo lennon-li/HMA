@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -124,5 +125,43 @@ func TestCaptureRejectsRelativeExecutablePath(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("relative executable path accepted")
+	}
+}
+
+// B17: an evidence command's own Git calls must not read replacement objects.
+func TestCaptureDisablesGitReplaceObjects(t *testing.T) {
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git unavailable")
+	}
+	repo := t.TempDir()
+	run := func(args ...string) string {
+		t.Helper()
+		c := exec.Command("git", append([]string{"-C", repo, "-c", "user.email=t@example.invalid", "-c", "user.name=t"}, args...)...)
+		out, err := c.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	run("init", "-q")
+	if err := os.WriteFile(filepath.Join(repo, "a"), []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run("add", "a")
+	run("commit", "-qm", "base")
+	orig := run("rev-parse", "HEAD:a")
+	if err := os.WriteFile(filepath.Join(repo, "b"), []byte("substitute"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	subID := run("hash-object", "-w", "b")
+	os.Remove(filepath.Join(repo, "b"))
+	run("replace", orig, subID)
+	res, err := Capture(context.Background(), Request{Executable: gitPath, Argv: []string{"show", "HEAD:a"}, WorkingDir: repo, RepositoryRoot: repo})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(res.Stdout) != "original" {
+		t.Fatalf("evidence command read replacement object: %q", res.Stdout)
 	}
 }

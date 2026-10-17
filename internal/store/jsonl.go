@@ -147,6 +147,38 @@ func recoverPending(p runPaths, chainTail string) error {
 	return os.Remove(p.pending)
 }
 
+// WithRunLock holds the run's exclusive lock while fn runs against the
+// committed chain, so no core record can be appended until fn returns. A run
+// with no files is reported as empty without taking the lock or creating
+// anything, as Load does.
+func (s *Store) WithRunLock(runID string, fn func([]model.Record) error) error {
+	if !safeRunID(runID) {
+		return errors.New("invalid run id")
+	}
+	p := s.paths(runID)
+	if !exists(p.stream) && !exists(p.head) && !exists(p.pending) {
+		return fn(nil)
+	}
+	lock, err := lockRun(p.lock)
+	if err != nil {
+		return err
+	}
+	defer unlockRun(lock)
+	records, err := s.loadLocked(runID)
+	if err != nil {
+		return err
+	}
+	return fn(records)
+}
+
+// LockFile takes the same exclusive cross-process lock the core store uses
+// for a run, on path. The host store uses it so host and core writes share one
+// locking discipline.
+func LockFile(path string) (*os.File, error) { return lockRun(path) }
+
+// UnlockFile releases a lock taken by LockFile.
+func UnlockFile(f *os.File) error { return unlockRun(f) }
+
 func (s *Store) loadLocked(runID string) ([]model.Record, error) {
 	p := s.paths(runID)
 	out, chainTail, err := readChain(runID, p.stream)

@@ -14,12 +14,14 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 )
 
 type Request struct {
@@ -136,9 +138,11 @@ func Capture(ctx context.Context, req Request) (Result, error) {
 	start := time.Now().UTC()
 	cmd := exec.CommandContext(ctx, resolved, req.Argv...)
 	cmd.Dir = wd
-	if req.Environment != nil {
-		cmd.Env = req.Environment
+	env := req.Environment
+	if env == nil {
+		env = os.Environ()
 	}
+	cmd.Env = repostate.GitEnv(env)
 	cmd.Stdout = out
 	cmd.Stderr = erout
 	runErr := cmd.Run()

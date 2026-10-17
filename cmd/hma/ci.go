@@ -13,6 +13,7 @@ import (
 	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/evidence"
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 )
 
@@ -60,6 +61,18 @@ func runCIGithub(args []string) error {
 	if err != nil {
 		return fmt.Errorf("github ci adapter: %w", err)
 	}
+	// Evidence is written to the store, so the store must not be one the
+	// tested checkout can rewrite. A repository-selecting variable such as
+	// GIT_DIR would let the command read a repository other than the one HMA
+	// snapshots, so CI refuses to run with one set.
+	if !*verifyOnly {
+		if v := repostate.SelectingVariableSet(os.Environ()); v != "" {
+			return fmt.Errorf("refusing evidence capture: repository-selecting variable %s is set", v)
+		}
+		if err := repostate.StoreOutsideRepository(*repoRoot, *storePath); err != nil {
+			return err
+		}
+	}
 
 	s := store.New(*storePath)
 	records, err := s.Load(*runID)
@@ -69,12 +82,25 @@ func runCIGithub(args []string) error {
 	if len(records) == 0 {
 		return errors.New("no records found for run_id")
 	}
-	lastRecord := records[len(records)-1]
-
+	// The stage comes from the projection, not the last record: a
+	// stage-transition record carries its from-stage and a resolution record
+	// may carry none. The approval packet verified against is the latest one
+	// for leaving the current stage, recorded since the run entered it, so a
+	// packet from an earlier visit to the stage is never reused.
+	state := engine.ProjectStageState(records)
+	if state.Terminal {
+		return fmt.Errorf("run is terminal (%s)", state.Outcome)
+	}
+	entered := -1
+	for i, r := range records {
+		if r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil && r.Approval.ProposedTargetStage == state.CurrentStage {
+			entered = i
+		}
+	}
 	var approval *model.ApprovalBinding
-	for i := len(records) - 1; i >= 0; i-- {
-		if records[i].Approval != nil {
-			approval = records[i].Approval
+	for i := len(records) - 1; i > entered; i-- {
+		if a := records[i].Approval; a != nil && a.CurrentStage == state.CurrentStage {
+			approval = a
 			break
 		}
 	}
@@ -85,7 +111,7 @@ func runCIGithub(args []string) error {
 	res := engine.EvaluateCIVerification(engine.CIVerificationRequest{
 		CIRepository:               env.Repository,
 		CISHA:                      env.SHA,
-		CurrentStage:               lastRecord.Stage,
+		CurrentStage:               state.CurrentStage,
 		ExpectedRepositoryIdentity: approval.RepositoryIdentityDigest,
 		ExpectedProducedHead:       approval.ProducedHeadDigest,
 	})
@@ -101,7 +127,15 @@ func runCIGithub(args []string) error {
 	// recorded with its provenance prefix rather than as a bare human identity.
 	actor := "github-actions:" + env.Actor
 
-	captured, err := evidence.Capture(context.Background(), evidence.Request{
+	// Environment strings only claim a revision. The checkout must be a clean
+	// Git worktree at the approved base, head, and diff, and the command must
+	// leave it so; otherwise the evidence would describe content HMA never saw.
+	ctx := context.Background()
+	before, err := ciCheckoutState(ctx, *repoRoot, approval, env.SHA)
+	if err != nil {
+		return err
+	}
+	captured, err := evidence.Capture(ctx, evidence.Request{
 		Executable:         *executable,
 		Argv:               argv,
 		WorkingDir:         *repoRoot,
@@ -109,12 +143,19 @@ func runCIGithub(args []string) error {
 		MaxOutputBytes:     1 << 20,
 		RepositoryIdentity: env.Repository,
 		BaseRevision:       approval.BaseRevisionDigest,
-		HeadRevision:       env.SHA,
-		DiffDigest:         approval.DiffDigest,
+		HeadRevision:       before.Head,
+		DiffDigest:         before.Diff,
 		CapturingActor:     actor,
 	})
 	if err != nil {
 		return err
+	}
+	after, err := ciCheckoutState(ctx, *repoRoot, approval, env.SHA)
+	if err != nil {
+		return fmt.Errorf("checkout changed during evidence capture: %w", err)
+	}
+	if after != before {
+		return errors.New("checkout changed during evidence capture")
 	}
 
 	rec := model.Record{
@@ -122,12 +163,12 @@ func runCIGithub(args []string) error {
 		Version: 1,
 		Metadata: model.RecordMetadata{
 			RunID:           *runID,
-			Sequence:        lastRecord.Metadata.Sequence + 1,
-			PredecessorHash: lastRecord.Metadata.HeadAnchor,
+			Sequence:        state.Sequence + 1,
+			PredecessorHash: state.PredecessorHead,
 			Timestamp:       time.Now().UTC().Format(time.RFC3339),
 			Actor:           actor,
 		},
-		Stage:    lastRecord.Stage,
+		Stage:    state.CurrentStage,
 		Evidence: &captured.Evidence,
 	}
 	if err := s.Append(&rec); err != nil {
@@ -139,4 +180,25 @@ func runCIGithub(args []string) error {
 		Evidence:      &captured.Evidence,
 		RecordWritten: true,
 	})
+}
+
+// ciCheckoutState snapshots root as a clean Git worktree and requires it to be
+// the approved base, the CI head, and the approved produced head and diff.
+func ciCheckoutState(ctx context.Context, root string, approval *model.ApprovalBinding, ciSHA string) (repostate.State, error) {
+	// CI tests only clean checkouts; an approval that binds dirty content
+	// describes bytes a clean checkout does not have.
+	if approval.WorktreeDigest != "" {
+		return repostate.State{}, errors.New("checkout is not the approved repository state: approval binds uncommitted worktree content")
+	}
+	if err := repostate.VerifyBase(ctx, root, approval.BaseRevisionDigest); err != nil {
+		return repostate.State{}, fmt.Errorf("checkout is not the approved repository state: %w", err)
+	}
+	st, err := repostate.Snapshot(ctx, root, approval.BaseRevisionDigest, false)
+	if err != nil {
+		return repostate.State{}, fmt.Errorf("checkout is not the approved repository state: %w", err)
+	}
+	if st.Head != ciSHA || st.Head != approval.ProducedHeadDigest || st.Diff != approval.DiffDigest {
+		return repostate.State{}, errors.New("checkout is not the approved repository state: head or diff differs")
+	}
+	return st, nil
 }

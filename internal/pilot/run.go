@@ -91,7 +91,12 @@ func Run(ctx context.Context, in Input, storeDir string) (Result, error) {
 		return Result{}, errors.New("repository identity is stale")
 	}
 	expected := in.ExpectedApproval
-	if expected.RunID != in.RunID || expected.RepositoryIdentityDigest != in.RepositoryIdentity || expected.BaseRevisionDigest != in.BaseRevision || expected.ProducedHeadDigest != before.Head || expected.DiffDigest != before.Diff {
+	if expected.RunID != in.RunID || expected.RepositoryIdentityDigest != in.RepositoryIdentity || expected.BaseRevisionDigest != in.BaseRevision {
+		return Result{}, errors.New("expected approval binding is stale")
+	}
+	// Head and diff are bound only at stages whose approvals bind them
+	// (architecture section 6); earlier approvals must leave them empty.
+	if model.ApprovalBindsHeadDiff(expected.CurrentStage) && (expected.ProducedHeadDigest != before.Head || expected.DiffDigest != before.Diff) {
 		return Result{}, errors.New("expected approval binding is stale")
 	}
 	s := store.New(sd)

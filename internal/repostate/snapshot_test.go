@@ -273,3 +273,387 @@ func TestOutputIgnoresRepositorySelectingEnvironment(t *testing.T) {
 		t.Fatalf("injected core.worktree changed the status of dir: %q, %v", status, err)
 	}
 }
+
+// B11: the worktree digest binds executable mode and file type, not bytes alone.
+func TestWorktreeDigestBindsModeAndType(t *testing.T) {
+	repo, base := newRepo(t)
+	path := filepath.Join(repo, "x")
+	if err := os.WriteFile(path, []byte("dirty"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	digest := func() string {
+		t.Helper()
+		st, err := Snapshot(context.Background(), repo, base, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st.Worktree
+	}
+	regular := digest()
+	if err := os.Chmod(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	executable := digest()
+	if executable == regular {
+		t.Fatal("executable-mode change kept the worktree digest")
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if digest() != regular {
+		t.Fatal("restoring the mode did not restore the digest")
+	}
+	target := filepath.Join(t.TempDir(), "same-bytes")
+	if err := os.WriteFile(target, []byte("dirty"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
+		t.Fatal(err)
+	}
+	if digest() == regular {
+		t.Fatal("symlink to identical bytes kept the worktree digest")
+	}
+}
+
+// B11 residual: Git distinguishes 0610 (100644) from 0710 (100755); the digest
+// must too, and must not change for group/other execute bits Git ignores.
+func TestWorktreeDigestBindsOwnerExecuteBit(t *testing.T) {
+	repo, base := newRepo(t)
+	path := filepath.Join(repo, "x")
+	if err := os.WriteFile(path, []byte("dirty"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	digest := func(mode os.FileMode) string {
+		t.Helper()
+		if err := os.Chmod(path, mode); err != nil {
+			t.Fatal(err)
+		}
+		st, err := Snapshot(context.Background(), repo, base, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st.Worktree
+	}
+	if digest(0o610) == digest(0o710) {
+		t.Fatal("owner-execute change (Git 100644 -> 100755) kept the worktree digest")
+	}
+	if digest(0o600) != digest(0o611) {
+		t.Fatal("group/other execute bits Git ignores changed the worktree digest")
+	}
+}
+
+// B12: repository config must not hide a change from a snapshot.
+func TestSnapshotIgnoresConfigThatHidesChanges(t *testing.T) {
+	cases := []struct {
+		name   string
+		config []string
+		change func(t *testing.T, repo string)
+	}{
+		{"core.filemode=false hides owner-execute", []string{"core.filemode", "false"}, func(t *testing.T, repo string) {
+			if err := os.Chmod(filepath.Join(repo, "x"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"status.showUntrackedFiles=no hides new files", []string{"status.showUntrackedFiles", "no"}, func(t *testing.T, repo string) {
+			if err := os.WriteFile(filepath.Join(repo, "new"), []byte("n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, base := newRepo(t)
+			git(t, repo, append([]string{"config"}, tc.config...)...)
+			if _, err := Snapshot(context.Background(), repo, base, false); err != nil {
+				t.Fatalf("clean control: %v", err)
+			}
+			tc.change(t, repo)
+			if _, err := Snapshot(context.Background(), repo, base, false); err == nil {
+				t.Fatal("hidden change read as a clean worktree")
+			}
+			st, err := Snapshot(context.Background(), repo, base, true)
+			if err != nil || st.Worktree == "" {
+				t.Fatalf("approved-dirty snapshot did not bind the change: %+v, %v", st, err)
+			}
+		})
+	}
+}
+
+// B12/B13: a clean filter or text/eol attribute makes git status compare
+// converted bytes. Raw comparison must still see the change on disk.
+func TestSnapshotSeesChangesHiddenByConversion(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, repo string)
+		write []byte
+	}{
+		{"clean filter returning committed bytes", func(t *testing.T, repo string) {
+			git(t, repo, "config", "filter.hide.clean", "sh -c 'cat >/dev/null; printf one'")
+			writeAttr(t, repo, "x filter=hide\n")
+		}, []byte("two")},
+		{"eol normalization", func(t *testing.T, repo string) {
+			writeAttr(t, repo, "x text eol=lf\n")
+		}, []byte("one\r\n")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, base := newRepo(t)
+			tc.setup(t, repo)
+			if _, err := Snapshot(context.Background(), repo, base, false); err != nil {
+				t.Fatalf("clean control: %v", err)
+			}
+			if err := os.WriteFile(filepath.Join(repo, "x"), tc.write, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Snapshot(context.Background(), repo, base, false); err == nil {
+				t.Fatal("converted change read as a clean worktree")
+			}
+			st, err := Snapshot(context.Background(), repo, base, true)
+			if err != nil || st.Worktree == "" {
+				t.Fatalf("approved-dirty snapshot did not bind the change: %+v, %v", st, err)
+			}
+		})
+	}
+}
+
+// writeAttr writes repository-local attributes outside the worktree, so the
+// attribute file itself is not an untracked change.
+func writeAttr(t *testing.T, repo, content string) {
+	t.Helper()
+	info := filepath.Join(repo, ".git", "info")
+	if err := os.MkdirAll(info, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(info, "attributes"), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// B14: submodules and sparse checkout are refused, not silently skipped.
+func TestSnapshotRefusesSubmoduleAndSparse(t *testing.T) {
+	repo, base := newRepo(t)
+	sub, _ := newRepo(t)
+	git(t, repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", sub, "sub")
+	git(t, repo, "commit", "-qm", "sub")
+	if _, err := Snapshot(context.Background(), repo, base, true); err == nil || !strings.Contains(err.Error(), "submodule") {
+		t.Fatalf("submodule not refused: %v", err)
+	}
+	repo2, base2 := newRepo(t)
+	git(t, repo2, "config", "core.sparseCheckout", "true")
+	if _, err := Snapshot(context.Background(), repo2, base2, true); err == nil || !strings.Contains(err.Error(), "sparse") {
+		t.Fatalf("sparse checkout not refused: %v", err)
+	}
+}
+
+// Host-local excludes and an untracked self-ignoring .gitignore must not hide
+// new untracked files.
+func TestSnapshotSeesUntrackedHiddenByLocalExcludes(t *testing.T) {
+	cases := map[string]func(t *testing.T, repo string){
+		"core.excludesFile": func(t *testing.T, repo string) {
+			ex := filepath.Join(t.TempDir(), "ignore-all")
+			if err := os.WriteFile(ex, []byte("*\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			git(t, repo, "config", "core.excludesFile", ex)
+		},
+		"info/exclude": func(t *testing.T, repo string) {
+			if err := os.WriteFile(filepath.Join(repo, ".git", "info", "exclude"), []byte("*\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"untracked self-ignoring .gitignore": func(t *testing.T, repo string) {
+			if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("*\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+	for name, hide := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo, base := newRepo(t)
+			if err := os.MkdirAll(filepath.Join(repo, ".git", "info"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			hide(t, repo)
+			if err := os.WriteFile(filepath.Join(repo, "new"), []byte("n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Snapshot(context.Background(), repo, base, false); err == nil {
+				t.Fatal("untracked file hidden by host-local excludes read as clean")
+			}
+		})
+	}
+}
+
+// A committed .gitignore still excludes its build outputs (control).
+func TestSnapshotHonoursCommittedGitignore(t *testing.T) {
+	repo, _ := newRepo(t)
+	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("out/\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repo, "add", ".gitignore")
+	git(t, repo, "commit", "-qm", "ignore")
+	base := Trim(git(t, repo, "rev-parse", "HEAD"))
+	if err := os.MkdirAll(filepath.Join(repo, "out"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "out", "bin"), []byte("b"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Snapshot(context.Background(), repo, base, false); err != nil {
+		t.Fatalf("committed .gitignore output treated as dirty: %v", err)
+	}
+}
+
+// B15: core.ignorecase must not hide an untracked case alias.
+func TestSnapshotSeesCaseAliasUnderIgnoreCase(t *testing.T) {
+	repo, base := newRepo(t)
+	git(t, repo, "config", "core.ignorecase", "true")
+	if err := os.WriteFile(filepath.Join(repo, "X"), []byte("alias"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Snapshot(context.Background(), repo, base, false); err == nil {
+		t.Fatal("untracked case alias read as a clean worktree")
+	}
+}
+
+// B16: a subdirectory of the work tree is not a repository root.
+func TestSnapshotRefusesSubdirectoryRoot(t *testing.T) {
+	repo, base := newRepo(t)
+	sub := filepath.Join(repo, "build-copy")
+	if err := os.MkdirAll(sub, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "x"), []byte("one"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Snapshot(context.Background(), sub, base, true); err == nil || !strings.Contains(err.Error(), "top level") {
+		t.Fatalf("subdirectory root accepted: %v", err)
+	}
+}
+
+// B17: a replacement ref must not let a different committed tree stand for
+// HEAD; snapshots read the original objects.
+func TestSnapshotIgnoresReplaceRefs(t *testing.T) {
+	repo, base := newRepo(t)
+	if err := os.WriteFile(filepath.Join(repo, "x"), []byte("two"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repo, "commit", "-qam", "two")
+	head := Trim(git(t, repo, "rev-parse", "HEAD"))
+	want, err := Snapshot(context.Background(), repo, base, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Replace HEAD's tree with base's tree, then make the disk match base.
+	baseTree := Trim(git(t, repo, "rev-parse", base+"^{tree}"))
+	headTree := Trim(git(t, repo, "rev-parse", head+"^{tree}"))
+	git(t, repo, "replace", headTree, baseTree)
+	if err := os.WriteFile(filepath.Join(repo, "x"), []byte("one"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Snapshot(context.Background(), repo, base, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Diff != want.Diff || got.Worktree == "" {
+		t.Fatalf("replace ref changed the observed repository: want diff %s with dirty x, got %+v", want.Diff, got)
+	}
+}
+
+// B18: a relative path to the top level is a valid root.
+func TestSnapshotAcceptsRelativeTopLevelRoot(t *testing.T) {
+	repo, base := newRepo(t)
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(repo); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(wd)
+	if _, err := Snapshot(context.Background(), ".", base, false); err != nil {
+		t.Fatalf("relative top-level root refused: %v", err)
+	}
+}
+
+// F01: restaging different content while the disk bytes stay the same is a
+// different artifact.
+func TestWorktreeDigestBindsStagedContent(t *testing.T) {
+	repo, base := newRepo(t)
+	path := filepath.Join(repo, "x")
+	stage := func(content string) string {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		git(t, repo, "add", "x")
+		if err := os.WriteFile(path, []byte("disk"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		st, err := Snapshot(context.Background(), repo, base, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st.Worktree
+	}
+	if stage("staged-A") == stage("staged-B") {
+		t.Fatal("different staged content under identical disk bytes kept the worktree digest")
+	}
+}
+
+// F04: diff.ignoreSubmodules must not drop a gitlink change from the
+// approved base..head diff.
+func TestSnapshotDiffIncludesHistoricalGitlink(t *testing.T) {
+	repo, _ := newRepo(t)
+	sub, _ := newRepo(t)
+	subHead := Trim(git(t, sub, "rev-parse", "HEAD"))
+	git(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+subHead+",sub")
+	git(t, repo, "commit", "-qm", "gitlink")
+	base := Trim(git(t, repo, "rev-parse", "HEAD"))
+	git(t, repo, "rm", "-q", "--cached", "sub")
+	git(t, repo, "commit", "-qm", "drop gitlink")
+	want, err := Snapshot(context.Background(), repo, base, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	git(t, repo, "config", "diff.ignoreSubmodules", "all")
+	got, err := Snapshot(context.Background(), repo, base, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Diff != want.Diff {
+		t.Fatalf("diff.ignoreSubmodules changed the approved diff identity: %s != %s", got.Diff, want.Diff)
+	}
+}
+
+// C01: an uncommitted change to a committed .gitignore must not hide the
+// files it now ignores.
+func TestSnapshotSeesFilesHiddenByChangedGitignore(t *testing.T) {
+	repo, _ := newRepo(t)
+	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("out/\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repo, "add", ".gitignore")
+	git(t, repo, "commit", "-qm", "ignore")
+	base := Trim(git(t, repo, "rev-parse", "HEAD"))
+	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("out/\nhidden\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	digest := func(content string) string {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(repo, "hidden"), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		st, err := Snapshot(context.Background(), repo, base, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st.Worktree
+	}
+	if digest("A") == digest("B") {
+		t.Fatal("file hidden by an uncommitted .gitignore change kept the worktree digest")
+	}
+}

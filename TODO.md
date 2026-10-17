@@ -49,9 +49,9 @@ Fury pilot sequence.
 
 Open before interactive-host MVP conformance:
 
-- [ ] Bind recorded unit, task, route, permissions, and route approval to the
-  actual approved HMA plan/route state. A non-empty approval digest alone does
-  not establish that binding.
+- [x] Bind host decision, preflight, dispatch, and implementation-transition claims by unit and route-approval digest to the latest applicable approved HMA `ROUTE_SELECTION -> IMPLEMENTATION_AUTHORIZATION` record; reject absent, mismatched, wrong-unit, superseded, or earlier-gate-rewound approvals.
+- [ ] Complete binding of task, route eligibility, capabilities, permissions, and host route telemetry to approved HMA plan/route state. Core approvals do not persist approved provider/model/profile/capability/permission fields, so this subset cannot prove those bindings; a non-empty digest alone remains insufficient.
+- [ ] Persist and enforce affected-and-dependent-unit invalidation scope for plan-unit rewinds. Current core stage-transition records identify the changed unit but do not persist the dependent unit set, so a dependent unit can retain a stale route-approval digest after a dependency-invalidating plan change. Do not count this as full unit/route approval conformance.
 - [ ] Enforce every §12.4 direct-cost exception condition: bounded/small task,
   approved permission envelope, route eligibility, and a total-cost comparison
   that includes setup, duplicated context, execution, and review coordination.
@@ -63,6 +63,88 @@ Open before interactive-host MVP conformance:
   host evidence bound to an earlier core-chain head.
 - [ ] Add client-neutral adapter hooks and conformance coverage for an
   interactive CLI host; the HMA core must remain non-dispatching.
+
+### Gate B — 2026-10-14 audit defect remediation (pending independent audit)
+
+Plan: `docs/handoffs/2026-10-15-outcome-consolidation-opus-liz.md`; design:
+`docs/handoffs/2026-10-15-gate-a-v3.md` to `-v7.md`. Each item has a failing-first
+regression test (`*/gateb_regression_test.go` and named tests).
+
+- [x] H1 CI verifies against the projected stage and the approval for leaving it.
+- [x] H2 pilot compares head/diff only at head/diff-binding stages.
+- [x] H3 host store: run lock, `head.pending` intent, crash recovery, concurrent appends.
+- [x] H4 host commands and coding gates refuse a terminal core run.
+- [x] M1 CI evidence store must be outside the repository.
+- [x] M2 `hma resolve` refuses trailing JSON documents.
+- [x] M3 strictest applicable independence rule; high/critical needs provider and model-family separation.
+- [x] M4 review -> verification gate re-checks the active route approval.
+- [x] M5 dogfood marker bound to canonical scratch store and run; seed run must be untouched.
+- [x] M6 dogfood refusals compare store byte fingerprints.
+- [x] N1 review must name the exact artifact (head, diff, worktree) its gate approval binds.
+- [x] N2 CI evidence requires a clean Git checkout at approved base/head/diff before and after the command.
+- [x] L1 direct route-attestation structural tests.
+- [x] L3 CI runs the dogfood harness.
+- [x] Round-1 audit (Liz, FAIL) remediation: B1 review artifact binds host-declared dirty content;
+  B2 snapshots refuse assume-unchanged/skip-worktree entries; B3 CI refuses repository-selecting
+  variables and evidence commands run without them; B4 CI refuses worktree-bound approvals;
+  B5/B6 host commands check and append under the host run lock against one core snapshot and
+  re-check terminal state after append; B7 directory fsync after every rename/link/unlink;
+  B8 every applicable independence rule binds; B9 synthetic seed must match seed-core exactly.
+- [x] Round-2 audit (Liz, FAIL) remediation: B10 any unit's approved return to Planning or earlier
+  invalidates every unit's route approval (fail closed; Gate D narrows with plan-derived dependents);
+  B11 worktree digest v2 binds file type and executable mode (v1-bound approvals fail closed);
+  B7 parent directory synced even when the directory already exists.
+- [x] Round-3 audit (Liz, FAIL on B11 only) remediation: worktree digest v3 binds Git's owner-execute
+  bit exactly (0610 vs 0710 differ; group/other execute ignored); v1/v2-bound approvals fail closed.
+- [x] Round-4 audit (Liz, FAIL on new B12) remediation (Lennon chose option 1): every Git command HMA
+  runs forces change-revealing config (core.fileMode/symlinks/checkStat/trustctime, fsmonitor and
+  untrackedCache off, autocrlf off, all untracked files, no external diff); diff uses --no-ext-diff
+  --no-textconv; snapshots refuse configured clean/process filters; worktree digest v4 (v1-v3 fail closed).
+  Residual under decision T: .gitattributes eol normalization and a deliberate stat-preserving
+  rewrite are not detected. (Superseded by round 5 below.)
+- [x] Round-5 audit (Liz, FAIL: B13 eol/attribute conversion, B14 submodule ignore) remediation (Lennon
+  chose option 2): change detection no longer uses git status. internal/repostate/raw.go hashes each HEAD
+  entry's raw worktree bytes as a Git blob (no conversion) and compares type, owner-execute bit, and object
+  id; adds staged index differences and untracked files (committed .gitignore only; core.excludesFile and
+  info/exclude ignored; untracked .gitignore always a change). Submodules and sparse checkout are refused.
+  Worktree digest v5 (v1-v4 fail closed). Configured filters are no longer refused (they cannot hide a
+  change from raw comparison). Repositories whose checkout converts bytes (eol, smudge, LFS) read as dirty.
+  Accepted under decision T (Liz r5): deliberate size+mtime-preserving rewrite of ignored files is out of
+  scope; ignored files remain out of scope.
+- [x] Round-6 audit (Liz, FAIL: B15 core.ignorecase hid an untracked case alias; B16 subdirectory root)
+  remediation: core.ignoreCase=false forced on every HMA Git command; snapshots refuse a root that is not
+  the work tree top level.
+- [x] Round-7 audit (Jax standing in for Liz, FAIL: B17 replacement refs, B15 v5 digest not retired, B18
+  relative top-level root refused) remediation: every HMA Git command runs with --no-replace-objects;
+  worktree digest v6 (v1-v5 fail closed); top-level check resolves the root to an absolute path first.
+- [x] Round-8 audit (Liz, FAIL on B17 residual) remediation: evidence commands run with
+  GIT_NO_REPLACE_OBJECTS=1; review artifact digest schema v2 retires reviews whose clean identity predates
+  the replacement-object fix.
+- [x] Blind closure review (Liz, FAIL) remediation: F01 worktree digest v7 binds the staged index entry of
+  each changed path; F02 host commands hold the core run lock then the host lock from check through append
+  (a racing core commit is ordered after the host record); F03 every host append syncs all ancestor
+  directories; F04 diffs never ignore submodules (--ignore-submodules=none, diff.ignoreSubmodules=none).
+- [x] Blind closure review r2 (Liz, FAIL) remediation: C01 a changed/added/deleted .gitignore disables
+  ignore rules for untracked enumeration; C02 ancestor sync climbs the absolute path; C03 host review import
+  refuses a revoked route approval.
+- [x] Blind closure review r3 (Liz, FAIL) remediation: R3-01 hma transition holds the host run lock from
+  the host gate through the core append (single lock order: host, then core); R3-02 ancestor sync also
+  climbs the symlink-resolved path; R3-04 task14 describes the conservative invalidation and lock order.
+- [x] Blind closure review r4 (Liz, FAIL) remediation: R4-01 host commands commit the host record inside
+  the core run lock (`host.Store.Transact`), so no core terminal or rewind lands between check and durable
+  append; R4-02 ancestor sync resolves the store path per component and syncs every lookup directory,
+  including intermediate symlink hops.
+- [x] Blind closure review r5 (Liz, FAIL) remediation: R5-01 a tracked path under a symlinked or
+  non-directory parent is absent (`lstatInTree`, Git's "beyond a symbolic link" rule) in both the change
+  scan and the digest; worktree digest domain v8 retires v7. R5-02 fixtures cover disputed and final
+  validation family separation at low risk; task14 documents the host mapping.
+- [x] Blind closure review r6 (Liz, FAIL) remediation: R6-01 review artifact domain advanced to
+  `hma.host.review-artifact/v3`, retiring clean and dirty v2 reviews taken before the tracked-parent
+  correction; replay regression with a reconstructed v2 clean review.
+- [ ] F05/C04/R3-03 plan-derived dependent invalidation (deferred to Gate D by Lennon, 2026-10-16;
+  conservative all-units invalidation stays in force until then) (current rule is conservative: any unit's return to Planning
+  or earlier invalidates every unit's route approval): Gate D.
+- [ ] Independent Gate B re-audit (Liz) and commit.
 
 
 ### Post-MVP — learned decision-provider integration (optional)

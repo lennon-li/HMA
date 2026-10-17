@@ -43,16 +43,8 @@ func runResolve(args []string) error {
 		return errors.New("usage: hma resolve --input <file> --store <directory>")
 	}
 
-	f, err := os.Open(*inputPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	dec := json.NewDecoder(f)
-	dec.DisallowUnknownFields()
 	var in resolveInput
-	if err := dec.Decode(&in); err != nil {
+	if err := decodeStrictFile(*inputPath, &in); err != nil {
 		return err
 	}
 

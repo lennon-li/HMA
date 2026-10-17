@@ -8,7 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/lennon-li/HMA/internal/engine"
 	hoststate "github.com/lennon-li/HMA/internal/host"
+	"github.com/lennon-li/HMA/internal/model"
 	"github.com/lennon-li/HMA/internal/store"
 )
 
@@ -91,25 +93,61 @@ func validateHostEnvelope(in hostEnvelope) (time.Time, error) {
 	return at, nil
 }
 
-func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.RecordKind, decision *hoststate.OrchestrationDecision, preflight *hoststate.RoutePreflight, dispatch *hoststate.Dispatch, review *hoststate.IndependentReview) (hostResult, error) {
-	core, err := coreHead(storePath, envelope.RunID)
+// hostCheckHook and hostAppendHook are test seams: nil in production. A
+// core append started from either hook blocks until the host append
+// completes, which is what the tests assert.
+var hostCheckHook, hostAppendHook func()
+
+// hostCheck validates one host command against the host history and the core
+// chain it is about to bind. It runs under the host run lock, against one
+// core snapshot whose head the record then binds.
+type hostCheck func(history []hoststate.Record, core []model.Record) error
+
+// appendHostRecord evaluates check and appends the record atomically with
+// respect to both chains: it holds the host run lock and then the core run
+// lock, checks against the core chain read under that lock, and writes the
+// host record before releasing either. No core record (a terminal outcome, a
+// rewind that revokes the route) can commit between the check and the host
+// append, so an execution-authorizing host record is never appended after
+// the core withdrew its authority. Lock order across HMA is always host then
+// core; hma transition takes them in the same order.
+func appendHostRecord(storePath string, envelope hostEnvelope, kind hoststate.RecordKind, decision *hoststate.OrchestrationDecision, preflight *hoststate.RoutePreflight, dispatch *hoststate.Dispatch, review *hoststate.IndependentReview, check hostCheck) (hostResult, error) {
+	var rec hoststate.Record
+	err := hoststate.NewStore(storePath).Transact(envelope.RunID, func(history []hoststate.Record, commit func(*hoststate.Record) error) error {
+		return store.New(storePath).WithRunLock(envelope.RunID, func(core []model.Record) error {
+			if len(core) == 0 {
+				return errors.New(hoststate.ReasonCoreRunMissing)
+			}
+			if engine.ProjectStageState(core).Terminal {
+				return errors.New(hoststate.ReasonCoreRunTerminal)
+			}
+			if hostCheckHook != nil {
+				hostCheckHook()
+			}
+			if err := check(history, core); err != nil {
+				return err
+			}
+			rec = hoststate.Record{
+				Version:        1,
+				Kind:           kind,
+				RunID:          envelope.RunID,
+				CoreHeadAnchor: core[len(core)-1].Metadata.HeadAnchor,
+				Timestamp:      envelope.Timestamp,
+				Actor:          envelope.Actor,
+				Decision:       decision,
+				Preflight:      preflight,
+				Dispatch:       dispatch,
+				Review:         review,
+			}
+			if hostAppendHook != nil {
+				hostAppendHook()
+			}
+			// Commit inside the core lock: the record, head, and directory
+			// are durable before any core terminal or rewind can append.
+			return commit(&rec)
+		})
+	})
 	if err != nil {
-		return hostResult{}, err
-	}
-	rec := hoststate.Record{
-		Version:        1,
-		Kind:           kind,
-		RunID:          envelope.RunID,
-		CoreHeadAnchor: core,
-		Timestamp:      envelope.Timestamp,
-		Actor:          envelope.Actor,
-		Decision:       decision,
-		Preflight:      preflight,
-		Dispatch:       dispatch,
-		Review:         review,
-	}
-	hs := hoststate.NewStore(storePath)
-	if err := hs.Append(&rec); err != nil {
 		return hostResult{}, err
 	}
 	return hostResult{Recorded: true, Kind: kind, Sequence: rec.Sequence, HeadAnchor: rec.HeadAnchor, CoreHeadAnchor: rec.CoreHeadAnchor}, nil
@@ -140,14 +178,12 @@ func runHostDecision(args []string) error {
 	if _, err := validateHostEnvelope(in.hostEnvelope); err != nil {
 		return err
 	}
-	history, err := hoststate.NewStore(storePath).Load(in.RunID)
-	if err != nil {
-		return err
-	}
-	if err := hoststate.EvaluateDecision(history, in.Decision); err != nil {
-		return err
-	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil)
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDecision, &in.Decision, nil, nil, nil, func(history []hoststate.Record, core []model.Record) error {
+		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Decision.UnitID, in.Decision.Route.RouteApprovalDigest); err != nil {
+			return err
+		}
+		return hoststate.EvaluateDecision(history, in.Decision)
+	})
 	if err != nil {
 		return err
 	}
@@ -168,14 +204,12 @@ func runHostPreflight(args []string) error {
 	if err != nil {
 		return err
 	}
-	history, err := hoststate.NewStore(storePath).Load(in.RunID)
-	if err != nil {
-		return err
-	}
-	if err := hoststate.EvaluatePreflight(history, in.Preflight, at); err != nil {
-		return err
-	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindPreflight, nil, &in.Preflight, nil, nil)
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindPreflight, nil, &in.Preflight, nil, nil, func(history []hoststate.Record, core []model.Record) error {
+		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Preflight.UnitID, in.Preflight.Route.RouteApprovalDigest); err != nil {
+			return err
+		}
+		return hoststate.EvaluatePreflight(history, in.Preflight, at)
+	})
 	if err != nil {
 		return err
 	}
@@ -201,14 +235,12 @@ func runHostDispatch(args []string) error {
 	if err != nil {
 		return err
 	}
-	history, err := hoststate.NewStore(storePath).Load(in.RunID)
-	if err != nil {
-		return err
-	}
-	if err := hoststate.EvaluateDispatch(history, in.Dispatch, at); err != nil {
-		return err
-	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDispatch, nil, nil, &in.Dispatch, nil)
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDispatch, nil, nil, &in.Dispatch, nil, func(history []hoststate.Record, core []model.Record) error {
+		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Route.RouteApprovalDigest); err != nil {
+			return err
+		}
+		return hoststate.EvaluateDispatch(history, in.Dispatch, at)
+	})
 	if err != nil {
 		return err
 	}
@@ -229,14 +261,14 @@ func runHostReview(args []string) error {
 	if _, err := validateHostEnvelope(in.hostEnvelope); err != nil {
 		return err
 	}
-	history, err := hoststate.NewStore(storePath).Load(in.RunID)
-	if err != nil {
-		return err
-	}
-	if err := hoststate.EvaluateReview(history, in.Review); err != nil {
-		return err
-	}
-	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindReview, nil, nil, nil, &in.Review)
+	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindReview, nil, nil, nil, &in.Review, func(history []hoststate.Record, core []model.Record) error {
+		// A review continues the coding path only while the unit's route
+		// approval is still in force in the core chain it binds.
+		if _, err := approvedCoreRouteDigestIn(core, in.RunID, in.Review.UnitID); err != nil {
+			return err
+		}
+		return hoststate.EvaluateReview(history, in.Review)
+	})
 	if err != nil {
 		return err
 	}

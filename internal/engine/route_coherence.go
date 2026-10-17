@@ -271,6 +271,39 @@ func EvaluateRouteCoherence(req RouteCoherenceRequest) RouteCoherenceResult {
 		result.Decision, result.Reason = DecisionRejected, ReasonRouteCoherencePolicyRuleMissing
 		return result
 	}
+	// The named rule must be one written for the highest risk tier that has
+	// an applicable rule; a higher-risk request may not name a rule written for
+	// a lower tier.
+	for _, r := range policyResult.Projection.IndependenceRules {
+		if routeRiskRank(r.MinimumRisk) <= routeRiskRank(req.Risk) && routeRiskRank(r.MinimumRisk) > routeRiskRank(independenceRule.MinimumRisk) {
+			result.Decision, result.Reason = DecisionRejected, ReasonRouteCoherencePolicyRuleMissing
+			return result
+		}
+	}
+	// The caller names the rule, but every rule that applies at this risk
+	// binds: the validator must meet the union of their required
+	// capabilities and every separation any of them demands. Naming a weaker
+	// applicable rule therefore cannot drop a stricter one's requirement.
+	effective := *independenceRule
+	effective.RequiredValidatorCapabilities = append([]string(nil), independenceRule.RequiredValidatorCapabilities...)
+	for _, r := range policyResult.Projection.IndependenceRules {
+		if routeRiskRank(r.MinimumRisk) > routeRiskRank(req.Risk) {
+			continue
+		}
+		effective.DistinctProviderFamily = effective.DistinctProviderFamily || r.DistinctProviderFamily
+		effective.DistinctModelFamily = effective.DistinctModelFamily || r.DistinctModelFamily
+		for _, c := range r.RequiredValidatorCapabilities {
+			if !contains(effective.RequiredValidatorCapabilities, c) {
+				effective.RequiredValidatorCapabilities = append(effective.RequiredValidatorCapabilities, c)
+			}
+		}
+	}
+	// Section 13 kernel floor: high and critical work needs provider and
+	// model-family separation whatever rules the policy supplies.
+	if routeRiskRank(req.Risk) >= routeRiskRank(model.RouteRiskHigh) {
+		effective.DistinctProviderFamily, effective.DistinctModelFamily = true, true
+	}
+	independenceRule = &effective
 	profileMap := make(map[string]model.RouteProfile, len(req.Profiles))
 	for _, profile := range req.Profiles {
 		if reason := validateProfile(profile); reason != ReasonNone {

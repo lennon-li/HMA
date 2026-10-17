@@ -26,12 +26,28 @@ func cliRoute(worker, provider, providerFamily, modelName, modelFamily, approval
 	}
 }
 
+func seedRouteAuthorization(t *testing.T, dir, runID, unitID, digest string) *store.Store {
+	t.Helper()
+	s := store.New(dir)
+	a := &model.ApprovalBinding{UnitID: unitID, RunID: runID, TransitionDigest: digest,
+		CurrentStage: model.StageRouteSelection, ProposedTargetStage: model.StageImplementationAuthorization,
+		RepositoryIdentityDigest: "repo", BaseRevisionDigest: "base", StageTimeDigest: "head:1",
+		AcceptedPlanDigest: "plan", ChallengeNonce: "nonce-route", Approver: "human", Timestamp: "2026-09-16T11:00:00Z"}
+	rec := model.Record{UnitID: unitID, Kind: model.KindStageTransition, Version: 1,
+		Metadata: model.RecordMetadata{RunID: runID, Sequence: 1, Timestamp: "2026-09-16T11:00:00Z", Actor: "human"},
+		Stage:    model.StageRouteSelection, Control: model.ControlApproved, Approval: a}
+	if err := s.Append(&rec); err != nil {
+		t.Fatalf("seed route authorization: %v", err)
+	}
+	return s
+}
+
 func TestHostCLIEndToEndDelegationAndReview(t *testing.T) {
 	dir := t.TempDir()
-	seedCriterion(t, dir, "run")
+	seedRouteAuthorization(t, dir, "run", "U1", "approved-route")
 	input := filepath.Join(t.TempDir(), "host.json")
-	impl := cliRoute("jax", "openai", "openai", "luna", "gpt", "route-impl", false)
-	reviewer := cliRoute("ming", "anthropic", "anthropic", "sonnet", "claude", "route-review", true)
+	impl := cliRoute("jax", "openai", "openai", "luna", "gpt", "approved-route", false)
+	reviewer := cliRoute("ming", "anthropic", "anthropic", "sonnet", "claude", "approved-route", true)
 
 	decision := hostDecisionInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:00:00Z"}, Decision: hoststate.OrchestrationDecision{
 		UnitID: "U1", Mode: hoststate.DecisionDelegate, BoundedJob: "change one bounded unit",
@@ -87,7 +103,7 @@ func TestHostCLIEndToEndDelegationAndReview(t *testing.T) {
 	reviewDispatch := hostDispatchInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:04:00Z"}, Dispatch: hoststate.Dispatch{
 		UnitID: "U1", Role: hoststate.RoleReview, Route: reviewer, PreflightRecordDigest: reviewPreflightDigest,
 		BoundedTask: "review fixed packet", WorkContextDigest: "ctx-ming", ImplementationRecordDigest: implementation,
-		ArtifactDigest: "artifact", ReviewPacketDigest: "packet", Risk: model.RouteRiskHigh,
+		ArtifactDigest: hoststate.ReviewArtifactDigest("reviewed-head", "reviewed-diff", ""), ReviewPacketDigest: "packet", Risk: model.RouteRiskHigh,
 	}}
 	writeJSON(t, input, reviewDispatch)
 	if err := run([]string{"host", "dispatch", "--input", input, "--store", dir}); err != nil {
@@ -98,7 +114,7 @@ func TestHostCLIEndToEndDelegationAndReview(t *testing.T) {
 
 	review := hostReviewInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:05:00Z"}, Review: hoststate.IndependentReview{
 		UnitID: "U1", ImplementationRecordDigest: implementation, ReviewDispatchDigest: reviewDispatchDigest,
-		ArtifactDigest: "artifact", ReviewPacketDigest: "packet", ReviewerID: "ming", Verdict: hoststate.ReviewApprove,
+		ArtifactDigest: hoststate.ReviewArtifactDigest("reviewed-head", "reviewed-diff", ""), ReviewPacketDigest: "packet", ReviewerID: "ming", Verdict: hoststate.ReviewApprove,
 	}}
 	writeJSON(t, input, review)
 	if err := run([]string{"host", "review", "--input", input, "--store", dir}); err != nil {
@@ -107,6 +123,7 @@ func TestHostCLIEndToEndDelegationAndReview(t *testing.T) {
 
 	if err := requireHostTransitionGate(dir, transition.Input{RunID: "run", ExpectedApproval: model.ApprovalBinding{
 		UnitID: "U1", CurrentStage: model.StageImplementationReview, ProposedTargetStage: model.StageVerification,
+		ProducedHeadDigest: "reviewed-head", DiffDigest: "reviewed-diff",
 	}}); err != nil {
 		t.Fatalf("review gate: %v", err)
 	}
@@ -114,9 +131,9 @@ func TestHostCLIEndToEndDelegationAndReview(t *testing.T) {
 
 func TestHostCLIFailsClosedOnQuotaExhaustion(t *testing.T) {
 	dir := t.TempDir()
-	seedCriterion(t, dir, "run")
+	seedRouteAuthorization(t, dir, "run", "U1", "approved-route")
 	input := filepath.Join(t.TempDir(), "host.json")
-	impl := cliRoute("jax", "openai", "openai", "luna", "gpt", "route-impl", false)
+	impl := cliRoute("jax", "openai", "openai", "luna", "gpt", "approved-route", false)
 	decision := hostDecisionInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:00:00Z"}, Decision: hoststate.OrchestrationDecision{
 		UnitID: "U1", Mode: hoststate.DecisionDelegate, BoundedJob: "change one bounded unit",
 		EstimatedDirectCost: 8, EstimatedDelegatedCost: 4, CostUnit: "relative", ComparisonBasis: "cost", Rationale: "delegate",
@@ -156,8 +173,8 @@ func TestHostTransitionGateRejectsUnrecordedCodingPath(t *testing.T) {
 
 func TestHostTransitionGateRejectsStaleCoreBinding(t *testing.T) {
 	dir := t.TempDir()
-	coreStore := seedCriterion(t, dir, "run")
-	impl := cliRoute("fury", "openai", "openai", "luna", "gpt", "route", false)
+	coreStore := seedRouteAuthorization(t, dir, "run", "U1", "approved-route")
+	impl := cliRoute("fury", "openai", "openai", "luna", "gpt", "approved-route", false)
 	decision := hostDecisionInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:00:00Z"}, Decision: hoststate.OrchestrationDecision{
 		UnitID: "U1", Mode: hoststate.DecisionDirectCostException, BoundedJob: "small bounded change",
 		EstimatedDirectCost: 1, EstimatedDelegatedCost: 2, CostUnit: "relative", ComparisonBasis: "total cost",

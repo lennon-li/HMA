@@ -1,0 +1,1076 @@
+{
+  "audit_id": "hma-gate-b-closure-blind-20261016",
+  "dispatch_id": "hma-gate-b-closure-blind-20261016",
+  "date": "2026-10-16T15:00:50.034198+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:67965541b7032a585a68e48f3d10f4a998d5399e; branch:main; tracked-diff-sha256:1eee27ed75133e778a8b050bad20bff7d6ed2dd4c891e71584186f89ff75847f; untracked:FREEZE-start.json (20 files, .serena excluded)",
+  "isolation": "partial",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_mapping": "FAIL is the single gate verdict. fix-required is its equivalent in the independent-audit JSON report contract.",
+  "objective": "Gate B existing defect remediation, authoritative handoff \u00a75; H1-H4, M1-M6, L1/L3, Gate A N1/N2/M3, and every supplied B1-B18 closure entry.",
+  "provenance": {
+    "worker": "liz (requested audit identity)",
+    "provider": "OpenAI (host session)",
+    "model": "gpt-6.1-sol (dispatch declaration; runtime identity not independently attested)",
+    "effort": "high (dispatch declaration)",
+    "access_service": "current Codex host session; no external agent/model route invoked",
+    "permission_envelope": "Read-only /home/yeli/repos; output and test mutations only under audit output directory",
+    "threat_model": "Trusted host; detect accident/drift; same-UID adversary out of scope"
+  },
+  "requirements": [
+    {
+      "id": "H1",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Projected CI stage and current-visit approval selection work after approved transitions; stale prior-stage packets refuse.",
+      "evidence_refs": [
+        "test.log:TestGateBR2CIProjectedTransitions; cmd/hma/ci.go:86-111"
+      ]
+    },
+    {
+      "id": "H2",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Grounding, Acceptance, Planning, Route Selection, and Implementation Authorization capture with absent head/diff approval fields.",
+      "evidence_refs": [
+        "probes-other.log:TestClosureAuditorEarlyStages; internal/pilot/run.go:99"
+      ]
+    },
+    {
+      "id": "H3",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Process interruption recovery and concurrent appends work; unsynchronized existing ancestry remains unsafe.",
+      "evidence_refs": [
+        "F03; test.log:TestGateBHostInterruptedHead; probes-durability.log"
+      ]
+    },
+    {
+      "id": "H4",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "All five terminal outcomes refuse serial host paths. A concurrent terminal commit can still precede a host append on an error path.",
+      "evidence_refs": [
+        "F02; test.log:TestGateBR2AllTerminalHostPaths; probes-cli-confirmed.log"
+      ]
+    },
+    {
+      "id": "M1",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "CI refuses inside-repository and symlinked-inside stores.",
+      "evidence_refs": [
+        "test.log:TestGateBCIInsideRepositoryStore; TestGateBR2CIStoreSymlink"
+      ]
+    },
+    {
+      "id": "M2",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Resolution rejects a second JSON document and trailing garbage; whitespace-only trailing input remains valid.",
+      "evidence_refs": [
+        "test.log:TestGateBR2ResolveStrict; cmd/hma/resolve.go:46"
+      ]
+    },
+    {
+      "id": "M3",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "HIGH/CRITICAL lower/tied-rule choices cannot drop applicable constraints or the family-separation floor. Final/disputed host review controls also refuse same-family reviewers.",
+      "evidence_refs": [
+        "probes-other.log:TestClosureAuditorIndependenceUnion; probes-additional.log:TestClosureAuditorFinalDisputedIndependence"
+      ]
+    },
+    {
+      "id": "M4",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "The review-to-verification gate revalidates active route approval. Core stage-time freshness remains required.",
+      "evidence_refs": [
+        "cmd/hma/transition.go:65; test.log:TestHostRouteApprovalInvalidatedByEarlierStageRewind"
+      ]
+    },
+    {
+      "id": "M5",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Scratch marker binds canonical store/run and regular-file type; only the exact seed record is accepted.",
+      "evidence_refs": [
+        "test.log:TestSyntheticStoreRefusesCopiedMarker; TestSyntheticStoreRefusesSymlinkedMarker; probes-other.log:TestClosureAuditorSeedMutation"
+      ]
+    },
+    {
+      "id": "M6",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Harness compares store filenames and file-content hashes in addition to counts; all 17 checks execute successfully. Lock files are intentionally excluded.",
+      "evidence_refs": [
+        "scripts/dogfood/host-dogfood.sh:61-102; dogfood.log"
+      ]
+    },
+    {
+      "id": "L1",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Direct route-attestation positive/negative tests and record-level tests execute successfully.",
+      "evidence_refs": [
+        "test.log:TestRouteAttestationStructure; TestGateBR2AttestationThroughRecord"
+      ]
+    },
+    {
+      "id": "L3",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "CI workflow now invokes the hardened synthetic harness. The same command passed locally. Remote CI was not run.",
+      "evidence_refs": [
+        ".github/workflows/ci.yml:51; dogfood.log"
+      ]
+    },
+    {
+      "id": "N1",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Head/diff/disk-byte/mode/type changes and predecessor domains refuse old reviews. Staged-content changes still reuse the review and reach Verification.",
+      "evidence_refs": [
+        "F01; probes-index-full-review.log; probes-cli-confirmed.log"
+      ]
+    },
+    {
+      "id": "N2",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Original checkout negatives refuse: non-Git, wrong checkout/head/diff, unapproved dirt, mutation, and inside-store. Clean real checkout controls pass. CI supports clean capture only. Separate B14 diff gap remains.",
+      "evidence_refs": [
+        "test.log:TestGateBCINonRepositoryEvidence; probes-cli-confirmed.log:TestClosureAuditorCIMatrix"
+      ]
+    },
+    {
+      "id": "B1",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Changed dirty disk content refuses stale review with optional worktree approval binding absent or present; unchanged controls advance.",
+      "evidence_refs": [
+        "probes-cli-confirmed.log:TestClosureAuditorFullArtifactMatrix/bytes; test.log:TestGateBR2ReviewDirtyFullTransition"
+      ]
+    },
+    {
+      "id": "B2",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Both hidden-index flags refuse before capture; truncate/chmod mutation controls refuse with unchanged store bytes.",
+      "evidence_refs": [
+        "probes-cli-confirmed.log:TestClosureAuditorCIMatrix; test.log:TestGateBR2CIMutationHiddenByIndex"
+      ]
+    },
+    {
+      "id": "B3",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "CI rejects inherited repository selectors. Capture/pilot strip selectors and pin original-object view while retaining nonselector config.",
+      "evidence_refs": [
+        "probes-cli-confirmed.log:TestClosureAuditorCIMatrix/foreign-selector; probes-other.log:TestClosureAuditorPilotObjectView"
+      ]
+    },
+    {
+      "id": "B4",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Populated dirty-content approval refuses on a clean checkout; absent-binding clean controls succeed.",
+      "evidence_refs": [
+        "test.log:TestGateBR2CIBoundWorktreeGone; probes-cli-confirmed.log:TestClosureAuditorCIMatrix/clean"
+      ]
+    },
+    {
+      "id": "B5",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Post-append terminal check prevents START_WORKER in terminal case, but fails the atomic/no-append check. Nonterminal route revocation still returns START_WORKER.",
+      "evidence_refs": [
+        "F02; probes-cli-confirmed.log; probes-route-revocation.log"
+      ]
+    },
+    {
+      "id": "B6",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Exactly one of 24 conflicting unsuperseded real CLI decisions commits. Existing concurrent nonconflicting appends also pass.",
+      "evidence_refs": [
+        "probes-process-concurrency.json; test.log:TestGateBR2HostSeparateProcessWriters"
+      ]
+    },
+    {
+      "id": "B7",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Normal durable-boundary protocol passes 32 modeled checkpoints and sync-failure refusal. Existing undurable ancestry loses acknowledged data. Historical 40/55 suites were not imported.",
+      "evidence_refs": [
+        "F03; probes-durability.log"
+      ]
+    },
+    {
+      "id": "B8",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "All applicable rule capabilities/separations are unioned, including stricter lower-risk and tied-risk constraints.",
+      "evidence_refs": [
+        "probes-other.log:TestClosureAuditorIndependenceUnion; test.log:TestGateBR2IndependenceTiedRule"
+      ]
+    },
+    {
+      "id": "B9",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "PASSED seed, foreign metadata/payload, copied/symlink/directory markers, and repeated seeding refuse; untouched seed succeeds.",
+      "evidence_refs": [
+        "probes-other.log:TestClosureAuditorSeedMutation; test.log:TestGateBR2SyntheticForeignSeed; TestGateBR2SyntheticSecondSeed"
+      ]
+    },
+    {
+      "id": "B10",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Old dependent authority now refuses after serial upstream rewind. No validated plan graph supports the expanded transitive/unaffected-unit criteria. Concurrent route revocation also remains unsafe.",
+      "evidence_refs": [
+        "F05; F02; probes-additional.log:TestClosureAuditorDependentRewind"
+      ]
+    },
+    {
+      "id": "B11",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Raw disk byte/type/owner-execute/symlink/deletion changes produce stale-review refusal in both binding forms; group/other execute-equivalence controls pass. Old dirty domains refuse.",
+      "evidence_refs": [
+        "probes-cli-confirmed.log:TestClosureAuditorFullArtifactMatrix; probes-refined-controls.log"
+      ]
+    },
+    {
+      "id": "B12",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "core.filemode=false cannot hide owner-execute changes from capture or review; both mode directions and legacy-domain expiry refuse.",
+      "evidence_refs": [
+        "probes-refined-controls.log; test.log:TestGateBR4CIHiddenOwnerExecuteMutation"
+      ]
+    },
+    {
+      "id": "B13",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Raw mixed-EOL changes are detected under info/global/tracked attributes and SHA-1/SHA-256 repositories. Full normalized-byte review negatives refuse.",
+      "evidence_refs": [
+        "probes-repostate.log:TestClosureAuditorRawObjectFormats; probes-refined-controls.log; test.log:TestSnapshotSeesChangesHiddenByConversion"
+      ]
+    },
+    {
+      "id": "B14",
+      "status": "fail",
+      "closure_status": "PARTIAL",
+      "observation": "Current HEAD/index gitlinks refuse. Historical removed gitlinks can still be hidden from the bound base..head diff.",
+      "evidence_refs": [
+        "F04; probes-repostate.log:TestClosureAuditorHistoricalGitlinkDiff; test.log:TestSnapshotRefusesSubmoduleAndSparse"
+      ]
+    },
+    {
+      "id": "B15",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Case aliases are detected. Correctly framed v5 predecessor identities refuse with the legacy alias retained or removed, in both binding forms.",
+      "evidence_refs": [
+        "probes-refined-controls.log:legacy-v5-alias; probes-repostate.log:TestClosureAuditorRawObjectFormats"
+      ]
+    },
+    {
+      "id": "B16",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Subdirectory and foreign configured roots refuse. Absolute/symlink/relative top-level roots, matching core.worktree, and linked worktrees pass.",
+      "evidence_refs": [
+        "probes-repostate.log:TestClosureAuditorRootForms; test.log:TestGateBR2CISymlinkAndWorktree"
+      ]
+    },
+    {
+      "id": "B17",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "SHA-1/SHA-256 replacement-view dirt is detected. Capture/pilot read original objects with inherited selectors and GIT_NO_REPLACE_OBJECTS=0. Old clean review-artifact/v1 and old dirty-domain identities refuse.",
+      "evidence_refs": [
+        "probes-repostate.log; probes-other.log:TestClosureAuditorPilotObjectView; probes-cli-confirmed.log:legacy-clean-artifact"
+      ]
+    },
+    {
+      "id": "B18",
+      "status": "pass",
+      "closure_status": "FIXED",
+      "observation": "Absolute, relative, symlink, configured actual-root, and linked-worktree controls pass. Invalid roots still refuse. No case-insensitive host was available.",
+      "evidence_refs": [
+        "probes-repostate.log:TestClosureAuditorRootForms; probes-cli-confirmed.log:TestClosureAuditorCIMatrix/relative"
+      ]
+    }
+  ],
+  "closure_results": [
+    {
+      "id": "H1",
+      "status": "FIXED",
+      "observation": "Projected CI stage and current-visit approval selection work after approved transitions; stale prior-stage packets refuse.",
+      "evidence": "test.log:TestGateBR2CIProjectedTransitions; cmd/hma/ci.go:86-111"
+    },
+    {
+      "id": "H2",
+      "status": "FIXED",
+      "observation": "Grounding, Acceptance, Planning, Route Selection, and Implementation Authorization capture with absent head/diff approval fields.",
+      "evidence": "probes-other.log:TestClosureAuditorEarlyStages; internal/pilot/run.go:99"
+    },
+    {
+      "id": "H3",
+      "status": "PARTIAL",
+      "observation": "Process interruption recovery and concurrent appends work; unsynchronized existing ancestry remains unsafe.",
+      "evidence": "F03; test.log:TestGateBHostInterruptedHead; probes-durability.log"
+    },
+    {
+      "id": "H4",
+      "status": "PARTIAL",
+      "observation": "All five terminal outcomes refuse serial host paths. A concurrent terminal commit can still precede a host append on an error path.",
+      "evidence": "F02; test.log:TestGateBR2AllTerminalHostPaths; probes-cli-confirmed.log"
+    },
+    {
+      "id": "M1",
+      "status": "FIXED",
+      "observation": "CI refuses inside-repository and symlinked-inside stores.",
+      "evidence": "test.log:TestGateBCIInsideRepositoryStore; TestGateBR2CIStoreSymlink"
+    },
+    {
+      "id": "M2",
+      "status": "FIXED",
+      "observation": "Resolution rejects a second JSON document and trailing garbage; whitespace-only trailing input remains valid.",
+      "evidence": "test.log:TestGateBR2ResolveStrict; cmd/hma/resolve.go:46"
+    },
+    {
+      "id": "M3",
+      "status": "FIXED",
+      "observation": "HIGH/CRITICAL lower/tied-rule choices cannot drop applicable constraints or the family-separation floor. Final/disputed host review controls also refuse same-family reviewers.",
+      "evidence": "probes-other.log:TestClosureAuditorIndependenceUnion; probes-additional.log:TestClosureAuditorFinalDisputedIndependence"
+    },
+    {
+      "id": "M4",
+      "status": "FIXED",
+      "observation": "The review-to-verification gate revalidates active route approval. Core stage-time freshness remains required.",
+      "evidence": "cmd/hma/transition.go:65; test.log:TestHostRouteApprovalInvalidatedByEarlierStageRewind"
+    },
+    {
+      "id": "M5",
+      "status": "FIXED",
+      "observation": "Scratch marker binds canonical store/run and regular-file type; only the exact seed record is accepted.",
+      "evidence": "test.log:TestSyntheticStoreRefusesCopiedMarker; TestSyntheticStoreRefusesSymlinkedMarker; probes-other.log:TestClosureAuditorSeedMutation"
+    },
+    {
+      "id": "M6",
+      "status": "FIXED",
+      "observation": "Harness compares store filenames and file-content hashes in addition to counts; all 17 checks execute successfully. Lock files are intentionally excluded.",
+      "evidence": "scripts/dogfood/host-dogfood.sh:61-102; dogfood.log"
+    },
+    {
+      "id": "L1",
+      "status": "FIXED",
+      "observation": "Direct route-attestation positive/negative tests and record-level tests execute successfully.",
+      "evidence": "test.log:TestRouteAttestationStructure; TestGateBR2AttestationThroughRecord"
+    },
+    {
+      "id": "L3",
+      "status": "FIXED",
+      "observation": "CI workflow now invokes the hardened synthetic harness. The same command passed locally. Remote CI was not run.",
+      "evidence": ".github/workflows/ci.yml:51; dogfood.log"
+    },
+    {
+      "id": "N1",
+      "status": "PARTIAL",
+      "observation": "Head/diff/disk-byte/mode/type changes and predecessor domains refuse old reviews. Staged-content changes still reuse the review and reach Verification.",
+      "evidence": "F01; probes-index-full-review.log; probes-cli-confirmed.log"
+    },
+    {
+      "id": "N2",
+      "status": "FIXED",
+      "observation": "Original checkout negatives refuse: non-Git, wrong checkout/head/diff, unapproved dirt, mutation, and inside-store. Clean real checkout controls pass. CI supports clean capture only. Separate B14 diff gap remains.",
+      "evidence": "test.log:TestGateBCINonRepositoryEvidence; probes-cli-confirmed.log:TestClosureAuditorCIMatrix"
+    },
+    {
+      "id": "B1",
+      "status": "FIXED",
+      "observation": "Changed dirty disk content refuses stale review with optional worktree approval binding absent or present; unchanged controls advance.",
+      "evidence": "probes-cli-confirmed.log:TestClosureAuditorFullArtifactMatrix/bytes; test.log:TestGateBR2ReviewDirtyFullTransition"
+    },
+    {
+      "id": "B2",
+      "status": "FIXED",
+      "observation": "Both hidden-index flags refuse before capture; truncate/chmod mutation controls refuse with unchanged store bytes.",
+      "evidence": "probes-cli-confirmed.log:TestClosureAuditorCIMatrix; test.log:TestGateBR2CIMutationHiddenByIndex"
+    },
+    {
+      "id": "B3",
+      "status": "FIXED",
+      "observation": "CI rejects inherited repository selectors. Capture/pilot strip selectors and pin original-object view while retaining nonselector config.",
+      "evidence": "probes-cli-confirmed.log:TestClosureAuditorCIMatrix/foreign-selector; probes-other.log:TestClosureAuditorPilotObjectView"
+    },
+    {
+      "id": "B4",
+      "status": "FIXED",
+      "observation": "Populated dirty-content approval refuses on a clean checkout; absent-binding clean controls succeed.",
+      "evidence": "test.log:TestGateBR2CIBoundWorktreeGone; probes-cli-confirmed.log:TestClosureAuditorCIMatrix/clean"
+    },
+    {
+      "id": "B5",
+      "status": "PARTIAL",
+      "observation": "Post-append terminal check prevents START_WORKER in terminal case, but fails the atomic/no-append check. Nonterminal route revocation still returns START_WORKER.",
+      "evidence": "F02; probes-cli-confirmed.log; probes-route-revocation.log"
+    },
+    {
+      "id": "B6",
+      "status": "FIXED",
+      "observation": "Exactly one of 24 conflicting unsuperseded real CLI decisions commits. Existing concurrent nonconflicting appends also pass.",
+      "evidence": "probes-process-concurrency.json; test.log:TestGateBR2HostSeparateProcessWriters"
+    },
+    {
+      "id": "B7",
+      "status": "PARTIAL",
+      "observation": "Normal durable-boundary protocol passes 32 modeled checkpoints and sync-failure refusal. Existing undurable ancestry loses acknowledged data. Historical 40/55 suites were not imported.",
+      "evidence": "F03; probes-durability.log"
+    },
+    {
+      "id": "B8",
+      "status": "FIXED",
+      "observation": "All applicable rule capabilities/separations are unioned, including stricter lower-risk and tied-risk constraints.",
+      "evidence": "probes-other.log:TestClosureAuditorIndependenceUnion; test.log:TestGateBR2IndependenceTiedRule"
+    },
+    {
+      "id": "B9",
+      "status": "FIXED",
+      "observation": "PASSED seed, foreign metadata/payload, copied/symlink/directory markers, and repeated seeding refuse; untouched seed succeeds.",
+      "evidence": "probes-other.log:TestClosureAuditorSeedMutation; test.log:TestGateBR2SyntheticForeignSeed; TestGateBR2SyntheticSecondSeed"
+    },
+    {
+      "id": "B10",
+      "status": "PARTIAL",
+      "observation": "Old dependent authority now refuses after serial upstream rewind. No validated plan graph supports the expanded transitive/unaffected-unit criteria. Concurrent route revocation also remains unsafe.",
+      "evidence": "F05; F02; probes-additional.log:TestClosureAuditorDependentRewind"
+    },
+    {
+      "id": "B11",
+      "status": "FIXED",
+      "observation": "Raw disk byte/type/owner-execute/symlink/deletion changes produce stale-review refusal in both binding forms; group/other execute-equivalence controls pass. Old dirty domains refuse.",
+      "evidence": "probes-cli-confirmed.log:TestClosureAuditorFullArtifactMatrix; probes-refined-controls.log"
+    },
+    {
+      "id": "B12",
+      "status": "FIXED",
+      "observation": "core.filemode=false cannot hide owner-execute changes from capture or review; both mode directions and legacy-domain expiry refuse.",
+      "evidence": "probes-refined-controls.log; test.log:TestGateBR4CIHiddenOwnerExecuteMutation"
+    },
+    {
+      "id": "B13",
+      "status": "FIXED",
+      "observation": "Raw mixed-EOL changes are detected under info/global/tracked attributes and SHA-1/SHA-256 repositories. Full normalized-byte review negatives refuse.",
+      "evidence": "probes-repostate.log:TestClosureAuditorRawObjectFormats; probes-refined-controls.log; test.log:TestSnapshotSeesChangesHiddenByConversion"
+    },
+    {
+      "id": "B14",
+      "status": "PARTIAL",
+      "observation": "Current HEAD/index gitlinks refuse. Historical removed gitlinks can still be hidden from the bound base..head diff.",
+      "evidence": "F04; probes-repostate.log:TestClosureAuditorHistoricalGitlinkDiff; test.log:TestSnapshotRefusesSubmoduleAndSparse"
+    },
+    {
+      "id": "B15",
+      "status": "FIXED",
+      "observation": "Case aliases are detected. Correctly framed v5 predecessor identities refuse with the legacy alias retained or removed, in both binding forms.",
+      "evidence": "probes-refined-controls.log:legacy-v5-alias; probes-repostate.log:TestClosureAuditorRawObjectFormats"
+    },
+    {
+      "id": "B16",
+      "status": "FIXED",
+      "observation": "Subdirectory and foreign configured roots refuse. Absolute/symlink/relative top-level roots, matching core.worktree, and linked worktrees pass.",
+      "evidence": "probes-repostate.log:TestClosureAuditorRootForms; test.log:TestGateBR2CISymlinkAndWorktree"
+    },
+    {
+      "id": "B17",
+      "status": "FIXED",
+      "observation": "SHA-1/SHA-256 replacement-view dirt is detected. Capture/pilot read original objects with inherited selectors and GIT_NO_REPLACE_OBJECTS=0. Old clean review-artifact/v1 and old dirty-domain identities refuse.",
+      "evidence": "probes-repostate.log; probes-other.log:TestClosureAuditorPilotObjectView; probes-cli-confirmed.log:legacy-clean-artifact"
+    },
+    {
+      "id": "B18",
+      "status": "FIXED",
+      "observation": "Absolute, relative, symlink, configured actual-root, and linked-worktree controls pass. Invalid roots still refuse. No case-insensitive host was available.",
+      "evidence": "probes-repostate.log:TestClosureAuditorRootForms; probes-cli-confirmed.log:TestClosureAuditorCIMatrix/relative"
+    }
+  ],
+  "additional_defects": [
+    {
+      "id": "X1",
+      "status": "OPEN",
+      "finding": "F01",
+      "title": "Staged-index observation collision"
+    },
+    {
+      "id": "X2",
+      "status": "OPEN",
+      "finding": "F02",
+      "title": "Concurrent nonterminal route revocation still returns START_WORKER"
+    }
+  ],
+  "closure_summary": {
+    "FIXED": 25,
+    "PARTIAL": 7
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "title": "Staged content can change without invalidating evidence or independent review",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "related_ids": [
+        "N1",
+        "X1"
+      ],
+      "diagnosis": "The index is Git's staging area. The probe stages A for tracked a, restores the approved disk bytes, records an independent review, then stages B and restores the same disk bytes. Both full CLI transitions reach VERIFICATION with the old review, with optional approval worktree binding absent and present. A pilot evidence command also changes the index object from 96040db93419758cd9b2d64ab222d3baa3570d53 to b926d36c133674e7a146a57b016903c790ca8a33 and succeeds, writing two core records. The snapshot adds staged path names to the path set but hashes only disk bytes. It does not bind the staged object, mode, or stage. The index therefore changes what Git commands can inspect without changing the snapshot. This is an additional observed safety gap in changed snapshot code; its original introducing revision was not established.",
+      "evidence": [
+        {
+          "source": "probes-index-full-review.log",
+          "observation": "Both bind=false and bind=true return to_stage=VERIFICATION; tests fail with stale review authorized B."
+        },
+        {
+          "source": "probes-additional.log:TestClosureAuditorIndexMutationDuringCapture",
+          "observation": "Index object changed; capture-error=<nil>, records=2, load-error=<nil>."
+        },
+        {
+          "source": "repo/internal/repostate/raw.go:77-97; repo/internal/repostate/snapshot.go:178-210",
+          "observation": "Only staged path names feed the digest; disk bytes supply its payload."
+        }
+      ],
+      "fix": {
+        "action": "Bind sorted, length-framed index entries (path, mode, stage, and object ID) together with the raw worktree state. Retire the incomplete v6 dirty observation domain. Apply the resulting identity at capture and review gates.",
+        "why": "Commands can read staged content. Evidence and review must expire when that content changes.",
+        "verification": [
+          {
+            "method": "Run TestClosureAuditorIndexMutationDuringCapture and FullArtifactMatrix/staged-index for both binding forms. Add index mode, deletion, and unmerged-stage variants, plus unchanged controls and stored v6 replay.",
+            "expected": "Changed staged artifacts refuse old reviews and command-induced index mutation before any evidence append. Unchanged supported artifacts pass. Stored incomplete identities need fresh review."
+          }
+        ],
+        "tradeoffs": "This adds index observation cost and expires affected stored dirty approvals/reviews. Preserve the optional nature of ApprovalBinding.WorktreeDigest.",
+        "alternative": "Explicitly refuse staged differences from HEAD for capture and progression until staged-state binding exists. This is simpler but narrows dirty-worktree support.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "F02",
+      "title": "Host authorization and core authority do not commit atomically",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "related_ids": [
+        "H4",
+        "B5",
+        "X2"
+      ],
+      "diagnosis": "The four host commands check a core snapshot while holding only the host lock. The core lock is released by Load before the host append. A deterministic hook commits a human-approved Planning rewind after route checks and before dispatch append. The CLI still returns dispatch_allowed=true and START_WORKER, while replay reports HOST_ROUTE_APPROVAL_MISSING. In the terminal variant, each host operation appends after ABORTED commits, then returns HOST_CORE_RUN_TERMINAL. The terminal variant does not return START_WORKER; its defect is the changed host chain on refusal. The nonterminal rewind variant does return START_WORKER after route authority is revoked.",
+      "evidence": [
+        {
+          "source": "probes-route-revocation.log",
+          "observation": "dispatch error=<nil>, host-records=3, active-route-error=HOST_ROUTE_APPROVAL_MISSING; stdout contains START_WORKER."
+        },
+        {
+          "source": "probes-cli-confirmed.log:TestClosureAuditorTerminalAppendAtomicity",
+          "observation": "Decision appends 0->1; preflight, dispatch, and review each append 4->5 after the terminal commit, despite error return."
+        },
+        {
+          "source": "repo/cmd/hma/host.go:115-158; repo/internal/host/store.go:222-246",
+          "observation": "Host AppendWith holds the host lock; the core Load releases its separate lock. The post-append check checks only terminal state."
+        }
+      ],
+      "fix": {
+        "action": "Add a shared core-authority transaction boundary. Hold a consistent per-run core lock from nonterminal/route validation through the host append, using a locked-load API to avoid recursive locking. Define and apply one lock order for all participating core and host writers.",
+        "why": "One coherent core snapshot must authorize and bind the host write. A post-write terminal check cannot undo an authorizing record or detect a nonterminal route revocation.",
+        "verification": [
+          {
+            "method": "Run ConcurrentRouteRevocation and TerminalAppendAtomicity. Exercise decision, preflight, dispatch, and review; unit and whole-run rewinds; all five terminal outcomes; both possible commit orders; and independent concurrent decisions.",
+            "expected": "If revocation or termination commits first, the host write refuses without adding a record or returning an execution action. If the host transaction commits first, its record binds that same core snapshot. No deadlocks or lost accepted records occur."
+          }
+        ],
+        "tradeoffs": "Cross-store transactions add lock contention and require explicit lock ordering. Do not claim that a lock can revoke a worker already started before a later human stop.",
+        "alternative": "Represent authorizing host events within the core transaction log, then project the separate host view. This is a larger persistence change.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "F03",
+      "title": "Existing unsynchronized ancestors can lose acknowledged host records",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "related_ids": [
+        "H3",
+        "B7"
+      ],
+      "diagnosis": "The filesystem model persists a directory's entry map only when that directory is synced. A trusted initializer creates new-parent/nested-parent/store with MkdirAll and no directory sync. Host append acknowledges one record. Its highest observed directory sync is new-parent/nested-parent. Neither the outer root entry for new-parent nor new-parent's entry for nested-parent is made durable. An allowed crash image therefore recovers zero records without an error. mkdirAllSynced stops ancestor recursion when Stat finds an existing directory. Visibility does not prove durable ancestry. The normal first/successor protocol passes 32 modeled checkpoints when the supplied store boundary is already durable.",
+      "evidence": [
+        {
+          "source": "probes-durability.log:TestClosureAuditorPreexistingAncestorDurability",
+          "observation": "acknowledged=1; sync trace omits the outer ancestors; crash recovered=0 err=<nil>."
+        },
+        {
+          "source": "probes-durability.log:TestClosureAuditorDurableCrashPrefixes",
+          "observation": "All 32 first-append/successor durability checkpoints recover a valid prefix at an initially durable boundary."
+        },
+        {
+          "source": "repo/internal/host/store.go:286-305",
+          "observation": "Parent recursion occurs only after a failed Stat; existing ancestors are not walked to a known durable boundary."
+        }
+      ],
+      "fix": {
+        "action": "Establish and record a durable store boundary before accepting host writes. Sync every required ancestor entry back to that boundary, even when the directories already exist. Propagate every directory-sync failure.",
+        "why": "The store must not acknowledge bytes whose only path can disappear after a crash.",
+        "verification": [
+          {
+            "method": "Run both durability probes. Add concurrent same-run and different-run initialization, interrupted initialization/recovery, and injected fsync failures at each ancestor. Preserve all process-exit and normal recovery controls.",
+            "expected": "Every acknowledged record survives every modeled crash image. Interrupted attempts recover one verified prefix. Fsync failures never acknowledge."
+          }
+        ],
+        "tradeoffs": "Walking ancestors adds fsync work. The host must define the durable boundary rather than infer it from path existence. The model is not a physical power-cut experiment.",
+        "alternative": "Require an explicitly initialized, durably published store root and reject writes until its initialization evidence is present. This adds an initialization protocol.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "F04",
+      "title": "Historical gitlink changes can disappear from the approved diff identity",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "medium",
+      "confidence": "observed",
+      "related_ids": [
+        "B14"
+      ],
+      "diagnosis": "A gitlink is the Git tree entry for a submodule. The probe commits a gitlink at the approved base, then removes it at HEAD. Current HEAD and index contain no gitlink, so the unsupported-current-submodule checks allow the repository. The normal diff digest is 204d7c3708c0e0b294934a22be997faeff2d0283433d8b923e2b112664a18081. With local diff.ignoreSubmodules=all, Snapshot accepts the same repository and returns e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, the digest of an empty diff. This fails B14's explicit base..head history control. No current dirty-submodule bypass or complete stale-review exploit is claimed by this probe.",
+      "evidence": [
+        {
+          "source": "probes-repostate.log:TestClosureAuditorHistoricalGitlinkDiff",
+          "observation": "Both snapshots succeed; the second diff is empty despite the historical removal."
+        },
+        {
+          "source": "repo/internal/repostate/raw.go:45-96; repo/internal/repostate/snapshot.go:248",
+          "observation": "Gitlink refusal checks current HEAD/index; the base..head diff has no explicit --ignore-submodules=none override."
+        }
+      ],
+      "fix": {
+        "action": "Force --ignore-submodules=none for the bound base..head diff and every other gitlink-sensitive comparison, or explicitly reject unsupported base/head histories before snapshot acceptance.",
+        "why": "Repository-local submodule policy must not suppress the artifact diff shown to approval and evidence consumers.",
+        "verification": [
+          {
+            "method": "Run HistoricalGitlinkDiff with local diff.ignoreSubmodules, submodule.<name>.ignore, and tracked .gitmodules policies. Retain current missing/deinitialized-submodule refusals and clean supported controls.",
+            "expected": "The repository is explicitly refused, or its nonempty canonical diff remains identical across ignore settings. No suppressed diff identity is accepted."
+          }
+        ],
+        "tradeoffs": "Explicit unsupported-history refusal can reject repositories with old submodules that are no longer present. A forced diff preserves more compatibility.",
+        "alternative": "Reject all bases containing gitlinks until historical gitlink diff support is tested.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "F05",
+      "title": "Dependent invalidation is conservative rather than plan-derived",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "related_ids": [
+        "B10"
+      ],
+      "diagnosis": "Serial replay now refuses the old U1 route after U0 rewinds to Planning. The first CLI refusal is HOST_ROUTE_APPROVAL_MISSING, before a new decision or worker authorization. The implementation invalidates every other unit on any Grounding/Acceptance/Planning rewind. It never loads a validated dependency graph. Thus it closes the demonstrated stale-dependent route in serial execution, but does not satisfy the expanded B10 closure checks for a validated transitive graph and preservation of an unaffected unit once that graph is available. The source explicitly defers graph-derived precision to Gate D. This is a closure-coverage gap; the conservative serial behavior is safe.",
+      "evidence": [
+        {
+          "source": "probes-additional.log:TestClosureAuditorDependentRewind",
+          "observation": "The old dependent route refuses before a new host decision; store bytes remain unchanged."
+        },
+        {
+          "source": "repo/cmd/hma/transition.go:190-202",
+          "observation": "All other units are invalidated; the source says Gate D narrows this with plan-derived dependents."
+        }
+      ],
+      "fix": {
+        "action": "Resolve AcceptedPlanDigest to a validated immutable plan dependency graph before selective route replay. Apply transitive affected/dependent invalidation. Retain all-unit invalidation when the plan is absent or invalid.",
+        "why": "This implements the expanded closure requirement without weakening the current conservative fallback.",
+        "verification": [
+          {
+            "method": "Use U2->U1->U0 plus independent U3. Rewind U0; test missing/corrupt plans, review re-attestation, whole-run rewind, and a fresh approved route.",
+            "expected": "U1/U2 old authority refuses; U3 can remain valid only with a verified graph; missing/corrupt plans fail closed; a fresh human-approved route establishes new authority."
+          }
+        ],
+        "tradeoffs": "A content-addressed plan resolver adds scope and compatibility work. This precision gap must not be used to reopen existing authority without validation.",
+        "alternative": "Keep conservative invalidation and obtain an explicit human-approved scope amendment that defers graph precision. Do not silently mark the existing criterion closed.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    }
+  ],
+  "required_checks": [
+    {
+      "name": "versions",
+      "command": [
+        "go",
+        "version"
+      ],
+      "cwd": "/tmp/hma-gate-b-closure-20261016/repo",
+      "exit": 0,
+      "seconds": 0.007
+    },
+    {
+      "name": "test",
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-json",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-b-closure-20261016/repo",
+      "exit": 0,
+      "seconds": 20.403
+    },
+    {
+      "name": "vet",
+      "command": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-b-closure-20261016/repo",
+      "exit": 0,
+      "seconds": 1.586
+    },
+    {
+      "name": "race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-count=1",
+        "-json",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-b-closure-20261016/repo",
+      "exit": 0,
+      "seconds": 31.719
+    },
+    {
+      "name": "dogfood",
+      "command": [
+        "bash",
+        "scripts/dogfood/host-dogfood.sh",
+        "--keep"
+      ],
+      "cwd": "/tmp/hma-gate-b-closure-20261016/repo",
+      "exit": 0,
+      "seconds": 2.19
+    },
+    {
+      "name": "probes-cli-confirmed",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestClosureAuditor"
+      ],
+      "exit": 1,
+      "seconds": 15.284
+    },
+    {
+      "name": "probes-durability",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./internal/host",
+        "-run",
+        "^TestClosureAuditor"
+      ],
+      "exit": 1,
+      "seconds": 1.054
+    },
+    {
+      "name": "probes-other",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./internal/pilot",
+        "./internal/engine",
+        "./scripts/dogfood/hostinput",
+        "-run",
+        "^TestClosureAuditor"
+      ],
+      "exit": 0,
+      "seconds": 2.364
+    },
+    {
+      "name": "probes-repostate",
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/repostate",
+        "-run",
+        "^TestClosureAuditor"
+      ],
+      "exit": 1,
+      "seconds": 2.849
+    },
+    {
+      "name": "probes-index-full-review",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestClosureAuditorFullArtifactMatrix$/^staged-index"
+      ],
+      "exit": 1,
+      "seconds": 1.304
+    },
+    {
+      "name": "probes-final",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-json",
+        "./...",
+        "-run",
+        "^TestClosureAuditor"
+      ],
+      "exit": 1,
+      "seconds": 20.143
+    },
+    {
+      "name": "probes-refined-controls",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestClosureAuditorFullArtifactMatrix$/(legacy-v5-alias.*|owner-exec-.*|normalized-crlf)"
+      ],
+      "exit": 0,
+      "seconds": 4.251
+    },
+    {
+      "name": "probes-route-revocation",
+      "command": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-b-closure-20261016/overlay-host.json",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestClosureAuditorConcurrentRouteRevocation$"
+      ],
+      "exit": 1,
+      "seconds": 1.091
+    }
+  ],
+  "limitations": [
+    "Isolation is partial. The first read of the authorized Gate A audit-r1 source exposed historical verdict/assessment fields before requirements extraction. No implementer conversation was inherited. No prohibited current Gate B directory, Gate A v* handoff, or TODO Gate B section was read before Phase 1 was hashed.",
+    "The copied worktree omits TODO.md, .serena/, and prohibited Gate A v* handoffs. Code/configuration tests ran in the copy. The original target remained read-only. Target.diff preserves the original tracked diff, including TODO bytes, but its TODO content was not inspected before Phase 1.",
+    "The filesystem crash check is an explicit directory-entry durability model with instrumentation through Go -overlay. It is not a hardware power-cut test. It tests loss of unsynchronized directory maps; it does not exhaust all filesystems or storage failures.",
+    "The exact historical 40/55 crash suites and named earlier auditor probe files were not imported. Independent equivalents and the retained repository tests were used. Interrupted recovery at every historical checkpoint and every historical variant were not exhaustively repeated.",
+    "The initial requirements/source batch output was truncated. Architecture critical sections and all B1-B18 closure entries were subsequently read in bounded output. Gate A N1/N2/M3 entries were extracted separately. Historical verdict exposure cannot be undone.",
+    "No case-insensitive filesystem or physical directory bind-mount fixture was available. Linux symlink, relative-path, configured-root, and linked-worktree controls were executed.",
+    "No model API, nested agent CLI, worker dispatch, network adapter, remote GitHub CI job, release, commit, push, or publication was executed. Preflight/approval fixtures are synthetic. This audit does not authenticate live human approvals or runtime model identity.",
+    "No Jev host tool was exposed in tool metadata. Audit judgments followed the orchestrator/human fallback; no substitute model was presented as Jev.",
+    "All remediation proposals remain unimplemented and unvalidated. FIXED is scoped to the named original closure check and tested supported behavior; it does not imply whole-product or release readiness.",
+    "The original implementation suite has two skips in both normal and race runs: a child-only helper (executed by its parent process test) and TestGateBR2HostPowerLossImage (explicitly skipped by the implementation). The latter is not counted as crash proof.",
+    "A probe initially failed to compile due to one unused auditor-test import. It was corrected only in the output copy. The failed attempt remains in probes-cli-build-attempt1.log."
+  ],
+  "phase1_frozen": true,
+  "original_requirements": "REQUIREMENTS.json; sha256 04a2d4cf7fc25d4d11a422fdb4a75c5dc10fa728cc1d594a8d44bd4918a7e4c0",
+  "criteria_sha256": "ae5945effa0d4aa7aa1d49f043d8fbbed81e52b3daf5218235ef92baf3c8fa9f",
+  "isolation_history": [
+    {
+      "event": "Initial source read",
+      "effect": "Historical authorized audit-r1 verdict fields entered context; partial isolation disclosed"
+    },
+    {
+      "event": "Before diff read",
+      "artifact": "REQUIREMENTS.json",
+      "effect": "Requirements and failure hypotheses recorded"
+    },
+    {
+      "event": "Blind assessment freeze",
+      "artifact": "PHASE1.json",
+      "effect": "No optional unblinding before hash recording"
+    }
+  ],
+  "evidence_ledger": [
+    {
+      "id": "E01",
+      "source": "FREEZE-start.json",
+      "observation": "Target identity and 20 untracked-file SHA-256 digests recorded before source/diff review."
+    },
+    {
+      "id": "E02",
+      "source": "test.log; vet.log; race.log; dogfood.log; versions.log",
+      "observation": "Go 1.27.1. Normal tests and race tests each show 710 pass events and two skips across 12 passing packages. Vet passes. Harness passes 17 checks."
+    },
+    {
+      "id": "E03",
+      "source": "probes-final.jsonl",
+      "observation": "Independent final combined run: 137 pass and 11 fail test/subtest events; nine failing leaves expose four failure mechanisms. Later targeted controls and route-revocation probe are separate."
+    },
+    {
+      "id": "E04",
+      "source": "probes-process-concurrency.json",
+      "observation": "One of 24 conflicting real decision CLI processes commits; chain contains exactly one record."
+    },
+    {
+      "id": "E05",
+      "source": "probes-refined-controls.log",
+      "observation": "Ten refined full-review subcases pass: owner-execute in both directions, normalized raw bytes, and old v5 alias retained/removed; both optional binding forms."
+    },
+    {
+      "id": "E06",
+      "source": "gofmt.log",
+      "observation": "Original audited cmd/internal/scripts files produce no gofmt -l output. git diff --check returned zero."
+    },
+    {
+      "id": "E07",
+      "source": "FREEZE-prephase1.json",
+      "observation": "HEAD, branch, filtered status, tracked diff digest, and all untracked hashes still match the initial freeze."
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "O1",
+      "kind": "opportunity",
+      "observation": "Retain the independent negative probes beside the eventual fixes, particularly no-store-mutation assertions and durable-ancestry initialization. This is a testing opportunity, not a new acceptance criterion."
+    }
+  ],
+  "roadmap": [
+    {
+      "priority": 1,
+      "finding": "F02",
+      "action": "Prepare atomic core-authority/host-write remediation; block dispatch from the reproduced revoked-route schedule."
+    },
+    {
+      "priority": 2,
+      "finding": "F01",
+      "action": "Bind or explicitly refuse staged state, retire incomplete dirty identities, and rerun full approval/review controls."
+    },
+    {
+      "priority": 3,
+      "finding": "F03",
+      "action": "Establish durable ancestry and repeat fault-model/initialization controls."
+    },
+    {
+      "priority": 4,
+      "finding": "F04",
+      "action": "Prevent suppressed historical gitlink diff or refuse the unsupported history."
+    },
+    {
+      "priority": 5,
+      "finding": "F05",
+      "action": "Implement validated dependency replay or obtain an explicit scope decision; keep conservative refusal meanwhile."
+    }
+  ],
+  "next_action": {
+    "action": "HUMAN_REVIEW_GATE_B_REMEDIATION_PACKET",
+    "owner": "Human Gate B owner",
+    "rationale": "The target has observed authority, artifact-identity, and durability failures. Gate B cannot support progression.",
+    "proposed_route": "No execution for this review action. Subsequent implementation proposal: Opus on an explicitly human-approved eligible route; provider/model/effort/access service must be confirmed at its route gate and exact-route hi preflight.",
+    "permission_envelope": "Review this frozen evidence packet. This audit authorizes no repository edits, store changes, dispatch, commit, push, release, or publication.",
+    "exact_approval_required": "A fresh human decision bound to a bounded remediation plan, acceptance checks, affected files, unit, route, and permissions before coding. No generic continue or audit verdict grants stage approval.",
+    "stop_and_escalation": "Keep Gate B failed until fixes and independent re-test resolve the findings. Stop on permission failure, changed acceptance criteria, unavailable eligible independent reviewer, or unapproved scope expansion. A fully blind final audit must use a fresh context."
+  },
+  "phase1_sha256": "217b7859ad7b55926c22792be029a303855cf7b6c6f2e84374beabf282fbc1ad",
+  "phase1_artifact": "PHASE1.json",
+  "finalized_at": "2026-10-16T15:03:31.530126+00:00",
+  "freeze_verification": {
+    "utc": "2026-10-16T15:03:31.458008+00:00",
+    "head": "67965541b7032a585a68e48f3d10f4a998d5399e",
+    "branch": "main",
+    "status_short": " M .github/workflows/ci.yml\n M TODO.md\n M cmd/hma/ci.go\n M cmd/hma/host.go\n M cmd/hma/host_test.go\n M cmd/hma/main_test.go\n M cmd/hma/resolve.go\n M cmd/hma/transition.go\n M docs/task14-host-orchestration.md\n M internal/engine/route_coherence.go\n M internal/evidence/capture.go\n M internal/evidence/capture_test.go\n M internal/host/host.go\n M internal/host/store.go\n M internal/pilot/run.go\n M internal/repostate/snapshot.go\n M internal/repostate/snapshot_test.go\n M internal/store/jsonl.go\n?? .serena/.gitignore\n?? .serena/project.yml\n?? cmd/hma/gateb_r2_review_test.go\n?? cmd/hma/gateb_r2_test.go\n?? cmd/hma/gateb_r4_ci_hidden_mode_test.go\n?? cmd/hma/gateb_r4_hidden_mode_probe_test.go\n?? cmd/hma/gateb_r5_test.go\n?? cmd/hma/gateb_regression_test.go\n?? cmd/hma/route_approval_binding_test.go\n?? internal/engine/gateb_r2_test.go\n?? internal/engine/gateb_regression_test.go\n?? internal/host/gateb_r2_test.go\n?? internal/host/gateb_regression_test.go\n?? internal/model/gateb_r2_test.go\n?? internal/model/route_test.go\n?? internal/pilot/gateb_r2_test.go\n?? internal/pilot/gateb_regression_test.go\n?? internal/repostate/raw.go\n?? scripts/dogfood/host-dogfood.sh\n?? scripts/dogfood/hostinput/gateb_r2_test.go\n?? scripts/dogfood/hostinput/main.go\n?? scripts/dogfood/hostinput/main_test.go\n",
+    "diff_binary_sha256": "1eee27ed75133e778a8b050bad20bff7d6ed2dd4c891e71584186f89ff75847f",
+    "untracked_sha256": {
+      "cmd/hma/gateb_r2_review_test.go": "6cfc2855587106100f182c80e6f73b39225b6cce7bda4ec306ab27d8112792eb",
+      "cmd/hma/gateb_r2_test.go": "a1daef8b7babdf77621f68162cc985b601bca5131d1c293faed6e29492e3bd8a",
+      "cmd/hma/gateb_r4_ci_hidden_mode_test.go": "e89bf6e1d0fdc23c95d710e923ebba309310c510ddf5ece2dafe7d310efa7863",
+      "cmd/hma/gateb_r4_hidden_mode_probe_test.go": "7baa75e36d2df5a1106437800849aa07c62097642abacd30474f9b1943892fc3",
+      "cmd/hma/gateb_r5_test.go": "09a4dc6fa6d858da15f5cc1f671b9f729e9be6749732daf33d7b5ba6cdf6a247",
+      "cmd/hma/gateb_regression_test.go": "af7e7e7585878835b923dd3d32e977222810e58c08e4beeb672cc9411063e205",
+      "cmd/hma/route_approval_binding_test.go": "5217686eec3eb5bb2a8a2b26cee044821196e920ad14de13339d1dd9ea9e814f",
+      "internal/engine/gateb_r2_test.go": "383dcc481ce6f5dba55e89936220cce26ec409add4b0fa16ee142e366b32ca9a",
+      "internal/engine/gateb_regression_test.go": "ea7c3d83842afb8c95a7e04646ea0867f9a1250a5d7a586475e3c9a615a349bb",
+      "internal/host/gateb_r2_test.go": "76d705dc4b7c59c1bf172cdc00e5cdb2ed7be2fbe0aafe901e48e2da1a57c3e7",
+      "internal/host/gateb_regression_test.go": "fd788e42fadb5c41abbe5553bc9c020321ac51faff93ad97d4f84039d4b77c64",
+      "internal/model/gateb_r2_test.go": "133d520ee3ea64eaa6624249a9955f0ad367c44e553982e0577431150716c1aa",
+      "internal/model/route_test.go": "1baf261c2a25ab343924fde3764aa0dd04261bd163cf47b43b810af0b1e1769c",
+      "internal/pilot/gateb_r2_test.go": "6683ffc752144d2f58d4d9f37df784ecd03e2a4acfe5c0a02a938e02c2fbbd52",
+      "internal/pilot/gateb_regression_test.go": "f05028cd0dedcb06e9f9e7116fec7d6df136135924f8f7867ad0bd1e2085e868",
+      "internal/repostate/raw.go": "b397f7d1554e8f743ec0e4cb325a49ce44d7eb9b1d32eccd08408cd698dd3d5d",
+      "scripts/dogfood/host-dogfood.sh": "c0c3dad4aee2d0dd917eb3d95eca4ebb436c157555c7a35261008a857707f3cb",
+      "scripts/dogfood/hostinput/gateb_r2_test.go": "b8052b0c69a89d531e4ac24edbcad86aa3321f00db1719636a6311a0e7fdade3",
+      "scripts/dogfood/hostinput/main.go": "2fa062642fba1b50d0004bc9d894e31d2cf352509dd3b33ad0601641a9624ef3",
+      "scripts/dogfood/hostinput/main_test.go": "e9cb88afebcac15993b6424e52ea8504558c6fdacd03d30a6b7eef141d6f03a8"
+    },
+    "ignored": ".serena/",
+    "matches_start": {
+      "head": true,
+      "branch": true,
+      "status_short": true,
+      "diff_binary_sha256": true,
+      "untracked_sha256": true
+    }
+  },
+  "unblinding_addendum": {
+    "read_after_phase1_hash": "TODO.md:67-123 only; no other previously prohibited artifact was opened",
+    "observed_claims": [
+      "TODO marks H3, H4, N1, and B5/B7 remediations checked, while leaving the independent Gate B re-audit unchecked.",
+      "TODO explicitly defers plan-derived dependency precision to Gate D.",
+      "TODO claims staged index differences are added and current submodules are refused."
+    ],
+    "adjudication": "These are implementer artifact claims. The executable counterexamples remain. Adding staged path names does not bind staged content. Current-submodule refusal does not cover the historical-gitlink diff. Deferring dependency precision in TODO is not an authoritative amendment to the supplied closure criteria.",
+    "phase1_changes": "None. Findings, statuses, and gate verdict are unchanged."
+  },
+  "report_contract_validation": "Validated by independent-audit/scripts/validate_report.py; see validation.log. Validation checks form, not truth."
+}

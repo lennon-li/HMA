@@ -48,6 +48,11 @@ jobs:
         # Deterministic fixtures must produce the same result on every run.
         run: go test -count=3 ./internal/engine/ ./internal/model/
 
+      - name: host dogfood harness
+        # Synthetic end-to-end run of the real hma host/transition CLIs in a
+        # scratch store; jq is preinstalled on ubuntu-latest.
+        run: bash scripts/dogfood/host-dogfood.sh
+
       - name: git diff --check
         run: git diff --check
 

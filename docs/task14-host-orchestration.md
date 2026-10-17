@@ -154,7 +154,7 @@ side-effect-free; this enforcement belongs to the interactive-host CLI boundary.
 These gates establish only that a current host record exists for the named
 unit. They do not make the host select an eligible route, validate the route
 approval against the approved plan, or implement the host's full decision and
-dispatch flow. Learned decision-provider route choice, result-sufficiency,
+dispatch flow. Host decision, preflight, dispatch, and the implementation-authorization gate now bind their claimed route approval to the latest applicable approved core `ROUTE_SELECTION -> IMPLEMENTATION_AUTHORIZATION` transition for that same unit. It reads the currently loaded, chain-validated core run and compares the host `route_approval_digest` with the core approval's `TransitionDigest`. Missing approvals, another unit's approval, a digest mismatch, or a later unit-scoped/whole-run approved rewind to Route Selection or an earlier gate fail closed. This is a bounded approval-digest binding only: core approval records do not persist approved provider, model, profile, capability, or permission fields, so host route telemetry cannot yet be proven equal to those approved route facts. The broader MVP item remains open in `TODO.md`. Persisted core transitions do not list dependent units, so the lookup is conservative: any unit's approved return to Grounding, Acceptance criteria, or Planning invalidates every unit's route approval until a fresh Route Selection approval (Gate B, B10). Plan-derived dependent scope is Gate D work. Review preflight and dispatch also carry the same plan-unit route-approval digest as implementation, not a separate approved reviewer-route identity. Neither behavior proves the chosen model, profile, or permission envelope was human-approved. Learned decision-provider route choice, result-sufficiency,
 next-step, and discretionary-idea judgments remain optional post-MVP host
 extensions; see architecture §12.5.
 
@@ -171,6 +171,39 @@ hashes, content head anchors, and a host head file. Every record also binds the
 core HMA head visible when it was recorded. The chain detects accidental or
 uncoordinated record modification within the same host-trusted boundary as the
 rest of HMA; it is not a same-UID tamper-resistance claim.
+
+Appends take the run lock `<store>/host/<run_id>.lock` (the core store's lock
+discipline), write a `head.pending` intent, create the numbered record
+atomically, then move `head`. `Load` completes an interrupted append whose
+intent equals the verified chain tail and discards any other intent. A head
+that disagrees with the chain without a matching intent is still
+`HOST_HEAD_MISMATCH` (Gate B, H3).
+
+Every host command and both coding gates refuse a run whose core chain records
+a terminal outcome (`HOST_CORE_RUN_TERMINAL`, Gate B, H4). The Implementation
+review -> Verification gate also re-checks the active route approval and
+requires the review's `artifact_digest` to equal
+`ReviewArtifactDigest(produced_head_digest, diff_digest, expected_worktree_digest)`,
+where the worktree part is the host-declared dirty content that the core
+transition checks against the live worktree, not the approval's optional
+worktree field (`HOST_REVIEW_ARTIFACT_MISMATCH`, Gate B, N1/M4/B1), so one
+review cannot stand for a different artifact.
+
+A review dispatch declares `risk`, and the host sets `disputed` and
+`final_validation` when the review resolves a disputed finding or is the final
+validation (architecture §17). If any of these is true (risk high or critical,
+disputed, or final validation), the reviewer must differ from the implementer
+in provider family and model family. Otherwise a different worker, model, and
+work context is enough (`HOST_REVIEWER_NOT_INDEPENDENT`, Gate B, M3/R5-02).
+
+Lock order is host run lock, then core run lock. Host commands check and
+append under both: the core lock is released only after the host record,
+`head`, and run directory are durable, so a core terminal outcome or rewind
+either precedes the check or follows the commit (Gate B closure, R4-01).
+Before acknowledging, an append syncs every directory a store path
+component is looked up in, including the directory of each intermediate
+symlink hop (R4-02). `hma transition` holds the host lock from its host gate
+check through the core append, so no host record can land in between.
 
 The separate host chain is deliberate. Provider/model/runtime/access-service
 telemetry is host integration state and must not become a second portable route
@@ -192,7 +225,9 @@ The P1 tests cover:
 - same-context rejection;
 - valid independent review;
 - fixed review-packet mismatch;
-- coding-stage transition enforcement; and
+- coding-stage transition enforcement;
+- unit-scoped and whole-run stale route approval rejection (including earlier-gate rewinds);
+- forged route approval rejection at decision, preflight, and dispatch entrypoints; and
 - host-record tamper detection.
 
 ## First Fury pilot

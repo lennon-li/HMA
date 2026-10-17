@@ -54,6 +54,30 @@ var repositorySelectingEnv = []string{
 	"GIT_WORK_TREE",
 }
 
+// GitEnv returns environ without the repository-selecting variables. Evidence
+// commands run with it so a captured command reads the checkout HMA snapshot,
+// not a repository named by an inherited GIT_DIR or GIT_WORK_TREE.
+//
+// It also sets GIT_NO_REPLACE_OBJECTS, so a Git command the evidence runs
+// reads the committed objects HMA snapshot, not replacement objects.
+func GitEnv(environ []string) []string {
+	return append(gitEnv(environ), "GIT_NO_REPLACE_OBJECTS=1")
+}
+
+// SelectingVariableSet returns the name of the first repository-selecting
+// variable present in environ, or "" when none is.
+func SelectingVariableSet(environ []string) string {
+	for _, entry := range environ {
+		name, _, _ := strings.Cut(entry, "=")
+		for _, v := range repositorySelectingEnv {
+			if name == v {
+				return name
+			}
+		}
+	}
+	return ""
+}
+
 // gitEnv returns environ without the repository-selecting variables.
 func gitEnv(environ []string) []string {
 	env := make([]string, 0, len(environ))
@@ -73,10 +97,31 @@ func gitEnv(environ []string) []string {
 	return env
 }
 
+// observationConfig overrides every Git setting that can make status or diff
+// report a changed file as unchanged, so the repository's own configuration
+// cannot hide a mode, type, or content change from a snapshot. Values given
+// with -c take precedence over system, global, and repository config.
+var observationConfig = []string{
+	"-c", "core.fileMode=true", // mode-only changes
+	"-c", "core.symlinks=true", // symlink vs regular file
+	"-c", "core.checkStat=default", // full stat comparison before trusting the cache
+	"-c", "core.trustctime=true",
+	"-c", "core.fsmonitor=false", // no external daemon decides what changed
+	"-c", "core.untrackedCache=false",
+	"-c", "core.autocrlf=false",
+	"-c", "status.showUntrackedFiles=all",
+	"-c", "core.ignoreCase=false", // a case alias is a distinct path
+	"-c", "diff.external=",
+	"-c", "diff.ignoreSubmodules=none",
+}
+
 // Output runs a read-only git command in dir and returns its stdout. The
-// repository is chosen by dir alone, never by inherited GIT_DIR-style variables.
+// repository is chosen by dir alone, never by inherited GIT_DIR-style
+// variables, and change detection is not weakened by repository config.
 func Output(ctx context.Context, dir string, args ...string) (string, error) {
-	c := exec.CommandContext(ctx, "git", args...)
+	// --no-replace-objects: replacement refs would let ls-tree and diff read
+	// substitute objects instead of the committed ones the approval names.
+	c := exec.CommandContext(ctx, "git", append(append([]string{"--no-replace-objects"}, observationConfig...), args...)...)
 	c.Dir = dir
 	c.Env = gitEnv(os.Environ())
 	b, err := c.Output()
@@ -115,29 +160,64 @@ func statusPaths(status string) []string {
 }
 
 // worktreeContentDigest hashes the exact content of a dirty worktree: the head
-// revision, then every changed path in sorted order with the digest of its
-// current bytes, or an explicit absence marker for a deleted path. Entries are
-// domain-separated and length-framed so no two different worktrees can produce
-// the same digest by concatenation.
+// revision, then every changed path in sorted order with its file type,
+// Git-relevant executable bit, and raw bytes (or symlink target), or an
+// explicit absence marker for a deleted path. Entries are domain-separated
+// and length-framed so no two different worktrees can produce the same digest
+// by concatenation.
 //
-// It reads only the paths git names and writes nothing, so taking the digest
-// never mutates the repository or its object store.
-func worktreeContentDigest(root, head, status string) (string, error) {
+// It reads only the paths it is given and writes nothing, so taking the
+// digest never mutates the repository or its object store.
+func worktreeContentDigest(root, head string, paths []string, staged map[string]string) (string, error) {
 	h := sha256.New()
-	h.Write([]byte("hma-worktree-v1\x00" + head + "\x00"))
-	for _, path := range statusPaths(status) {
+	// v5 takes its changed-path set from a raw comparison of the worktree
+	// against HEAD (see changedPaths), not from git status. Earlier domains
+	// (v1 ignored mode and type; v2 collapsed all execute bits; v3 and v4
+	// visited only the paths git status reported, which repository config,
+	// attributes, and submodule settings can hide) never equal a v5 digest,
+	// so approvals and reviews bound to them fail closed and need a fresh
+	// capture of the live content. v6 retired v5 digests taken before
+	// core.ignoreCase was forced; v7 adds the staged index entry per path;
+	// v8 retires v7 digests that read a tracked path through a symlinked or
+	// non-directory parent instead of recording it absent.
+	h.Write([]byte("hma-worktree-v8\x00" + head + "\x00"))
+	for _, path := range paths {
 		h.Write([]byte("path\x00"))
 		writeFramed(h, []byte(path))
+		// v7 also binds the staged index entry (mode, object, stage) for the
+		// path, so restaging different content under unchanged disk bytes is
+		// a different artifact.
+		h.Write([]byte("index\x00"))
+		writeFramed(h, []byte(staged[path]))
 		full := filepath.Join(root, filepath.FromSlash(path))
-		content, err := os.ReadFile(full)
+		fi, err := lstatInTree(root, path)
 		switch {
-		case err == nil:
-			h.Write([]byte("content\x00"))
-			writeFramed(h, content)
 		case errors.Is(err, os.ErrNotExist):
 			h.Write([]byte("absent\x00"))
-		default:
+		case err != nil:
 			return "", err
+		case fi.Mode()&os.ModeSymlink != 0:
+			target, err := os.Readlink(full)
+			if err != nil {
+				return "", err
+			}
+			h.Write([]byte("symlink\x00"))
+			writeFramed(h, []byte(target))
+		case fi.Mode().IsRegular():
+			content, err := os.ReadFile(full)
+			if err != nil {
+				return "", err
+			}
+			// Git records a regular file as 100755 exactly when the owner
+			// execute bit is set; group and other execute bits are ignored.
+			if fi.Mode().Perm()&0o100 != 0 {
+				h.Write([]byte("executable\x00"))
+			} else {
+				h.Write([]byte("regular\x00"))
+			}
+			writeFramed(h, content)
+		default:
+			return "", fmt.Errorf("worktree path %s is neither a regular file nor a symlink", path)
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -159,22 +239,32 @@ func Snapshot(ctx context.Context, root, baseRevision string, dirtyApproved bool
 	if err != nil {
 		return State{}, err
 	}
-	status, err := Output(ctx, root, "status", "--porcelain", "-z", "-uall")
+	// assume-unchanged and skip-worktree make git status report a changed
+	// tracked file as clean, so a snapshot cannot describe the bytes on disk
+	// while either flag is set.
+	if err := refuseHiddenIndexEntries(ctx, root); err != nil {
+		return State{}, err
+	}
+	paths, err := changedPaths(ctx, root, Trim(head))
 	if err != nil {
 		return State{}, err
 	}
-	dirty := strings.Trim(status, "\x00") != ""
+	dirty := len(paths) > 0
 	if dirty && !dirtyApproved {
 		return State{}, errors.New("dirty worktree policy violation")
 	}
-	diff, err := Output(ctx, root, "diff", "--binary", baseRevision+".."+Trim(head), "--")
+	diff, err := Output(ctx, root, "diff", "--binary", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", baseRevision+".."+Trim(head), "--")
 	if err != nil {
 		return State{}, err
 	}
 	sum := sha256.Sum256([]byte(diff))
 	s := State{Head: Trim(head), Diff: hex.EncodeToString(sum[:])}
 	if dirty {
-		s.Worktree, err = worktreeContentDigest(root, s.Head, status)
+		index, err := Output(ctx, root, "ls-files", "--stage", "-z", "--")
+		if err != nil {
+			return State{}, err
+		}
+		s.Worktree, err = worktreeContentDigest(root, s.Head, paths, stagedEntries(index, paths))
 		if err != nil {
 			return State{}, err
 		}
@@ -322,4 +412,47 @@ func hasAncestor(path string, root os.FileInfo) (bool, error) {
 		}
 		current = parent
 	}
+}
+
+// refuseHiddenIndexEntries fails when any index entry carries the
+// assume-unchanged or skip-worktree flag. `git ls-files -v` tags
+// assume-unchanged entries with a lower-case letter and skip-worktree
+// entries with S.
+func refuseHiddenIndexEntries(ctx context.Context, root string) error {
+	out, err := Output(ctx, root, "ls-files", "-v", "-z")
+	if err != nil {
+		return err
+	}
+	for _, entry := range strings.Split(out, "\x00") {
+		if entry == "" {
+			continue
+		}
+		tag := entry[0]
+		if tag == 'S' || (tag >= 'a' && tag <= 'z') {
+			return fmt.Errorf("index hides worktree changes (assume-unchanged or skip-worktree): %s", strings.TrimSpace(entry[1:]))
+		}
+	}
+	return nil
+}
+
+// stagedEntries maps each of paths to its `ls-files --stage` entries
+// ("<mode> <object> <stage>", several when unmerged), or "" when the index has
+// no entry for it.
+func stagedEntries(index string, paths []string) map[string]string {
+	want := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		want[p] = true
+	}
+	out := make(map[string]string, len(paths))
+	for _, entry := range strings.Split(index, "\x00") {
+		meta, path, ok := strings.Cut(entry, "\t")
+		if !ok || !want[path] {
+			continue
+		}
+		if out[path] != "" {
+			out[path] += ";"
+		}
+		out[path] += meta
+	}
+	return out
 }

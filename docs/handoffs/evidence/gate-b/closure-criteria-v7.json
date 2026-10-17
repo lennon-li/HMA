@@ -1,0 +1,631 @@
+{
+ "note": "Neutral closure criteria. Statuses, verdicts, diagnoses of current code, and implementer claims removed. F01-F05 come from the first blind closure review. C01-C04 come from the second blind closure review. R3-01..R3-04 come from the third blind closure review. Lennon deferred plan-derived dependent invalidation (F05, C04, R3-03) to Gate D on 2026-10-16; the conservative all-units invalidation must remain in force.",
+ "prior_finding_ids_from_2026-10-14_audit": "docs/audit-2026-10-14.md H1-H4, M1-M6, L1, L3 (read the file; its Findings table carries no fix status)",
+ "gate_a_ids": "N1, N2, M3: docs/handoffs/evidence/gate-a/audit-r1.json closure criteria only",
+ "gate_b_findings": {
+  "B1": [
+   {
+    "id": "B1",
+    "title": "A review can authorize different dirty bytes when the optional approval worktree field is absent",
+    "requirement": null,
+    "expected": "Progression must refuse B until an independent review binds the exact B worktree content. The valid A path and the optional nature of ApprovalBinding.WorktreeDigest must remain supported.",
+    "closure_check": [
+     {
+      "method": "Rerun TestBAuditReviewDirtyFullTransition and TestBAuditReviewExactArtifact. Review A, change to B, obtain an otherwise valid B approval, and require a fresh B review. Retain clean, explicitly bound dirty, and legacy optional-binding controls.",
+      "expected": "Progression must refuse B until an independent review binds the exact B worktree content. The valid A path and the optional nature of ApprovalBinding.WorktreeDigest must remain supported."
+     }
+    ]
+   }
+  ],
+  "B2": [
+   {
+    "id": "B2",
+    "title": "CI trusts Git cleanliness flags instead of the tracked bytes",
+    "requirement": null,
+    "expected": "CI must reject unapproved tracked content and must refuse to append revision-labelled evidence after a command changes that content.",
+    "closure_check": [
+     {
+      "method": "Rerun both flag cases and the truncate-command case. Add a clean full checkout and a regular dirty checkout as controls. Require unchanged store bytes on refusal.",
+      "expected": "CI must reject unapproved tracked content and must refuse to append revision-labelled evidence after a command changes that content."
+     }
+    ]
+   }
+  ],
+  "B3": [
+   {
+    "id": "B3",
+    "title": "CI checks one repository but its command inherits selectors for another repository",
+    "requirement": null,
+    "expected": "The capture command and the before/after state checks must use the same explicit repository-selection environment.",
+    "closure_check": [
+     {
+      "method": "Rerun the foreign GIT_DIR/GIT_WORK_TREE probe. Verify the captured output digest equals the approved HEAD output, or reject the selectors before execution. Preserve necessary CI settings such as approved safe.directory configuration.",
+      "expected": "The capture command and the before/after state checks must use the same explicit repository-selection environment."
+     }
+    ]
+   }
+  ],
+  "B4": [
+   {
+    "id": "B4",
+    "title": "CI ignores a populated approval worktree binding after the tree becomes clean",
+    "requirement": null,
+    "expected": "A nonempty approval worktree binding must match the actual worktree digest. A tree that has become clean must be refused against that populated binding.",
+    "closure_check": [
+     {
+      "method": "Rerun TestBAuditCIBoundWorktreeGone. The stale populated binding must refuse without mutation. A matching clean checkout with an absent binding must still pass.",
+      "expected": "A nonempty approval worktree binding must match the actual worktree digest. A tree that has become clean must be refused against that populated binding."
+     }
+    ]
+   }
+  ],
+  "B5": [
+   {
+    "id": "B5",
+    "title": "A terminal commit can occur after the host check and before an allowed dispatch append",
+    "requirement": null,
+    "expected": "An execution-authorizing host append must validate a nonterminal core snapshot and bind to that same snapshot atomically.",
+    "closure_check": [
+     {
+      "method": "Keep the deterministic interleaving test. Also cover terminal commits during decision, preflight and review import. If the terminal record commits first, the authorizing host append must refuse. All five supported terminal outcomes must still refuse in serial tests.",
+      "expected": "An execution-authorizing host append must validate a nonterminal core snapshot and bind to that same snapshot atomically."
+     }
+    ]
+   }
+  ],
+  "B6": [
+   {
+    "id": "B6",
+    "title": "Concurrent host commands can commit conflicting decisions from stale histories",
+    "requirement": null,
+    "expected": "Only one initial decision may commit. A later route change must pass the existing explicit supersession rules against the committed predecessor history.",
+    "closure_check": [
+     {
+      "method": "Run python3 /tmp/hma-gate-b-20261015/raw_concurrency.py and the deterministic barrier case. Require exactly one initial conflicting decision, or a refusal of every later unsuperseded route change. Preserve all accepted non-conflicting store appends.",
+      "expected": "Only one initial decision may commit. A later route change must pass the existing explicit supersession rules against the committed predecessor history."
+     }
+    ]
+   }
+  ],
+  "B7": [
+   {
+    "id": "B7",
+    "title": "The new host commit protocol lacks durable directory ordering",
+    "requirement": null,
+    "expected": "Acknowledged host records must remain recoverable after a storage crash. Recovery must not depend on an unsynchronized head or intent directory entry.",
+    "closure_check": [
+     {
+      "method": "Use a filesystem crash/fault model that permits loss or reordering of unsynchronized directory entries. Test first append, successor append, and interrupted recovery. Verify every acknowledged record survives and every recovered record is in the verified chain. Retain all 40 process-exit checkpoints.",
+      "expected": "Acknowledged host records must remain recoverable after a storage crash. Recovery must not depend on an unsynchronized head or intent directory entry."
+     }
+    ]
+   },
+   {
+    "id": "B7",
+    "title": "Concurrent directory initialization can acknowledge before ancestor entries are durable",
+    "requirement": "H3/B7 closure: every acknowledged host record remains recoverable after a storage crash, including first append and concurrent writers.",
+    "expected": "Every writer must establish durable ancestry to a known durable store boundary before acknowledging a record. Observing a directory exists is insufficient.",
+    "closure_check": [
+     {
+      "method": "Rerun both deterministic mkdir interleavings and add different-run writers, interrupted initialization, and fsync-failure controls.",
+      "expected": "No follower acknowledges before durable ancestry is established. Fsync failure returns an error and never acknowledges the record."
+     },
+     {
+      "method": "Retain all 40 original and 55 expanded crash checkpoints, plus a directory-entry fault model.",
+      "expected": "Each acknowledged record survives every supported crash image. Interrupted attempts recover one valid prefix. Unexplained head drift still refuses."
+     }
+    ]
+   }
+  ],
+  "B8": [
+   {
+    "id": "B8",
+    "title": "Rule selection still chooses weaker constraints among rules with the same risk threshold",
+    "requirement": null,
+    "expected": "Caller rule selection must not weaken the effective strictest applicable policy constraints.",
+    "closure_check": [
+     {
+      "method": "Rerun the tied-rule test and HIGH/CRITICAL low/medium-rule controls. Preserve valid separated routes. Cover stricter applicable rules whose requirements are not ordered by risk rank.",
+      "expected": "Caller rule selection must not weaken the effective strictest applicable policy constraints."
+     }
+    ]
+   }
+  ],
+  "B9": [
+   {
+    "id": "B9",
+    "title": "The synthetic approval guard accepts a seed that seedCore never creates",
+    "requirement": null,
+    "expected": "The seeding command must accept only the exact untouched seed fixture and refuse foreign record content.",
+    "closure_check": [
+     {
+      "method": "Rerun the PASSED-seed negative, marker directory/symlink/copied-marker negatives, and second-seeding refusal. Add unexpected metadata, disposition and payload fields. Preserve the fresh scratch positive.",
+      "expected": "The seeding command must accept only the exact untouched seed fixture and refuse foreign record content."
+     }
+    ]
+   }
+  ],
+  "B10": [
+   {
+    "id": "B10",
+    "title": "Dependent-unit invalidation is not available to route-approval replay",
+    "requirement": null,
+    "expected": "An approval invalidated by the existing affected-and-dependent-unit policy must not authorize new host work through route replay.",
+    "closure_check": [
+     {
+      "method": "Rerun the evaluator-to-replay discrepancy. Add real declared dependency fixtures and attempted review re-attestation after upstream rewinds. Show the actual first refusal on a full legal coding path.",
+      "expected": "An approval invalidated by the existing affected-and-dependent-unit policy must not authorize new host work through route replay."
+     }
+    ]
+   },
+   {
+    "id": "B10",
+    "title": "A dependent-unit route still authorizes new work after an upstream Planning rewind",
+    "requirement": "Gate B explicitly includes invalidation and host dispatch/review legality. The original B10 closure requires an approval invalidated by affected-and-dependent policy to stop authorizing host work. Gate A v3 \u00a72.3 requires plan-derived dependents and fail-closed behavior when the plan cannot be validated.",
+    "expected": "The old dependent route must refuse before authorizing new work. A missing validated dependency graph must fail closed.",
+    "closure_check": [
+     {
+      "method": "Enable the skipped dependent test and rerun the evaluator discrepancy plus the full CLI fixture with review re-attestation.",
+      "expected": "The old dependent route refuses before START_WORKER. Fresh review import does not revive invalidated authority."
+     },
+     {
+      "method": "Exercise missing plan, corrupt plan, transitive U2->U1->U0, independent unit, whole-run rewind, and newly approved route controls.",
+      "expected": "Missing/invalid plans refuse conservatively. Once a graph is validated, all transitive dependents refuse and an unaffected unit can be preserved. A new valid route approval can establish new authority."
+     }
+    ]
+   }
+  ],
+  "B11": [
+   {
+    "id": "B11",
+    "title": "The dirty-worktree digest omits executable mode and file type",
+    "requirement": "Architecture \u00a7\u00a76,14,16: approval and independent review must bind the exact artifact. N1 closure requires a fresh review after artifact A changes to B.",
+    "expected": "The file-mode and file-type changes must alter the live artifact identity. The old review must not authorize the new artifact.",
+    "closure_check": [
+     {
+      "method": "Rerun the unchanged, byte-change, mode-change, and symlink-change full CLI controls with optional approval binding absent and present.",
+      "expected": "Unchanged dirty A advances. Every changed artifact refuses the old review. Each distinct artifact produces a distinct digest."
+     },
+     {
+      "method": "Add tracked symlink retarget, executable-bit, deletion, and clean-checkout controls.",
+      "expected": "Each supported changed artifact has a distinct canonical identity. Clean revision capture remains compatible."
+     }
+    ]
+   },
+   {
+    "id": "B11",
+    "title": "v2 still conflates Git-distinct executable modes when group or other execute is already set",
+    "requirement": "Architecture sections 6, 14 and 16 and the N1/B11 closure checks require the independent review to bind the exact artifact, including Git-relevant mode and file type.",
+    "expected": "Adding or removing owner-execute while group/other execute is set changes artifact identity and refuses the old review until fresh review.",
+    "closure_check": [
+     {
+      "method": "Rerun TestR3FullDirtyReviewOwnerExecutable for optional binding absent and present, in both mode directions and with group/other execute controls.",
+      "expected": "Git-distinct owner-execute changes produce distinct worktree digests and old-review refusal. No Verification record is appended."
+     },
+     {
+      "method": "Persist a real v2 review at 0610 before the migration. After the migration, change to 0710 and attempt the full CLI path with otherwise valid current approval.",
+      "expected": "The stored v2 review cannot authorize current content. Fresh v3 review plus current bound approval succeeds."
+     },
+     {
+      "method": "Retain unchanged dirty, byte change, ordinary executable change, symlink type/retarget, deletion/empty, unsupported-kind and v1 expiry controls; repeat repository tests/vet/race and this read-only audit.",
+      "expected": "Valid controls pass; changed-artifact and stale-domain cases refuse without unintended core mutation."
+     }
+    ]
+   }
+  ],
+  "B12": [
+   {
+    "id": "B12",
+    "title": "core.filemode=false hides tracked owner-execute changes from review and CI snapshot identity",
+    "requirement": "docs/architecture.md sections 6, 14, 16 and 22; original B2, B11, N1 and N2 closure criteria. Project-local policy must not hide a Git-relevant owner-execute change from exact-artifact evidence or independent review.",
+    "expected": "A tracked owner-execute change cannot preserve exact-artifact authorization. Refuse an unsupported checkout policy or capture the changed mode, require fresh review/approval where applicable, and refuse misleading clean CI evidence.",
+    "closure_check": [
+     {
+      "method": "Rerun TestR4HiddenOwnerExecuteFullCLI for absent and populated optional approval binding. Keep dirty-evidence unchanged and change tracked a from 0600 to 0700 under core.filemode=false. Retain TestR4VisibleOwnerExecuteControl.",
+      "expected": "The unsupported policy refuses before authorization, or the live digest differs and the stale review refuses. No Verification record or unintended store-byte change occurs. The mode-sensitive control continues to refuse the old review."
+     },
+     {
+      "method": "Rerun TestR4CIHiddenOwnerExecute and TestR4CIHiddenOwnerExecuteMutation. Exercise clean unchanged positive controls as well.",
+      "expected": "No clean revision-labelled record is appended for an unapproved tracked owner-execute change or after chmod changes the capture checkout. Genuine clean controls still pass."
+     },
+     {
+      "method": "Rerun TestR4PreviouslyHiddenV3Review: capture a v3 review with hidden 0700 mode, change a to 0600, restore core.filemode=true, and attempt the full CLI path with otherwise valid current approval.",
+      "expected": "The old potentially incomplete v3 review cannot authorize the new artifact. Fresh post-migration review and any required current approval succeed."
+     },
+     {
+      "method": "Repeat owner-execute changes in both directions, group/other equivalence, unchanged dirty controls, byte/type/symlink/absence controls, v1/v2 expiry, original B1-B10 probes, suite/vet/race and target freeze.",
+      "expected": "All mandatory supported controls pass without widening approval semantics or weakening other gates."
+     }
+    ]
+   }
+  ],
+  "B13": [
+   {
+    "id": "B13",
+    "title": "Git text/eol normalization omits changed raw bytes from clean evidence and review identity",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Use the mixed-EOL fixtures and full review paths in change_detection_probe_test.go and r5_normalized_review_test.go. Test effective attributes from tracked, nested, info and global sources.",
+      "expected": "Either the unsupported repository is explicitly refused before capture/review progression, or changed raw bytes produce a distinct approved-dirty identity. No clean evidence append or stale-review progression is allowed. Recognize an intentional early unsupported-repository refusal as the negative-control success; current reproduction helpers initially require setup support."
+     },
+     {
+      "method": "Retain ordinary clean and unchanged dirty supported controls, optional approval-binding controls, mode/type cases, configured-filter controls and old-domain expiry.",
+      "expected": "Supported unchanged artifacts pass; changed or unsupported artifacts refuse without changing stored record/head bytes."
+     }
+    ]
+   }
+  ],
+  "B14": [
+   {
+    "id": "B14",
+    "title": "Submodule ignore policy hides changed content from CI and exact-artifact review",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Repeat local diff.ignoreSubmodules, local submodule ignore and tracked .gitmodules ignore fixtures, including pre-existing dirt and command-induced dirt. Repeat both optional-binding full review cases.",
+      "expected": "Unsupported gitlink repositories refuse before evidence or transition append. If submodules are supported instead, all nested byte/mode/type/head changes must be detected, including nested normalization/hidden-index cases."
+     },
+     {
+      "method": "Retain ordinary supported clean/dirty controls, missing/deinitialized submodule controls and base..head histories with gitlink changes.",
+      "expected": "No suppressed diff identity, no revision-labelled evidence for changed nested content, and no stale-review progression. Early explicit support-policy refusal is a successful negative, not a product regression to hide."
+     }
+    ]
+   }
+  ],
+  "B15": [
+   {
+    "id": "B15",
+    "title": "core.ignorecase hides an untracked case alias from the raw snapshot",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run TestR6CaseAliasCI for local/include/environment sources, TestR6CaseAliasMutation and TestR6CaseFullReview, with absent/present optional bindings.",
+      "expected": "New A makes Snapshot dirty; CI refuses without appending records; an old review refuses changed content. Unchanged controls still pass."
+     },
+     {
+      "method": "Run current root/symlink/linked-worktree, committed-ignore, mode and conversion controls; reconstruct an actual old v5 identity that omitted A.",
+      "expected": "Supported unchanged repositories remain usable. The old incomplete v5 identity cannot authorize either the retained or removed alias artifact."
+     }
+    ]
+   },
+   {
+    "id": "B15",
+    "title": "Old v5 case-alias review identities do not expire",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run the actual-r6 helper and all six TestR7LegacyCaseReview cases.",
+      "expected": "Both retained and removed legacy aliases refuse in both binding forms. Current unchanged controls pass."
+     },
+     {
+      "method": "Run the local/include/environment case-alias CI checks, mutation check and current full-review checks.",
+      "expected": "All alias changes are detected, and refusals preserve store bytes."
+     }
+    ]
+   }
+  ],
+  "B16": [
+   {
+    "id": "B16",
+    "title": "Raw comparison and Git enumeration can use different repository roots",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run TestR6SubdirectoryRoot and TestR6ConfiguredWorktreeRoot; inspect store bytes on refusal. Add the full-review parent mutation fixture with rejection of invalid root before any artifact can be authorized.",
+      "expected": "The mismatched root is refused before evidence capture or transition append. The current observed bypass cannot be constructed."
+     },
+     {
+      "method": "Run TestGateBR2CISymlinkAndWorktree and real top-level clean/dirty capture controls. Include legitimate core.worktree configurations whose actual root matches.",
+      "expected": "Valid root aliases and linked worktrees remain accepted. A string-spelling alias does not become an unnecessary refusal."
+     }
+    ]
+   }
+  ],
+  "B17": [
+   {
+    "id": "B17",
+    "title": "Mutable Git replacement refs preserve approval identity for different tracked bytes",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run the retained SHA-1 and SHA-256 direct probes, CI probe, command-mutation probe and both full-review binding forms.",
+      "expected": "Changed tracked bytes are dirty or refused. CI and stale-review transition append no records. Unchanged controls pass."
+     },
+     {
+      "method": "Test an evidence command that reads Git objects under a replacement configuration.",
+      "expected": "Its object view matches the bound snapshot, or capture refuses."
+     },
+     {
+      "method": "Replay pre-fix dirty and clean review identities after replacement refs are removed.",
+      "expected": "No incomplete predecessor identity authorizes a different artifact without fresh review."
+     }
+    ]
+   },
+   {
+    "id": "B17",
+    "title": "Replacement-object isolation is incomplete for capture and predecessor clean review identities",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run TestR8CaptureReplacementView with and without replacement refs, and repeat through the pilot path that shares Capture. Include inherited GIT_NO_REPLACE_OBJECTS and Git selector controls.",
+      "expected": "The ordinary Git command reads the original-object view, or capture refuses before append. The no-ref control remains accepted. Persisted evidence matches the snapshot object view."
+     },
+     {
+      "method": "Replay actual-r7 clean replacement-view reviews after removing refs and changing disk bytes. Replay correctly formed pre-fix reviews as an explicit compatibility check.",
+      "expected": "Predecessor identities refuse until a fresh independent review binds the current observation version. A fresh current unchanged review advances with valid human approval."
+     },
+     {
+      "method": "Rerun current dirty replacement mutation/full-review negatives, actual-r6 v5 alias retained/removed cases, v1-v5 dirty replay, relative/alias/mismatched-root controls and the full regression suite.",
+      "expected": "All safety negatives refuse without record changes. Current supported unchanged controls pass."
+     }
+    ]
+   }
+  ],
+  "B18": [
+   {
+    "id": "B18",
+    "title": "Top-level identity check rejects valid relative repository roots",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run TestJaxRootForms and TestR7RelativeRoot.",
+      "expected": "Absolute, relative and symlink spellings of the actual top level pass Snapshot and CI."
+     },
+     {
+      "method": "Run TestR6SubdirectoryRoot, TestR6ConfiguredWorktreeRoot and TestR6RootFullReview.",
+      "expected": "Subdirectory and foreign-root mismatches still refuse before capture or append."
+     },
+     {
+      "method": "Run linked-worktree controls; test case aliases on a case-insensitive host when available.",
+      "expected": "Valid directory aliases remain accepted without weakening the top-level requirement."
+     }
+    ]
+   }
+  ],
+  "F01": [
+   {
+    "id": "F01",
+    "title": "Staged content can change without invalidating evidence or independent review",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run TestClosureAuditorIndexMutationDuringCapture and FullArtifactMatrix/staged-index for both binding forms. Add index mode, deletion, and unmerged-stage variants, plus unchanged controls and stored v6 replay.",
+      "expected": "Changed staged artifacts refuse old reviews and command-induced index mutation before any evidence append. Unchanged supported artifacts pass. Stored incomplete identities need fresh review."
+     }
+    ]
+   }
+  ],
+  "F02": [
+   {
+    "id": "F02",
+    "title": "Host authorization and core authority do not commit atomically",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run ConcurrentRouteRevocation and TerminalAppendAtomicity. Exercise decision, preflight, dispatch, and review; unit and whole-run rewinds; all five terminal outcomes; both possible commit orders; and independent concurrent decisions.",
+      "expected": "If revocation or termination commits first, the host write refuses without adding a record or returning an execution action. If the host transaction commits first, its record binds that same core snapshot. No deadlocks or lost accepted records occur."
+     }
+    ]
+   }
+  ],
+  "F03": [
+   {
+    "id": "F03",
+    "title": "Existing unsynchronized ancestors can lose acknowledged host records",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run both durability probes. Add concurrent same-run and different-run initialization, interrupted initialization/recovery, and injected fsync failures at each ancestor. Preserve all process-exit and normal recovery controls.",
+      "expected": "Every acknowledged record survives every modeled crash image. Interrupted attempts recover one verified prefix. Fsync failures never acknowledge."
+     }
+    ]
+   }
+  ],
+  "F04": [
+   {
+    "id": "F04",
+    "title": "Historical gitlink changes can disappear from the approved diff identity",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Run HistoricalGitlinkDiff with local diff.ignoreSubmodules, submodule.<name>.ignore, and tracked .gitmodules policies. Retain current missing/deinitialized-submodule refusals and clean supported controls.",
+      "expected": "The repository is explicitly refused, or its nonempty canonical diff remains identical across ignore settings. No suppressed diff identity is accepted."
+     }
+    ]
+   }
+  ],
+  "F05": [
+   {
+    "id": "F05",
+    "title": "Dependent invalidation is conservative rather than plan-derived",
+    "requirement": null,
+    "expected": null,
+    "closure_check": [
+     {
+      "method": "Use U2->U1->U0 plus independent U3. Rewind U0; test missing/corrupt plans, review re-attestation, whole-run rewind, and a fresh approved route.",
+      "expected": "U1/U2 old authority refuses; U3 can remain valid only with a verified graph; missing/corrupt plans fail closed; a fresh human-approved route establishes new authority."
+     }
+    ]
+   }
+  ],
+  "C01": [
+   {
+    "id": "C01",
+    "title": "Uncommitted ignore rules hide changed bytes from review and capture",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "C02": [
+   {
+    "id": "C02",
+    "title": "Relative host store paths do not establish durable ancestry",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "C03": [
+   {
+    "id": "C03",
+    "title": "Review import accepts revoked route authority",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "C04": [
+   {
+    "id": "C04",
+    "title": "Dependency invalidation has no verified plan graph",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "R3-01": [
+   {
+    "id": "R3-01",
+    "title": "A committed BLOCK review can be bypassed by a concurrent coding transition",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "R3-02": [
+   {
+    "id": "R3-02",
+    "title": "Symlink store ancestry can lose an acknowledged host record",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "R3-03": [
+   {
+    "id": "R3-03",
+    "title": "Dependency graph closure remains incomplete",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "R3-04": [
+   {
+    "id": "R3-04",
+    "title": "Task 14 describes pre-fix route invalidation behavior",
+    "requirement": null,
+    "expected": null,
+    "closure_check": null
+   }
+  ],
+  "R4-01": [
+   {
+    "id": "R4-01",
+    "title": "The core lock ends before the host authorization commits",
+    "requirement": null,
+    "expected": "If core authority is withdrawn first, host adds no record and emits no execution action. If host commits first, the core contender waits until host durability is complete.; No deadlock, stale authorization, lost accepted record, or widened permission. The guarded interval includes the actual append, not only build.",
+    "closure_check": [
+     {
+      "method": "Run TestAuditorApprovedTransitionAPICommitWindow and decision/preflight/dispatch/review races with valid core API terminal/rewind inputs in both commit orders.",
+      "expected": "If core authority is withdrawn first, host adds no record and emits no execution action. If host commits first, the core contender waits until host durability is complete."
+     },
+     {
+      "method": "Repeat the BLOCK-review CLI race, independent concurrent decisions, all five terminal outcomes and normal unchanged full CLI controls.",
+      "expected": "No deadlock, stale authorization, lost accepted record, or widened permission. The guarded interval includes the actual append, not only build."
+     }
+    ]
+   }
+  ],
+  "R4-02": [
+   {
+    "id": "R4-02",
+    "title": "An intermediate symlink parent is absent from durable store ancestry",
+    "requirement": null,
+    "expected": "Every necessary parent is synced before acknowledgement. Each injected failure returns an error without acknowledgement.; Every acknowledged record remains reachable through the configured durable store identity. Unacknowledged attempts recover one verified prefix.",
+    "closure_check": [
+     {
+      "method": "Run the intermediate-symlink fixture with absolute and relative multi-hop targets, then inject failure at each collected link parent.",
+      "expected": "Every necessary parent is synced before acknowledgement. Each injected failure returns an error without acknowledgement."
+     },
+     {
+      "method": "Use a directory-entry crash model that loses any unsynchronized link or ancestor; retain first/successor/interrupted recovery and concurrent same/different-run controls.",
+      "expected": "Every acknowledged record remains reachable through the configured durable store identity. Unacknowledged attempts recover one verified prefix."
+     }
+    ]
+   }
+  ],
+  "R5-01": [
+   {
+    "id": "R5-01",
+    "title": "A symlink in a tracked path parent preserves clean evidence and old review authority",
+    "requirement": null,
+    "expected": "Snapshot refuses explicitly or identifies the changed structure. CI and old-review progression append no records and preserve store bytes.; Old incomplete identities refuse. A fresh review of a supported real-directory checkout succeeds.; Supported unchanged cases succeed. Root aliases remain supported; a root alias is distinct from a symlink replacing a tracked internal directory.",
+    "closure_check": [
+     {
+      "method": "Run TestAuditorR5TrackedDirectoryType, both TestAuditorR5CIDirectoryType cases, and FullArtifactMatrix parent-symlink with optional binding false/true.",
+      "expected": "Snapshot refuses explicitly or identifies the changed structure. CI and old-review progression append no records and preserve store bytes."
+     },
+     {
+      "method": "Review a symlink-parent observation using current v2/v7 identities, restore a real directory with equal bytes, then replay that stored review after the fix.",
+      "expected": "Old incomplete identities refuse. A fresh review of a supported real-directory checkout succeeds."
+     },
+     {
+      "method": "Retain clean/dirty, root-symlink, relative-root, linked-worktree, tracked leaf-symlink, committed-ignore and ordinary staged controls.",
+      "expected": "Supported unchanged cases succeed. Root aliases remain supported; a root alias is distinct from a symlink replacing a tracked internal directory."
+     }
+    ]
+   }
+  ],
+  "R5-02": [
+   {
+    "id": "R5-02",
+    "title": "M3 final and disputed validation closure subcheck is not demonstrated",
+    "requirement": null,
+    "expected": "Same-family routes refuse regardless of selected rule. Valid independent routes remain eligible. If the surface is unsupported, it refuses explicitly and the scope decision records that limitation.",
+    "closure_check": [
+     {
+      "method": "Exercise final and disputed contexts through their supported host/API boundary with every applicable lower-risk rule, plus a valid separated control.",
+      "expected": "Same-family routes refuse regardless of selected rule. Valid independent routes remain eligible. If the surface is unsupported, it refuses explicitly and the scope decision records that limitation."
+     }
+    ]
+   }
+  ],
+  "R6-01": [
+   {
+    "id": "R6-01",
+    "title": "Predecessor clean v2 reviews survive the tracked-parent correction",
+    "requirement": null,
+    "expected": "Both clean predecessor replay branches refuse with no core/host record or head byte changes.; Current unchanged clean and dirty controls advance; all changed artifacts and historical clean/dirty identities refuse.; All mandatory checks pass; no stale review authorizes Verification.",
+    "closure_check": [
+     {
+      "method": "Rerun TestAuditorR6FullArtifactMatrix legacy-clean-parent against a helper that preserves the predecessor v2 artifact schema. Do not recompute historical review records with the new digest function.",
+      "expected": "Both clean predecessor replay branches refuse with no core/host record or head byte changes."
+     },
+     {
+      "method": "Record a fresh review of the supported real-directory checkout and present a fresh valid human approval. Repeat dirty controls with the optional worktree field absent and populated.",
+      "expected": "Current unchanged clean and dirty controls advance; all changed artifacts and historical clean/dirty identities refuse."
+     },
+     {
+      "method": "Repeat package test, vet, race, dogfood and affected independent artifact probes on the frozen corrected target.",
+      "expected": "All mandatory checks pass; no stale review authorizes Verification."
+     }
+    ]
+   }
+  ]
+ }
+}

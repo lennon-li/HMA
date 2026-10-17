@@ -64,6 +64,10 @@ const (
 	ReasonHostHeadMismatch           = "HOST_HEAD_MISMATCH"
 	ReasonImplementationAlreadyBound = "HOST_IMPLEMENTATION_ALREADY_BOUND"
 	ReasonCoreBindingStale           = "HOST_CORE_BINDING_STALE"
+	ReasonRouteApprovalMissing       = "HOST_ROUTE_APPROVAL_MISSING"
+	ReasonRouteApprovalMismatch      = "HOST_ROUTE_APPROVAL_MISMATCH"
+	ReasonCoreRunTerminal            = "HOST_CORE_RUN_TERMINAL"
+	ReasonReviewArtifactMismatch     = "HOST_REVIEW_ARTIFACT_MISMATCH"
 )
 
 // Route is host orchestration telemetry. The portable route-policy identity
@@ -628,6 +632,26 @@ func RequireImplementation(records []Record, unitID string) (string, error) {
 		}
 	}
 	return "", errors.New(ReasonImplementationMissing)
+}
+
+// ReviewArtifactDigest is the artifact digest a review must carry to satisfy
+// the Implementation review -> Verification gate: it names the exact produced
+// head, diff, and (when bound) worktree content that the gate's approval binds,
+// so one review cannot stand for a different artifact. v2 retires v1 reviews,
+// whose clean identity could have been taken while replacement objects or
+// hidden configuration made different bytes read as clean (Gate B, B17). v3
+// retires v2 reviews, whose clean identity could have been taken while a
+// tracked directory was replaced by a symlink to identical bytes (Gate B,
+// R5-01/R6-01).
+func ReviewArtifactDigest(producedHead, diff, worktree string) string {
+	b, _ := json.Marshal(struct {
+		Schema       string `json:"schema"`
+		ProducedHead string `json:"produced_head_digest"`
+		Diff         string `json:"diff_digest"`
+		Worktree     string `json:"worktree_digest,omitempty"`
+	}{"hma.host.review-artifact/v3", producedHead, diff, worktree})
+	sum := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
 func RequireApprovedReview(records []Record, unitID string) error {

@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 )
 
@@ -183,11 +187,45 @@ func TestResolveSurfacesStaleHeadAndDiffBindings(t *testing.T) {
 
 func seedApprovedVerification(t *testing.T, dir, runID, repo, sha string) {
 	t.Helper()
+	seedApprovedVerificationAt(t, dir, runID, repo, "base-revision", sha, "diff")
+}
+
+// seedApprovedVerificationAt seeds a run in Verification whose approvals bind
+// the given base, produced head, and diff digest.
+func seedApprovedVerificationAt(t *testing.T, dir, runID, repo, base, sha, diff string) {
+	t.Helper()
 	s := store.New(dir)
-	rec := model.Record{
+	// The run must actually be in Verification: one approved transition
+	// enters it, then the pending packet for leaving it is recorded.
+	entry := model.Record{
 		Kind:     model.KindStageTransition,
 		Version:  1,
 		Metadata: model.RecordMetadata{RunID: runID, Sequence: 1, Timestamp: "2026-09-03T00:00:00Z", Actor: "lennon"},
+		Stage:    model.StageImplementationReview,
+		Control:  model.ControlApproved,
+		Approval: &model.ApprovalBinding{
+			RunID:                    runID,
+			TransitionDigest:         "transition-entry",
+			CurrentStage:             model.StageImplementationReview,
+			ProposedTargetStage:      model.StageVerification,
+			RepositoryIdentityDigest: repo,
+			BaseRevisionDigest:       base,
+			StageTimeDigest:          ":0",
+			AcceptedPlanDigest:       "plan",
+			ChallengeNonce:           "nonce-entry",
+			Approver:                 "lennon",
+			Timestamp:                "2026-09-03T00:00:00Z",
+			ProducedHeadDigest:       sha,
+			DiffDigest:               diff,
+		},
+	}
+	if err := s.Append(&entry); err != nil {
+		t.Fatal(err)
+	}
+	rec := model.Record{
+		Kind:     model.KindStageTransition,
+		Version:  1,
+		Metadata: model.RecordMetadata{RunID: runID, Sequence: 2, PredecessorHash: entry.Metadata.HeadAnchor, Timestamp: "2026-09-03T00:00:00Z", Actor: "lennon"},
 		Stage:    model.StageVerification,
 		Control:  model.ControlReadyForReview,
 		Approval: &model.ApprovalBinding{
@@ -196,14 +234,14 @@ func seedApprovedVerification(t *testing.T, dir, runID, repo, sha string) {
 			CurrentStage:             model.StageVerification,
 			ProposedTargetStage:      model.StageIndependentValidation,
 			RepositoryIdentityDigest: repo,
-			BaseRevisionDigest:       "base-revision",
+			BaseRevisionDigest:       base,
 			StageTimeDigest:          ":1",
 			AcceptedPlanDigest:       "plan",
 			ChallengeNonce:           "nonce-approval",
 			Approver:                 "lennon",
 			Timestamp:                "2026-09-03T00:00:00Z",
 			ProducedHeadDigest:       sha,
-			DiffDigest:               "diff",
+			DiffDigest:               diff,
 		},
 	}
 	if err := s.Append(&rec); err != nil {
@@ -248,8 +286,8 @@ func TestCIWritesNoEvidenceWithoutACommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("verification wrote %d extra records; want none", len(records)-1)
+	if len(records) != 2 {
+		t.Fatalf("verification wrote %d extra records; want none", len(records)-2)
 	}
 }
 
@@ -258,9 +296,9 @@ func TestCICapturesRealEvidence(t *testing.T) {
 		t.Skip("/bin/true unavailable")
 	}
 	dir := t.TempDir()
-	repoRoot := t.TempDir()
-	seedApprovedVerification(t, dir, "run", "owner/repo", "approved-sha")
-	setGitHubEnv(t, "owner/repo", "approved-sha")
+	repoRoot, base, head, diff := ciRepo(t)
+	seedApprovedVerificationAt(t, dir, "run", "owner/repo", base, head, diff)
+	setGitHubEnv(t, "owner/repo", head)
 
 	if err := runCIGithub([]string{"--store", dir, "--run_id", "run", "--repo-root", repoRoot, "--exec", "/bin/true"}); err != nil {
 		t.Fatal(err)
@@ -269,10 +307,10 @@ func TestCICapturesRealEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(records) != 2 {
-		t.Fatalf("chain holds %d records, want 2", len(records))
+	if len(records) != 3 {
+		t.Fatalf("chain holds %d records, want 3", len(records))
 	}
-	e := records[1].Evidence
+	e := records[2].Evidence
 	if e == nil {
 		t.Fatal("no evidence recorded")
 	}
@@ -364,5 +402,112 @@ func TestShowReportsTheRunStage(t *testing.T) {
 	}
 	if doc.Sequence != 1 || doc.Terminal {
 		t.Fatalf("doc = %+v", doc)
+	}
+}
+
+// ciRepo returns a Git repository with a base commit and one produced commit,
+// plus the base, head, and diff digest HMA computes for it.
+func ciRepo(t *testing.T) (root, base, head, diff string) {
+	t.Helper()
+	root = gitRepo(t)
+	gitRun := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", root, "-c", "user.email=t@example.invalid", "-c", "user.name=t"}, args...)...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if err := os.WriteFile(filepath.Join(root, "a"), []byte("one\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun("add", "a")
+	gitRun("commit", "-qm", "base")
+	base = gitRun("rev-parse", "HEAD")
+	if err := os.WriteFile(filepath.Join(root, "a"), []byte("two\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun("commit", "-qam", "produced")
+	st, err := repostate.Snapshot(context.Background(), root, base, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root, base, st.Head, st.Diff
+}
+
+func TestCIEvidenceRefusesWrongHead(t *testing.T) {
+	dir := t.TempDir()
+	_, base, head, diff := ciRepo(t)
+	seedApprovedVerificationAt(t, dir, "run", "owner/repo", base, head, diff)
+	setGitHubEnv(t, "owner/repo", head)
+	other, _, _, _ := ciRepo(t)
+	// Same content would give the same commit ids; add one more commit so
+	// the other checkout's head differs from the approved head.
+	if out, err := exec.Command("git", "-C", other, "-c", "user.email=t@example.invalid", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "extra").CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v: %s", err, out)
+	}
+	for _, root := range []string{other, t.TempDir()} {
+		if err := runCIGithub([]string{"--store", dir, "--run_id", "run", "--repo-root", root, "--exec", "/bin/true"}); err == nil {
+			t.Fatalf("captured evidence in %s, which is not the approved checkout", root)
+		}
+	}
+	if records, _ := store.New(dir).Load("run"); len(records) != 2 {
+		t.Fatalf("refusal wrote records: %d", len(records))
+	}
+}
+
+func TestCIEvidenceRefusesMutatingCommand(t *testing.T) {
+	touch, err := exec.LookPath("touch")
+	if err != nil {
+		t.Skip("touch unavailable")
+	}
+	dir := t.TempDir()
+	repoRoot, base, head, diff := ciRepo(t)
+	seedApprovedVerificationAt(t, dir, "run", "owner/repo", base, head, diff)
+	setGitHubEnv(t, "owner/repo", head)
+	if err := runCIGithub([]string{"--store", dir, "--run_id", "run", "--repo-root", repoRoot, "--exec", touch, "--arg", "new-file"}); err == nil {
+		t.Fatal("captured evidence from a command that changed the checkout")
+	}
+	if records, _ := store.New(dir).Load("run"); len(records) != 2 {
+		t.Fatalf("refusal wrote records: %d", len(records))
+	}
+}
+
+func TestCIEvidenceRefusesDirtyCheckout(t *testing.T) {
+	dir := t.TempDir()
+	repoRoot, base, head, diff := ciRepo(t)
+	seedApprovedVerificationAt(t, dir, "run", "owner/repo", base, head, diff)
+	setGitHubEnv(t, "owner/repo", head)
+	if err := os.WriteFile(filepath.Join(repoRoot, "a"), []byte("unapproved\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runCIGithub([]string{"--store", dir, "--run_id", "run", "--repo-root", repoRoot, "--exec", "/bin/true"}); err == nil {
+		t.Fatal("captured evidence from a dirty checkout")
+	}
+}
+
+// A record without a stage (here a criterion snapshot) after the packet must
+// not change the stage CI verifies against: the stage is projected (H1).
+func TestCIUsesProjectedStageNotLastRecord(t *testing.T) {
+	dir := t.TempDir()
+	seedApprovedVerification(t, dir, "run", "owner/repo", "approved-sha")
+	s := store.New(dir)
+	prior, err := s.Load("run")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := model.Record{
+		Kind:     model.KindCriterion,
+		Version:  1,
+		Metadata: model.RecordMetadata{RunID: "run", Sequence: int64(len(prior) + 1), PredecessorHash: prior[len(prior)-1].Metadata.HeadAnchor, Timestamp: "2026-09-03T00:00:00Z", Actor: "host"},
+		Criteria: []model.Criterion{{ID: "C1", Disposition: model.CriterionPending}},
+	}
+	if err := s.Append(&rec); err != nil {
+		t.Fatal(err)
+	}
+	setGitHubEnv(t, "owner/repo", "approved-sha")
+	if err := runCIGithub([]string{"--store", dir, "--run_id", "run", "--verify-only"}); err != nil {
+		t.Fatalf("verify-only after a stageless record: %v", err)
 	}
 }
