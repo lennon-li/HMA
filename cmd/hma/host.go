@@ -312,7 +312,7 @@ func runHostShow(args []string) error {
 
 func runHost(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|show] ...")
+		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|attempt|show] ...")
 	}
 	switch args[0] {
 	case "decision":
@@ -329,6 +329,8 @@ func runHost(args []string) error {
 		return runHostReviewImport(args[1:])
 	case "findings-import":
 		return runHostFindingsImport(args[1:])
+	case "attempt":
+		return runHostAttempt(args[1:])
 	case "bind-repository":
 		return runHostBindRepository(args[1:])
 	case "loop-evidence":
@@ -336,7 +338,7 @@ func runHost(args []string) error {
 	case "show":
 		return runHostShow(args[1:])
 	default:
-		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|show] ...")
+		return errors.New("usage: hma host [decision|preflight|dispatch|review|review-packet|review-import|findings-import|loop-evidence|bind-repository|attempt|show] ...")
 	}
 }
 

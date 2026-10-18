@@ -1,0 +1,629 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d3j",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "main@0d90eed831741db297c220ee83f123e2554e06a0+diff-sha256:70b827844a42b0d90e6d0a7a6984f8ef73e2798e8f7de69d12a6d2c59828e072+FREEZE.json:untracked_sha256",
+  "isolation": "isolated",
+  "verdict": "fix-required",
+  "requested_verdict": "FAIL",
+  "verdict_mapping": "FAIL is the user-facing encoding of report-contract fix-required; these encode one decision.",
+  "requirements": [
+    {
+      "id": "D3-01",
+      "requirement": "Replay precedes admission, lease validity and capacity checks; identical key/digest preserves reservation and charge; changed digest conflicts.",
+      "source": "v4 \u00a73.1; v6 \u00a73",
+      "d3_status": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "E-TEST",
+        "independent-complete.log:118",
+        "cmd/hma/attempt.go:216"
+      ],
+      "observation": "Stable key and digest replay one reservation. Exhausted capacity does not block replay. Altered valid requests conflict."
+    },
+    {
+      "id": "D3-02",
+      "requirement": "First controller admission binds envelope and controller state; active lease, exact route, stop escalation and envelope ceilings <= remaining attempts, minutes and spend. Admission consumes nothing.",
+      "source": "v3 \u00a73.1; v4 \u00a73.2 and \u00a74",
+      "d3_status": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-complete.log:110",
+        "D3J-01",
+        "D3J-02",
+        "D3J-04"
+      ],
+      "observation": "Attempt, time and spend admission ceilings reject without records. Admission consumes nothing. Current-time and baseline/namespace binding have reproduced gaps."
+    },
+    {
+      "id": "D3-03",
+      "requirement": "Each new attempt requires matching admission, active lease and >=1 capacity; one durable reservation charge; no rechecking full envelope ceiling after admission.",
+      "source": "v4 \u00a73.3",
+      "d3_status": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-complete.log:68",
+        "D3J-01"
+      ],
+      "observation": "One append charges consumption. Later attempts do not recheck the full envelope. A caller delayed on a lock can consume after lease expiry."
+    },
+    {
+      "id": "D3-04",
+      "requirement": "Unknown/unlaunched reservations remain charged; totals survive rewind and lease renewal.",
+      "source": "v3 \u00a73.2; v4 \u00a73.4",
+      "d3_status": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "E-TEST",
+        "independent-complete.log:118",
+        "cmd/hma/gated_attempt_test.go:276"
+      ],
+      "observation": "Unknown or unused reservations remain charged. Counters sum every unit reservation across lease generations. Rewind/renewal tests retain spent capacity."
+    },
+    {
+      "id": "D3-05",
+      "requirement": "A repeated material failure signature twice stops further attempts; route cannot change; non-stop escalation is refused.",
+      "source": "v3 \u00a73.1; architecture \u00a717",
+      "d3_status": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "E-TEST",
+        "D3J-03"
+      ],
+      "observation": "Wrong worker/model/effort and non-stop escalation are refused. Same-controller repeated signature is refused. New controller bypasses the unit failure guard."
+    },
+    {
+      "id": "D3-06",
+      "requirement": "Last-slot replay remains eligible only for current active lease and unused dispatch ID; used/expired/revoked/old-generation reservation remains counted and ineligible. Capacity is not rechecked on replay.",
+      "source": "v5 \u00a72; v6 \u00a72-\u00a73",
+      "d3_status": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-complete.log:88",
+        "independent-complete.log:118",
+        "D3J-01",
+        "D3J-02"
+      ],
+      "observation": "Normal final-slot replay, used-slot, exact-expiry and old-generation cases pass. Delayed-time and wrong-namespace cases can return true when they should not."
+    },
+    {
+      "id": "D3-07",
+      "requirement": "Atomic per-run serialization prevents two callers from sharing last capacity or duplicating charge on same key.",
+      "source": "v3 \u00a73.2; v4 \u00a73",
+      "d3_status": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "independent-complete.log:73",
+        "independent-complete.log:78",
+        "E-RACE"
+      ],
+      "observation": "Two distinct controllers competing for one remaining attempt produce one winner. Eight identical concurrent callers share one reservation and one charge. No data-race warning appeared."
+    },
+    {
+      "id": "D3-08",
+      "requirement": "Hook request is bound to controller state, envelope, store, HMA run/unit, live root, baseline and namespace; conflicts refuse. Exact route includes profile/provider/model/effort/access.",
+      "source": "v3 \u00a73.1-\u00a73.2; v4 \u00a74; verify-loop authority_request/invoke_authority_hook/authorize_launch",
+      "d3_status": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-complete.log:57",
+        "D3J-02",
+        "D3J-04"
+      ],
+      "observation": "Controller ID, envelope digest, store, HMA run/unit and root mismatches reject without charge. Baseline digest and namespace do not bind to controller state as required."
+    },
+    {
+      "id": "D3-09",
+      "requirement": "D5 endpoint tests prove launch requires launch_eligible true and resume preserves dispatch ID through the real HMA endpoint.",
+      "source": "Gate C scope \u00a70.1 rows 1,2,5; v6 \u00a75",
+      "d3_status": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "E-TEST",
+        "E-D5",
+        "independent-complete.log:95"
+      ],
+      "observation": "The existing D5 tests passed against a freshly built HMA binary. An independent adapter reproduction used actual authority_request, authorize_launch and invoke_authority_hook; resume reused the reservation and a used slot was refused."
+    },
+    {
+      "id": "D3-10",
+      "requirement": "No D1/D2, Gate B or Gate C regressions; D3 claims no D4 reconciliation/import generation/valid_until or D5 criterion/findings closure.",
+      "source": "Original objective Gate D; user scope",
+      "d3_status": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "E-TEST",
+        "E-VET",
+        "E-RACE",
+        "docs/handoffs/2026-10-17-gate-d-d3.md:8",
+        "END_FREEZE.json"
+      ],
+      "observation": "All 12 packages pass normal and race suites. Vet passes. D1/D2, Gate B and Gate C regression suites are included. After Phase 1 freeze, handoff inspection found explicit D4/D5 deferrals and no out-of-scope closure claim."
+    }
+  ],
+  "findings": [
+    {
+      "id": "D3J-01",
+      "title": "Lease time is sampled before waiting for both run locks",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "attemptOnce captures now before host and core lock acquisition. Lock wait can carry that stale value past the lease and preflight expiry. Consumption and replay use the stale value for authority and record time.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:202; cmd/hma/attempt.go:204; cmd/hma/attempt.go:205; cmd/hma/attempt.go:306",
+          "observation": "attemptOnce captures now before host and core lock acquisition. Lock wait can carry that stale value past the lease and preflight expiry. Consumption and replay use the stale value for authority and record time."
+        },
+        {
+          "source": "independent-complete.log:30",
+          "observation": "The hook returned launch_eligible=true with a trusted test clock at 02:32:05Z and valid_until at 02:31:05Z. The test held the real host lock, started consumption, observed the pre-lock clock read, advanced the injected clock beyond expiry, and released the lock. This is a deterministic simulated clock advance, not a one-hour real-time wait."
+        },
+        {
+          "source": "audit_d3_test.go::TestAuditD3ClockMustBeReadInsideLocks",
+          "observation": "Auditor-authored acceptance assertion failed against the frozen source through an external Go overlay."
+        }
+      ],
+      "fix": {
+        "action": "Read the host clock after both locks are acquired. Refresh launch eligibility before returning an affirmative response after a durable commit; preserve the charge if the lease expires during commit.",
+        "why": "Authority must use current time at the decision. A waiting caller cannot retain an expired lease.",
+        "verification": [
+          {
+            "method": "Run the clock-wait reproduction for new consumption and replay, and a control whose clock remains within validity.",
+            "expected": "Expired callers never receive launch_eligible=true. A committed reservation remains counted. In-window control remains eligible."
+          }
+        ],
+        "alternative": "Use a bounded lock acquisition deadline tied to lease expiry, plus a final current-time eligibility check.",
+        "tradeoffs": "A successful reservation can become ineligible before response. This is conservative and must not refund or cancel it.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "P1",
+      "fix_status": "proposed"
+    },
+    {
+      "id": "D3J-02",
+      "title": "An unchecked namespace lets replay miss an existing dispatch",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "parseAttemptRequest selects state.json from the namespace parent but never verifies the namespace child is the controller-defined dispatch-ledger. Admission freezes the unchecked string. replayResult then tests that unchecked path for prior use.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:172; cmd/hma/attempt.go:186; cmd/hma/attempt.go:281; cmd/hma/attempt.go:334",
+          "observation": "parseAttemptRequest selects state.json from the namespace parent but never verifies the namespace child is the controller-defined dispatch-ledger. Admission freezes the unchecked string. replayResult then tests that unchecked path for prior use."
+        },
+        {
+          "source": "independent-complete.log:18",
+          "observation": "A request used <controller>/wrong-ledger while the real layout is <controller>/dispatch-ledger. Admission succeeded. After creating the dispatch under the real namespace/runs/ID, replay still returned launch_eligible=true with one charged reservation."
+        },
+        {
+          "source": "audit_d3_test.go::TestAuditD3NamespaceMustMatchControllerLayout",
+          "observation": "Auditor-authored acceptance assertion failed against the frozen source through an external Go overlay."
+        }
+      ],
+      "fix": {
+        "action": "Derive the canonical ledger namespace from the loaded controller-state directory and require the request namespace to match it. Persist and use the derived namespace for admission and replay.",
+        "why": "verify-loop authority_request and authorize_launch use state_path.parent/dispatch-ledger. Replay must inspect that same ledger.",
+        "verification": [
+          {
+            "method": "Run the wrong-namespace reproduction, a canonical namespace control, a used-slot control, and symlink/path-alias cases under the declared path policy.",
+            "expected": "Wrong namespace is refused before authority records are appended. A used dispatch in the derived namespace is ineligible."
+          }
+        ],
+        "alternative": "Accept an explicitly supplied controller state path through trusted hook configuration and derive the namespace from that path.",
+        "tradeoffs": "Keep valid path aliases only if the host defines their canonical equivalence. This finding does not assert D4 reconciliation is implemented or required here.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "P1",
+      "fix_status": "proposed"
+    },
+    {
+      "id": "D3J-03",
+      "title": "A new controller run resets the repeated-failure guard",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The signature lookup filters by ControllerRunID. Architecture \u00a717 and the approved design apply the material-failure stopping rule to the plan unit. Starting another controller changes no unit failure evidence or approval.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:289; cmd/hma/attempt.go:291",
+          "observation": "The signature lookup filters by ControllerRunID. Architecture \u00a717 and the approved design apply the material-failure stopping rule to the plan unit. Starting another controller changes no unit failure evidence or approval."
+        },
+        {
+          "source": "independent-complete.log:24",
+          "observation": "One unit obtained an initial reservation, then a reservation with material-failure-A. Another request with that signature in the same controller was refused. A new controller for the same unit presented material-failure-A and received launch_eligible=true, raising reservations to three."
+        },
+        {
+          "source": "audit_d3_test.go::TestAuditD3FailureGuardSurvivesNewController",
+          "observation": "Auditor-authored acceptance assertion failed against the frozen source through an external Go overlay."
+        }
+      ],
+      "fix": {
+        "action": "Apply the repeated-material-failure guard to the unit across controller runs, using authoritative failure evidence and the approved reset/renewal policy. Do not treat a fresh controller ID as a reset.",
+        "why": "The per-unit stopping rule must survive controller restarts and new loop IDs.",
+        "verification": [
+          {
+            "method": "Run the cross-controller reproduction, same-controller refusal, a different-signature control, and another-unit control.",
+            "expected": "The same unit cannot obtain another reservation for the repeated signature. Unrelated units and a permitted distinct correction are not conflated."
+          }
+        ],
+        "alternative": "Persist a per-unit failure-evidence summary and consult it under the same locks, rather than scanning reservations.",
+        "tradeoffs": "Define any human-approved reset explicitly. Preserve monotonic counters and avoid inventing an automatic reset on a new lease.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "P1",
+      "fix_status": "proposed"
+    },
+    {
+      "id": "D3J-04",
+      "title": "The clone-baseline digest is copied without checking controller state",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "loopState reads only repo.root. parseAttemptRequest never computes the digest of repo.workspace_baseline_inventory. Admission therefore binds the caller assertion to itself, rather than binding it to the controller clone baseline.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:177; cmd/hma/attempt.go:186; cmd/hma/attempt.go:271; cmd/hma/loop.go:37",
+          "observation": "loopState reads only repo.root. parseAttemptRequest never computes the digest of repo.workspace_baseline_inventory. Admission therefore binds the caller assertion to itself, rather than binding it to the controller clone baseline."
+        },
+        {
+          "source": "independent-complete.log:10",
+          "observation": "The control populated repo.workspace_baseline_inventory and supplied its Python-canonical SHA-256; it passed. Replacing only clone_baseline_digest with forged-baseline also returned launch_eligible=true and appended one reservation."
+        },
+        {
+          "source": "audit_d3_test.go::TestAuditD3BaselineMustMatchState",
+          "observation": "Auditor-authored acceptance assertion failed against the frozen source through an external Go overlay."
+        }
+      ],
+      "fix": {
+        "action": "Decode the controller baseline inventory and compare its canonical digest with clone_baseline_digest, using the exact authority_request default and canonicalization. Refuse mismatch before admission.",
+        "why": "The v4 \u00a74 association must bind the request to the controller baseline, not merely repeat a supplied string.",
+        "verification": [
+          {
+            "method": "Run the matching/mismatching baseline controls, an empty/missing baseline case with the controller-defined default, and a changed-inventory case.",
+            "expected": "Only a digest computed from the loaded controller state is admitted; mismatch appends no admission or reservation."
+          }
+        ],
+        "alternative": "Move association derivation into a trusted controller-state loader and accept only its derived values.",
+        "tradeoffs": "This is an input-binding defect under the trusted-host model. It does not show a correct unmodified verify-loop emitting a forged baseline.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "P2",
+      "fix_status": "proposed"
+    }
+  ],
+  "limitations": [
+    "Context isolation: fresh assigned audit context, original requirements before diff, no implementer handoff read before Phase 1 freeze. Source comments and fixture helpers are naturally author-written.",
+    "Execution isolation: external source snapshot and overlays on the same trusted host. This is not a hermetic container or independent host. Tests used scratch repositories outside /home/yeli/repos.",
+    "The dispatch names jax / gpt-6.1-sol / high / review. Model, provider and effort telemetry are user-supplied route metadata, not independently attested by this audit. No worker or nested model API was dispatched.",
+    "Fixture construction helpers are reused from the candidate tests. Acceptance assertions, malformed inputs, concurrent-controller tests and clock-wait reproduction are auditor-authored.",
+    "The clock-wait finding uses an injected trusted clock and real host lock. It does not reproduce a one-hour wall-clock stall.",
+    "D4 launch reconciliation, UNAUTHORIZED_DISPATCH, revocation minima and import-generation rules are out of scope. D5 criterion credit and findings disposition are out of scope. No closure credit is awarded for them.",
+    "The original external Python boot tests were not run as an external suite. Their two D5 endpoint obligations were exercised by existing Go endpoint tests and an independent real-adapter reproduction.",
+    "No power-loss campaign or filesystem fault injection was performed. Durability depends on the existing audited transactional store, source inspection and regression tests. No universal absence-of-bugs claim is made.",
+    "Three preliminary test runs had auditor snapshot/environment errors. Their logs are retained and explicitly superseded by the corrected successful full runs.",
+    "Shell tool output was sometimes display-truncated or compressed. Complete test stdout/stderr remains in raw log files. No raw test log is truncated.",
+    "No approved Jev host tool was available. Requirement classification, sufficiency and next-step decisions used the auditor fallback. Jev was not simulated.",
+    "The untracked root hma binary was hashed but not executed or treated as a reproducible build. Endpoint tests used a binary built from the frozen source snapshot.",
+    "Exact per-command start/end timestamps were not instrumented. Raw-log modification times and report/freeze times are available, but they are not asserted to be precise command start/end times."
+  ],
+  "phase1_frozen": true,
+  "phase1_created_utc": "2026-10-18T01:34:47.945595+00:00",
+  "scope": "Gate D D3 hook and D5 endpoint obligations only",
+  "phase1_blinding": "No docs/handoffs/2026-10-17-gate-d-d3.md content read. No other /tmp/hma-gate-* or /tmp/claude-* directory inspected.",
+  "test_summary": {
+    "go_test": "12/12 packages PASS",
+    "go_vet": "PASS",
+    "go_race": "12/12 packages PASS",
+    "independent_overlay": "12 top-level auditor tests: 8 PASS, 4 FAIL; -race reports no data-race warning. Exit status 1 is expected from the four reproduced defects."
+  },
+  "evidence_inventory": [
+    "FREEZE.json",
+    "SNAPSHOT.json",
+    "SOURCES.json",
+    "REQUIREMENTS.json",
+    "COMMANDS.json",
+    "audit_d3_test.go",
+    "overlay.json",
+    "go-test-final.log",
+    "go-vet.log",
+    "go-race-final.log",
+    "independent-complete.log",
+    "independent-d5.log",
+    "PHASE1.json",
+    "PHASE1.sha256",
+    "END_FREEZE.json",
+    "ADDENDUM.md"
+  ],
+  "improvement_opportunities": [],
+  "next_action": {
+    "action": "Prepare one bounded D3 remediation dispatch packet for D3J-01 through D3J-04.",
+    "rationale": "Three observed high-severity authority defects and one observed baseline-binding defect prevent D3 acceptance.",
+    "owner": "Human-gated interactive orchestrator",
+    "route": "Packet preparation requires no worker dispatch. A later repair must use the exact human-approved implementer route and complete the required hi preflight. No eligible implementation route is inferred by this audit.",
+    "permission_envelope": "Prepare a review packet only. This audit authorizes no repository edits, git writes, worker launch or stage advance.",
+    "exact_approval_required": "No approval is needed to prepare the packet. Any later repair dispatch requires the applicable challenge-bound human approval and recorded route/permission envelope.",
+    "stop_and_escalation_conditions": "Keep D3 unaccepted. Stop if route eligibility, approval binding or scope cannot be established. Require fresh independent review of the fixed snapshot."
+  },
+  "phase1_sha256": "285ab2e12639fb51e584461007fbcfa5ac55ae98aedf3931f52180b92bddb751",
+  "finalized_utc": "2026-10-18T01:35:56.030093+00:00",
+  "controlled_unblinding": {
+    "after_phase1_sha256": "285ab2e12639fb51e584461007fbcfa5ac55ae98aedf3931f52180b92bddb751",
+    "path": "docs/handoffs/2026-10-17-gate-d-d3.md",
+    "source_sha256": "8b89666bb9a0eb44fecb98649ef5cc3a1e8d39f1e1cf80efb62fb39d67285c47",
+    "observations": [
+      "Lines 8-10 explicitly exclude D4 reconciliation/import validity, D5 criterion credit/findings/full packet, and D6. No out-of-scope closure claim was observed.",
+      "Lines 31-33 describe the failure signature as per-controller. That accurately describes the code but does not amend the authoritative per-unit \u00a717 rule.",
+      "The handoff adds no independently reproduced evidence that refutes D3J-01 through D3J-04."
+    ],
+    "effect_on_findings": "None. Findings and FAIL decision remain unchanged. D3-10 scope-claims coverage moves from unresolved to MET in this addendum only."
+  },
+  "repository_integrity": {
+    "utc": "2026-10-18T01:34:58.031522+00:00",
+    "repository_unchanged": true,
+    "checks": {
+      "head": "0d90eed831741db297c220ee83f123e2554e06a0",
+      "branch": "main",
+      "status_short": " M cmd/hma/host.go\n M internal/host/host.go\n?? .serena/\n?? cmd/hma/attempt.go\n?? cmd/hma/gated_attempt_test.go\n?? cmd/hma/gated_hook_test.go\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d3.md\n?? hma\n",
+      "git_diff_binary_sha256": "70b827844a42b0d90e6d0a7a6984f8ef73e2798e8f7de69d12a6d2c59828e072",
+      "untracked_sha256": {
+        ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+        ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+        "cmd/hma/attempt.go": "b57910cd0381e0f767407f4a0bd80dccc857159b5331f2d8b20a9a6ab2936fb2",
+        "cmd/hma/gated_attempt_test.go": "de1630c7dbdec635e3d76b1e64d8a1dec2dce7bbb0318bc628585b50dbfa9dd4",
+        "cmd/hma/gated_hook_test.go": "816ed6f2a933f1f33c367bcff0e0b4e8c7a39a9ec5bb24306299f481217d57ce",
+        "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+        "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+        "docs/handoffs/2026-10-17-gate-d-d3.md": "8b89666bb9a0eb44fecb98649ef5cc3a1e8d39f1e1cf80efb62fb39d67285c47",
+        "hma": "26e3d74708566dd73fa3200497b473a42d97781914f05ba89b67eeac9f5793d8"
+      }
+    },
+    "differences": {},
+    "snapshot_original_files_unchanged": true,
+    "snapshot_changed_files": [],
+    "phase1_digest_unchanged": true
+  },
+  "remediation_roadmap": [
+    {
+      "step": 1,
+      "action": "Prepare the bounded remediation packet; keep D3 unaccepted.",
+      "exit_criterion": "The packet binds the four findings, exact target snapshot, acceptance tests, worker route and permission envelope."
+    },
+    {
+      "step": 2,
+      "action": "After valid human authorization, fix current-time checks, derive namespace, apply the per-unit failure guard, and validate the baseline digest.",
+      "exit_criterion": "All four negative controls reject invalid authority. Valid controls still pass. Charges remain monotonic."
+    },
+    {
+      "step": 3,
+      "action": "Perform fresh independent review of the repaired fixed snapshot and repeat appropriate regressions.",
+      "exit_criterion": "All 12 auditor tests pass, full go test/vet/race pass, no unresolved blocking finding remains, and target integrity is verified."
+    }
+  ],
+  "atomic_checks": [
+    {
+      "id": "C01",
+      "requirement": "Replay first, including exhausted capacity",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:118"
+      ]
+    },
+    {
+      "id": "C02",
+      "requirement": "Same key, changed valid request digest returns HOST_RESERVATION_CONFLICT",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "cmd/hma/gated_attempt_test.go:208",
+        "go-test-final.log"
+      ]
+    },
+    {
+      "id": "C03",
+      "requirement": "First admission consumes no attempt",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "audit_d3_test.go::TestAuditD3ClockMustBeReadInsideLocks",
+        "cmd/hma/attempt.go:269"
+      ]
+    },
+    {
+      "id": "C04",
+      "requirement": "Admission caps attempts, minutes and spend to remaining lease amounts",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:110"
+      ]
+    },
+    {
+      "id": "C05",
+      "requirement": "Authority checks use current time after lock wait",
+      "d3_status": "NOT MET",
+      "evidence_refs": [
+        "D3J-01",
+        "independent-complete.log:30"
+      ]
+    },
+    {
+      "id": "C06",
+      "requirement": "Consumption requires current generation admission and counts once",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "cmd/hma/gated_attempt_test.go:276",
+        "independent-complete.log:78"
+      ]
+    },
+    {
+      "id": "C07",
+      "requirement": "Consumption does not recheck the full original envelope against decreasing remaining capacity",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:68"
+      ]
+    },
+    {
+      "id": "C08",
+      "requirement": "Unknown/unlaunched reservation remains charged",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:118"
+      ]
+    },
+    {
+      "id": "C09",
+      "requirement": "Counters carry across rewind and renewal",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "cmd/hma/gated_attempt_test.go:276",
+        "go-test-final.log"
+      ]
+    },
+    {
+      "id": "C10",
+      "requirement": "Repeated material failure cannot be bypassed by a new controller for the same unit",
+      "d3_status": "NOT MET",
+      "evidence_refs": [
+        "D3J-03",
+        "independent-complete.log:24"
+      ]
+    },
+    {
+      "id": "C11",
+      "requirement": "Different worker/model/effort route is refused and approved preflight route grant is checked",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "cmd/hma/gated_attempt_test.go:304",
+        "go-test-final.log"
+      ]
+    },
+    {
+      "id": "C12",
+      "requirement": "Envelope escalate_to must be stop",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "cmd/hma/gated_attempt_test.go:326",
+        "go-test-final.log"
+      ]
+    },
+    {
+      "id": "C13",
+      "requirement": "Final-slot lost-response replay uses same reservation without another charge",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:118"
+      ]
+    },
+    {
+      "id": "C14",
+      "requirement": "Used slot is ineligible under the validated declared namespace",
+      "d3_status": "PARTIAL",
+      "evidence_refs": [
+        "independent-complete.log:118",
+        "D3J-02"
+      ]
+    },
+    {
+      "id": "C15",
+      "requirement": "Expired, stage-revoked or old-generation slot is ineligible",
+      "d3_status": "PARTIAL",
+      "evidence_refs": [
+        "independent-complete.log:88",
+        "cmd/hma/gated_attempt_test.go:373",
+        "D3J-01"
+      ]
+    },
+    {
+      "id": "C16",
+      "requirement": "Two distinct controllers cannot both consume the last slot",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:73"
+      ]
+    },
+    {
+      "id": "C17",
+      "requirement": "Concurrent identical requests charge exactly once",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:78"
+      ]
+    },
+    {
+      "id": "C18",
+      "requirement": "Request binds controller ID, envelope digest, store, HMA run, unit and live root",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:57"
+      ]
+    },
+    {
+      "id": "C19",
+      "requirement": "Clone-baseline digest matches controller baseline inventory",
+      "d3_status": "NOT MET",
+      "evidence_refs": [
+        "D3J-04",
+        "independent-complete.log:10"
+      ]
+    },
+    {
+      "id": "C20",
+      "requirement": "Ledger namespace matches the controller-defined namespace",
+      "d3_status": "NOT MET",
+      "evidence_refs": [
+        "D3J-02",
+        "independent-complete.log:18"
+      ]
+    },
+    {
+      "id": "C21",
+      "requirement": "Real D5 endpoint requires eligibility true and preserves dispatch identity on resume",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "independent-complete.log:95",
+        "independent-d5.log"
+      ]
+    },
+    {
+      "id": "C22",
+      "requirement": "D1/D2, Gate B and Gate C regression suites pass",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "go-test-final.log",
+        "go-vet.log",
+        "go-race-final.log"
+      ]
+    },
+    {
+      "id": "C23",
+      "requirement": "No D4 or later D5 completion claim",
+      "d3_status": "MET",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-17-gate-d-d3.md:8",
+        "ADDENDUM.md"
+      ]
+    }
+  ],
+  "snapshot_exclusions": [
+    ".git/",
+    ".serena/",
+    "root hma binary",
+    "docs/handoffs/2026-10-16-arch-amendment-*.md",
+    "docs/handoffs/2026-10-17-gate-d-d3.md (withheld from snapshot for initial blinding; separately hashed and read only after Phase 1)"
+  ],
+  "tool_versions": {
+    "go": "go version go1.27.1 linux/amd64",
+    "git": "git version 2.43.0",
+    "python": "Python 3.12.3"
+  },
+  "snapshot_manifest_sha256": "6ad9a3f42895adc7cc8e1787d8b75ebc77d01d9765f3440389a2ba716c3c8c28",
+  "auditor_tests_sha256": "846be4abc7e76d1e023323c184c4f0359cc8d29dcaf5770bb0129287695e2490"
+}

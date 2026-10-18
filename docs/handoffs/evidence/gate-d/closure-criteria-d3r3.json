@@ -1,0 +1,73 @@
+{
+ "note": "Closure criteria for prior D3 findings; statuses and verdicts removed.",
+ "findings": [
+  {
+   "id": "D3J-01",
+   "title": "Lease time is sampled before waiting for both run locks",
+   "closure_check": [
+    {
+     "method": "Run the clock-wait reproduction for new consumption and replay, and a control whose clock remains within validity.",
+     "expected": "Expired callers never receive launch_eligible=true. A committed reservation remains counted. In-window control remains eligible."
+    }
+   ]
+  },
+  {
+   "id": "D3J-02",
+   "title": "An unchecked namespace lets replay miss an existing dispatch",
+   "closure_check": [
+    {
+     "method": "Run the wrong-namespace reproduction, a canonical namespace control, a used-slot control, and symlink/path-alias cases under the declared path policy.",
+     "expected": "Wrong namespace is refused before authority records are appended. A used dispatch in the derived namespace is ineligible."
+    }
+   ]
+  },
+  {
+   "id": "D3J-03",
+   "title": "A new controller run resets the repeated-failure guard",
+   "closure_check": [
+    {
+     "method": "Run the cross-controller reproduction, same-controller refusal, a different-signature control, and another-unit control.",
+     "expected": "The same unit cannot obtain another reservation for the repeated signature. Unrelated units and a permitted distinct correction are not conflated."
+    }
+   ]
+  },
+  {
+   "id": "D3J-04",
+   "title": "The clone-baseline digest is copied without checking controller state",
+   "closure_check": [
+    {
+     "method": "Run the matching/mismatching baseline controls, an empty/missing baseline case with the controller-defined default, and a changed-inventory case.",
+     "expected": "Only a digest computed from the loaded controller state is admitted; mismatch appends no admission or reservation."
+    }
+   ]
+  },
+  {
+   "id": "D3R2-01",
+   "title": "New reservations do not bind the current attempt or failure signature to controller state",
+   "closure_check": [
+    {
+     "method": "Run TestAuditCurrentAttemptStateBinding and TestAuditRepeatedFailureOmittedAgainstState against the revised endpoint.",
+     "expected": "Every contradiction refuses without a new reservation. The repeated material signature remains refused when omitted on the wire."
+    },
+    {
+     "method": "Run the real-controller boundary, historical replay, resume, admission and last-slot tests with real pending-attempt fixtures.",
+     "expected": "Valid saved requests and historical idempotent replays retain their specified behavior."
+    }
+   ]
+  },
+  {
+   "id": "D3R2-02",
+   "title": "First consumption grants an already used dispatch ID",
+   "closure_check": [
+    {
+     "method": "Run TestAuditFreshRequestForUsedDispatch with a directory, file and symlink at runs/<id>, plus an absent-path positive control.",
+     "expected": "Existing or unreadable paths grant no launch; an absent path can grant exactly one charged reservation."
+    },
+    {
+     "method": "Re-run final-slot, replay, unknown-launch and charge-conservation tests.",
+     "expected": "No cancellation or charge deletion is introduced; unused reservations remain recoverable."
+    }
+   ]
+  }
+ ]
+}

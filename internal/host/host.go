@@ -35,6 +35,13 @@ const (
 	// root and identity the run works on. Review packets and loop evidence
 	// must name it; it is never taken from a packet or a journal.
 	KindRepositoryBinding RecordKind = "repository_binding"
+	// KindLoopAdmission admits one HMA-bound verify-loop controller run to
+	// a unit's lease (Gate A v4 §3 step 2). It consumes nothing.
+	KindLoopAdmission RecordKind = "loop_admission"
+	// KindReservation charges one implementation attempt against a unit's
+	// lease before launch (Gate A v4 §3 step 3). It stays charged whether or
+	// not the launch happens.
+	KindReservation RecordKind = "reservation"
 
 	DecisionDelegate            DecisionMode = "DELEGATE"
 	DecisionDirectCostException DecisionMode = "DIRECT_COST_EXCEPTION"
@@ -86,6 +93,12 @@ const (
 	ReasonReviewIsolationInsufficient = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
 	ReasonFindingsSnapshotMissing     = "HOST_FINDINGS_SNAPSHOT_MISSING"
 	ReasonReviewTargetChanged         = "HOST_REVIEW_TARGET_CHANGED"
+	ReasonReservationConflict         = "HOST_RESERVATION_CONFLICT"
+	ReasonLeaseInactive               = "HOST_LEASE_INACTIVE"
+	ReasonAdmissionRefused            = "HOST_LOOP_ADMISSION_REFUSED"
+	ReasonAttemptRouteMismatch        = "HOST_ATTEMPT_ROUTE_MISMATCH"
+	ReasonRepeatedFailure             = "HOST_REPEATED_FAILURE_SIGNATURE"
+	ReasonAttemptInvalid              = "HOST_ATTEMPT_INVALID"
 	ReasonRepositoryBindingMissing    = "HOST_REPOSITORY_BINDING_MISSING"
 	ReasonRepositoryBindingExists     = "HOST_REPOSITORY_BINDING_EXISTS"
 	ReasonRepositoryMismatch          = "HOST_REPOSITORY_MISMATCH"
@@ -226,6 +239,48 @@ type Record struct {
 	Review          *IndependentReview     `json:"review,omitempty"`
 	LoopEvidence    *LoopEvidence          `json:"loop_evidence,omitempty"`
 	Repository      *RepositoryBinding     `json:"repository_binding,omitempty"`
+	Admission       *LoopAdmission         `json:"loop_admission,omitempty"`
+	Reservation     *Reservation           `json:"reservation,omitempty"`
+}
+
+// LeaseGeneration identifies one lease: its issuing core approval record.
+type LeaseGeneration struct {
+	IssuerSequence   int64  `json:"issuer_sequence"`
+	IssuerHeadAnchor string `json:"issuer_head_anchor"`
+	LeaseDigest      string `json:"lease_digest"`
+}
+
+// LoopAdmission binds a verify-loop controller run, its envelope, and its
+// association (live root, clone baseline, ledger namespace) to a unit's
+// lease generation.
+type LoopAdmission struct {
+	UnitID              string          `json:"unit_id"`
+	ControllerRunID     string          `json:"controller_run_id"`
+	EnvelopeSHA256      string          `json:"envelope_sha256"`
+	LiveRoot            string          `json:"live_root"`
+	CloneBaselineDigest string          `json:"clone_baseline_digest"`
+	LedgerNamespace     string          `json:"ledger_namespace"`
+	Generation          LeaseGeneration `json:"generation"`
+}
+
+// Reservation is one charged implementation attempt. Its key is
+// (controller_run_id, attempt_index, dispatch_run_id); RequestSHA256 is the
+// canonical digest of the hook request. ValidFrom is the record time and
+// ValidUntil the lease end at reservation time; launches are authorized only
+// in [valid_from, valid_until) and only in this generation.
+type Reservation struct {
+	UnitID           string          `json:"unit_id"`
+	ControllerRunID  string          `json:"controller_run_id"`
+	AttemptIndex     int             `json:"attempt_index"`
+	DispatchRunID    string          `json:"dispatch_run_id"`
+	RequestSHA256    string          `json:"request_sha256"`
+	AdmissionRecord  string          `json:"admission_record"`
+	RouteIdentity    string          `json:"route_identity"`
+	FailureSignature string          `json:"failure_signature,omitempty"`
+	Cost             int64           `json:"cost"`
+	ValidFrom        string          `json:"valid_from"`
+	ValidUntil       string          `json:"valid_until"`
+	Generation       LeaseGeneration `json:"generation"`
 }
 
 // RepositoryBinding is the run's one repository: its canonical root (symlinks
@@ -604,6 +659,12 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	if r.Repository != nil {
 		set++
 	}
+	if r.Admission != nil {
+		set++
+	}
+	if r.Reservation != nil {
+		set++
+	}
 	if set != 1 {
 		return errors.New(ReasonInvalidHostRecord)
 	}
@@ -631,6 +692,19 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	case KindLoopEvidence:
 		l := r.LoopEvidence
 		if l == nil || l.UnitID == "" || l.ControllerRunID == "" || l.EnvelopeSHA256 == "" || l.StateSHA256 == "" || l.RecaptureRecord == "" || l.RecaptureArgvSHA256 == "" {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindLoopAdmission:
+		a := r.Admission
+		if a == nil || a.UnitID == "" || a.ControllerRunID == "" || a.EnvelopeSHA256 == "" || a.LiveRoot == "" || a.LedgerNamespace == "" || a.Generation.IssuerHeadAnchor == "" {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindReservation:
+		v := r.Reservation
+		if v == nil || v.UnitID == "" || v.ControllerRunID == "" || v.AttemptIndex < 1 || v.DispatchRunID == "" || v.RequestSHA256 == "" ||
+			v.AdmissionRecord == "" || v.RouteIdentity == "" || v.Cost < 0 || v.ValidFrom == "" || v.ValidUntil == "" || v.Generation.IssuerHeadAnchor == "" {
 			return errors.New(ReasonInvalidHostRecord)
 		}
 		return nil

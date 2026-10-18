@@ -1,0 +1,731 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d3r3",
+  "phase": "final-after-controlled-unblinding",
+  "frozen_at_utc": "2026-10-18T02:18:43.192240+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "main@0d90eed831741db297c220ee83f123e2554e06a0 + diff sha256:70b827844a42b0d90e6d0a7a6984f8ef73e2798e8f7de69d12a6d2c59828e072 + freeze-start.json untracked digests",
+  "isolation": "isolated",
+  "isolation_details": "Fresh supplied auditor context. No implementer conversation or prior audit files read. Instruction-enforced read-only repository use; shared filesystem and write-capable host sandbox. Tests use /tmp fixtures and Go overlays. No nested agent, worker, CLI model, or model API. No route preflight needed because no dispatch. Declared jax review role is supplied dispatch metadata; actual backend model/effort is not independently attested.",
+  "verdict": "pass",
+  "decision": "PASS",
+  "phase1_frozen": true,
+  "requirements": [
+    {
+      "id": "D3-01",
+      "requirement": "Replay identical triple and request digest first; return unchanged reservation without recharging even inactive or exhausted. Conflict on changed digest.",
+      "source": "v4 \u00a73.1; v6 \u00a73",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged",
+        "auditor-tests.log:TestAuditorReplayConflictAndRevocation",
+        "mutant-replay-conflict.log",
+        "cmd/hma/attempt.go:282-299"
+      ]
+    },
+    {
+      "id": "D3-02",
+      "requirement": "First controller admission binds envelope and exact route; requires active lease, stop escalation, ceilings within remaining attempts/time/spend; no consumption on admission.",
+      "source": "v4 \u00a73.2",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionNegativeControls",
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged",
+        "cmd/hma/attempt.go:329-356"
+      ]
+    },
+    {
+      "id": "D3-03",
+      "requirement": "Each fresh reservation requires matching admission, active lease, capacity, allowed failure signature; exactly one durable charge under per-run lock. Unknown/unlaunched reservations stay charged.",
+      "source": "v3 \u00a73.2; v4 \u00a73.3-4",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "fresh-denials.log:TestFinalFreshConsumptionAfterRevocation",
+        "auditor-tests.log:TestAuditorFailurePersistsAcrossController",
+        "auditor-tests.log:TestAuditorCostMonotonicAndCeiling",
+        "write-cut.log",
+        "mutant-lost-charge.log",
+        "cmd/hma/attempt.go:357-392"
+      ]
+    },
+    {
+      "id": "D3-04",
+      "requirement": "Counters remain monotonic across rewind and new leases. Concurrent callers cannot share last slot.",
+      "source": "v3 \u00a73.2.5-6",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorConcurrentLastSlot",
+        "auditor-tests.log:TestAuditorReplayConflictAndRevocation",
+        "auditor-race.log",
+        "cmd/hma/attempt.go:462-471"
+      ]
+    },
+    {
+      "id": "D3-05",
+      "requirement": "Replay eligibility requires live lease by time/stage/policy/contract and unused dispatch ID; capacity not rechecked. Old generations cannot revive slots.",
+      "source": "v5 \u00a72; v6 \u00a73",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorExpiredReplayAndLastSlot",
+        "auditor-tests.log:TestAuditorUsedAndUnreadableLedgerRefused",
+        "auditor-tests.log:TestAuditorReplayDeniesChangedDocumentsAndStage",
+        "mutant-used-ledger.log",
+        "cmd/hma/attempt.go:399-425"
+      ]
+    },
+    {
+      "id": "D3-06",
+      "requirement": "Bind hook request to authoritative controller state, actual envelope, HMA store/run/unit, root, baseline, ledger namespace and exact route. Refuse wrong route and non-stop escalation.",
+      "source": "v3 \u00a73.1-3.2; v4 \u00a74; v6 \u00a75; verify-loop authority_request/invoke_authority_hook/authorize_launch",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorRequestBindingNegativeControls",
+        "auditor-tests.log:TestAuditorAdmissionNegativeControls",
+        "cmd/hma/attempt.go:163-258",
+        "cmd/hma/attempt.go:432-457"
+      ]
+    },
+    {
+      "id": "D3-07",
+      "requirement": "Endpoint works with verify-loop contract, launch needs literal eligible true, resume reuses dispatch ID and charges once.",
+      "source": "Gate C scope \u00a70.1 rows 1,2,5",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorActualControllerAuthorityContract",
+        "go-test.log",
+        "cmd/hma/gated_hook_test.go:65-101"
+      ]
+    },
+    {
+      "id": "D3-08",
+      "requirement": "No regression of D1/D2 lease/counter safety, Gate B kernel/approval safety, Gate C evidence integration. Do not claim deferred D4 reconciliation or D5 credit/disposition.",
+      "source": "Original objective Gate D; user scope; architecture \u00a7\u00a714,17,18",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "go-test.log",
+        "go-vet.log",
+        "go-race.log",
+        "tracked-working-tree.patch",
+        "requirements-derived.json"
+      ]
+    }
+  ],
+  "findings": [],
+  "improvement_opportunities": [],
+  "limitations": [
+    "No approved Jev tool exposed; auditor decision path used.",
+    "No power-loss, kernel-fault, or real process-kill experiment. Deterministic error injection tests cover before/after durable reservation record writes.",
+    "Auditor tests reuse existing accepted core and repository fixture constructors, then supply independent assertions and inputs.",
+    "Endpoint tests import only the specified verify-loop contract functions. Full external worker dispatch is not run.",
+    "D4 launch reconciliation, UNAUTHORIZED_DISPATCH, revocation minima, and import generation rules are excluded. D5 criterion credit and findings disposition are excluded.",
+    "Existing untracked hma binary hashed and build metadata inspected; endpoint runtime tests build fresh binaries.",
+    "Dirty working tree evidence applies to this frozen snapshot, not a committed revision alone. No hostile host protection is claimed.",
+    "One initial auditor integration assertion used an incorrect literal error string. It was corrected; initial logs are retained. No product defect was involved.",
+    "Terminal output may be compressed by host rendering. Complete test outputs are retained in audit-local raw logs.",
+    "The read-only permission envelope was followed as an instruction. The shared host sandbox technically permits repository writes; no OS-enforced read-only mount is claimed.",
+    "Context isolation means the fresh supplied audit context and blinded Phase 1. A separate OS process, backend model identity, or independently attested session origin is not claimed.",
+    "The initial failed ordinary integration log is retained as initial-auditor-tests.log. The corresponding initial race-failure log was overwritten by the final successful run. This is an evidence-retention omission; its exit 1 was observed. The wrong expected error text was corrected only in the auditor test.",
+    "The other-unit repeated-failure control injects a structurally valid host record. It does not execute an accepted two-unit plan.",
+    "No successful review import, criterion credit, worker launch reconciliation, or complete verify-loop worker execution is inferred from authority-hook acceptance."
+  ],
+  "checks": [
+    {
+      "name": "go-test",
+      "argv": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "cwd": "/home/yeli/repos/HMA",
+      "exit": 0,
+      "elapsed_seconds": 90.60057282447815,
+      "log": "go-test.log"
+    },
+    {
+      "name": "go-vet",
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/home/yeli/repos/HMA",
+      "exit": 0,
+      "elapsed_seconds": 1.8192951679229736,
+      "log": "go-vet.log"
+    },
+    {
+      "name": "go-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./..."
+      ],
+      "cwd": "/home/yeli/repos/HMA",
+      "exit": 0,
+      "elapsed_seconds": 127.60525965690613,
+      "log": "go-race.log"
+    },
+    {
+      "name": "auditor-tests",
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay.json",
+        "-run",
+        "^TestAuditor",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 14.43780779838562,
+      "log": "auditor-tests.log",
+      "log_sha256": "6f40cd3d6157ffc4cfccd81cda86252f28135baffa8af6af43514a65380178b7"
+    },
+    {
+      "name": "auditor-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay.json",
+        "-run",
+        "^TestAuditor",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 21.186956644058228,
+      "log": "auditor-race.log",
+      "log_sha256": "a89e364fb63de1f075cc140a64e5e77a979b74441a7b795e9e2f52085980a435"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-write-cut.json",
+        "-run",
+        "^TestAuditorReservationWriteCutRecovery$",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.5848681926727295,
+      "log": "write-cut.log",
+      "fault_model": "deterministic error at commit cutpoint; not power loss or process kill"
+    },
+    {
+      "name": "closure-tests",
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-closure.json",
+        "-run",
+        "^TestClosure",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 12.49898362159729,
+      "log": "closure-tests.log",
+      "log_sha256": "14da5818941859159602c92efab540135895c5c826cf3cd1517aacebda32cf4b"
+    },
+    {
+      "name": "closure-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-closure.json",
+        "-run",
+        "^TestClosure",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 19.088122367858887,
+      "log": "closure-race.log",
+      "log_sha256": "b5de861c908461d1fd8adb3d97c777aac76498fa0cf1ecaf34e12030abb4a51b"
+    },
+    {
+      "name": "fresh-denials",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-fresh-denials.json",
+        "-run",
+        "^TestFinalFreshConsumptionAfterRevocation$",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 7.256189346313477,
+      "log": "fresh-denials.log"
+    }
+  ],
+  "negative_controls": [
+    {
+      "mutation": "used-ledger",
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-used-ledger.json",
+        "-run",
+        "^TestAuditorUsedAndUnreadableLedgerRefused$",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 1,
+      "expected_exit": "nonzero with targeted assertion failure",
+      "log": "mutant-used-ledger.log"
+    },
+    {
+      "mutation": "lost-charge",
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-lost-charge.json",
+        "-run",
+        "^TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged$",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 1,
+      "expected_exit": "nonzero with targeted assertion failure",
+      "log": "mutant-lost-charge.log"
+    },
+    {
+      "mutation": "replay-conflict",
+      "argv": [
+        "go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d3r3/overlay-replay-conflict.json",
+        "-run",
+        "^TestAuditorReplayConflictAndRevocation$",
+        "-count=1",
+        "-v",
+        "./cmd/hma"
+      ],
+      "exit": 1,
+      "expected_exit": "nonzero with targeted assertion failure",
+      "log": "mutant-replay-conflict.log"
+    }
+  ],
+  "prior_criteria_read": true,
+  "implementer_handoff_read": true,
+  "next_action": {
+    "action": "Human review and accept D3 for this frozen snapshot.",
+    "owner": "human approver",
+    "route": "NOTHING",
+    "permission_envelope": "Read audit evidence; no repository writes, stage transition, commit, push, or launch.",
+    "exact_approval_required": "Explicit human D3 acceptance. This report does not approve or begin D4.",
+    "stop_conditions": [
+      "Repository snapshot changes",
+      "New critical/high evidence contradicts acceptance"
+    ],
+    "rationale": "Scoped requirements passed independent runtime checks and three mutation controls. No blocking finding was observed."
+  },
+  "report_contract": "independent-audit/references/report-contract.md",
+  "generated_at_utc": "2026-10-18T02:23:22.513864+00:00",
+  "gate_verdict": "PASS",
+  "phase1_sha256": "a2950186c47bd70c49889225956fff70099bd8b179137f3e27a76ebe8fd04f39",
+  "d3_subrequirements": [
+    {
+      "id": "R01",
+      "requirement": "Replay identical identity and digest before new lease/capacity checks",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged"
+      ]
+    },
+    {
+      "id": "R02",
+      "requirement": "Changed request digest returns HOST_RESERVATION_CONFLICT",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorReplayConflictAndRevocation"
+      ]
+    },
+    {
+      "id": "R03",
+      "requirement": "Admission consumes no attempts or spend",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged"
+      ]
+    },
+    {
+      "id": "R04",
+      "requirement": "Admission enforces attempts, minutes, spend, exact route, and stop escalation",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionNegativeControls"
+      ]
+    },
+    {
+      "id": "R05",
+      "requirement": "Fresh consumption requires active lease and matching admission",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "fresh-denials.log:TestFinalFreshConsumptionAfterRevocation",
+        "auditor-tests.log:TestAuditorReplayDeniesChangedDocumentsAndStage"
+      ]
+    },
+    {
+      "id": "R06",
+      "requirement": "Fresh attempt binds controller pending phase, index, dispatch, route and failure signature",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosurePendingContradictionsAndHistoricalReplay"
+      ]
+    },
+    {
+      "id": "R07",
+      "requirement": "Same-unit repeated failure signature refuses across controllers",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorFailurePersistsAcrossController"
+      ]
+    },
+    {
+      "id": "R08",
+      "requirement": "Unrelated-unit signature and distinct correction are not conflated",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureOtherUnitFailureIsolation"
+      ]
+    },
+    {
+      "id": "R09",
+      "requirement": "Reservation charges once and unknown/unlaunched attempt remains counted",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged"
+      ]
+    },
+    {
+      "id": "R10",
+      "requirement": "Eight concurrent callers cannot share last slot",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorConcurrentLastSlot"
+      ]
+    },
+    {
+      "id": "R11",
+      "requirement": "Counters carry across rewind and replacement generation",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorReplayConflictAndRevocation"
+      ]
+    },
+    {
+      "id": "R12",
+      "requirement": "Last-slot replay recovers without capacity recheck",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorExpiredReplayAndLastSlot"
+      ]
+    },
+    {
+      "id": "R13",
+      "requirement": "Used or unreadable slot is not launch eligible",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorUsedAndUnreadableLedgerRefused"
+      ]
+    },
+    {
+      "id": "R14",
+      "requirement": "Expired, changed-stage, changed-policy, changed-contract replay refuses launch",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorReplayDeniesChangedDocumentsAndStage"
+      ]
+    },
+    {
+      "id": "R15",
+      "requirement": "A replacement generation does not revive an old reservation",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorReplayConflictAndRevocation"
+      ]
+    },
+    {
+      "id": "R16",
+      "requirement": "Clock is sampled after acquiring both host and core locks",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureClockWaitBothLocksNewAndReplay"
+      ]
+    },
+    {
+      "id": "R17",
+      "requirement": "Store, run, unit, controller, envelope, root, namespace and baseline are bound",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorRequestBindingNegativeControls"
+      ]
+    },
+    {
+      "id": "R18",
+      "requirement": "Namespace aliases do not hide used slots",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureNamespaceAliasesAndUsedReplay"
+      ]
+    },
+    {
+      "id": "R19",
+      "requirement": "Baseline comes from loaded controller inventory",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureBaselineInventory"
+      ]
+    },
+    {
+      "id": "R20",
+      "requirement": "First use refuses existing ledger directory, file, symlink or unreadable path",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureFreshLedgerPathKinds"
+      ]
+    },
+    {
+      "id": "R21",
+      "requirement": "Real D5 endpoint contract requires eligible true and preserves resume dispatch ID",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorActualControllerAuthorityContract"
+      ]
+    },
+    {
+      "id": "R22",
+      "requirement": "Cost charges remain monotonic and cannot exceed lease ceiling",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorCostMonotonicAndCeiling"
+      ]
+    },
+    {
+      "id": "R23",
+      "requirement": "Before/after-record errors cannot lose or duplicate a committed charge",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "write-cut.log:TestAuditorReservationWriteCutRecovery"
+      ]
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "D3J-01",
+      "title": "Lease time is sampled before waiting for both run locks",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Eight controls hold either host or core lock for new consumption or replay. The clock is not sampled while the lock is held. Expired calls grant no launch; in-window controls grant. Existing reservations remain charged. Independent write-cut tests also conserve charges across commit errors.",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureClockWaitBothLocksNewAndReplay",
+        "closure-race.log:TestClosureClockWaitBothLocksNewAndReplay",
+        "go-test.log:TestAttemptClockReadUnderLocks"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run the clock-wait reproduction for new consumption and replay, and a control whose clock remains within validity.",
+          "expected": "Expired callers never receive launch_eligible=true. A committed reservation remains counted. In-window control remains eligible."
+        }
+      ]
+    },
+    {
+      "id": "D3J-02",
+      "title": "An unchecked namespace lets replay miss an existing dispatch",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Wrong namespace refuses before admission. Lexical and controller-directory symlink aliases resolve to the same used dispatch. Canonical absent-path control grants once. Used and unreadable paths refuse launch.",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureNamespaceAliasesAndUsedReplay",
+        "auditor-tests.log:TestAuditorRequestBindingNegativeControls",
+        "auditor-tests.log:TestAuditorUsedAndUnreadableLedgerRefused"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run the wrong-namespace reproduction, a canonical namespace control, a used-slot control, and symlink/path-alias cases under the declared path policy.",
+          "expected": "Wrong namespace is refused before authority records are appended. A used dispatch in the derived namespace is ineligible."
+        }
+      ]
+    },
+    {
+      "id": "D3J-03",
+      "title": "A new controller run resets the repeated-failure guard",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Same-unit repeated signature refuses across controllers and within one controller. Distinct signature is accepted. A synthetic other-unit host reservation does not block U1; this is a guard-isolation control, not a full two-unit workflow.",
+      "evidence_refs": [
+        "auditor-tests.log:TestAuditorFailurePersistsAcrossController",
+        "closure-tests.log:TestClosurePendingContradictionsAndHistoricalReplay/historical-and-distinct-control",
+        "closure-tests.log:TestClosureOtherUnitFailureIsolation"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run the cross-controller reproduction, same-controller refusal, a different-signature control, and another-unit control.",
+          "expected": "The same unit cannot obtain another reservation for the repeated signature. Unrelated units and a permitted distinct correction are not conflated."
+        }
+      ]
+    },
+    {
+      "id": "D3J-04",
+      "title": "The clone-baseline digest is copied without checking controller state",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Matching missing/default, empty, and nonempty inventories are accepted. Incorrect digest refuses before admission. A changed inventory invalidates the old request and preserves the existing charge.",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureBaselineInventory",
+        "auditor-tests.log:TestAuditorRequestBindingNegativeControls"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run the matching/mismatching baseline controls, an empty/missing baseline case with the controller-defined default, and a changed-inventory case.",
+          "expected": "Only a digest computed from the loaded controller state is admitted; mismatch appends no admission or reservation."
+        }
+      ]
+    },
+    {
+      "id": "D3R2-01",
+      "title": "New reservations do not bind the current attempt or failure signature to controller state",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Contradictory phase, route including cost, signature omitted or changed, attempt index, and dispatch ID refuse without reservation. The actual repeated signature is still refused. Historical replay and the real controller authority_request/invoke_authority_hook/authorize_launch boundary work. Last-slot replay charges once.",
+      "evidence_refs": [
+        "closure-tests.log:TestClosurePendingContradictionsAndHistoricalReplay",
+        "auditor-tests.log:TestAuditorActualControllerAuthorityContract",
+        "auditor-tests.log:TestAuditorAdmissionConsumesNothingAndUnknownStaysCharged",
+        "auditor-tests.log:TestAuditorExpiredReplayAndLastSlot"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run TestAuditCurrentAttemptStateBinding and TestAuditRepeatedFailureOmittedAgainstState against the revised endpoint.",
+          "expected": "Every contradiction refuses without a new reservation. The repeated material signature remains refused when omitted on the wire."
+        },
+        {
+          "method": "Run the real-controller boundary, historical replay, resume, admission and last-slot tests with real pending-attempt fixtures.",
+          "expected": "Valid saved requests and historical idempotent replays retain their specified behavior."
+        }
+      ]
+    },
+    {
+      "id": "D3R2-02",
+      "title": "First consumption grants an already used dispatch ID",
+      "status": "FIXED",
+      "certainty": "observed",
+      "assessment": "Fresh requests with directory, file, symlink, dangling symlink, or unreadable runs path refuse before admission. An absent path grants one charge. Replay, unknown launch, and commit-error recovery preserve exactly one reservation.",
+      "evidence_refs": [
+        "closure-tests.log:TestClosureFreshLedgerPathKinds",
+        "auditor-tests.log:TestAuditorUsedAndUnreadableLedgerRefused",
+        "write-cut.log",
+        "auditor-tests.log:TestAuditorExpiredReplayAndLastSlot"
+      ],
+      "closure_checks": [
+        {
+          "method": "Run TestAuditFreshRequestForUsedDispatch with a directory, file and symlink at runs/<id>, plus an absent-path positive control.",
+          "expected": "Existing or unreadable paths grant no launch; an absent path can grant exactly one charged reservation."
+        },
+        {
+          "method": "Re-run final-slot, replay, unknown-launch and charge-conservation tests.",
+          "expected": "No cancellation or charge deletion is introduced; unused reservations remain recoverable."
+        }
+      ]
+    }
+  ],
+  "scope_assessment": "Only D3 is accepted. The handoff expressly excludes D4 reconciliation and D5 criterion credit/findings disposition. Those exclusions match this audit. No Gate B/C or D1/D2 regression was observed in the full suite and race suite.",
+  "remediation_analysis": {
+    "actionable_findings": 0,
+    "preferred_remediation": "No scoped corrective change is required by this evidence.",
+    "opportunities": "No material non-defect redesign is recommended.",
+    "roadmap": [
+      "Human decides D3 acceptance against the frozen snapshot."
+    ],
+    "exit_criteria": "This audit is complete when its artifacts validate and final repository freeze matches the start. A later source change needs a new bound review."
+  },
+  "controlled_unblinding": {
+    "at_or_after_phase1_sha256": "a2950186c47bd70c49889225956fff70099bd8b179137f3e27a76ebe8fd04f39",
+    "sources": [
+      "/tmp/hma-gate-d-criteria/criteria-d3r3.json",
+      "docs/handoffs/2026-10-17-gate-d-d3.md"
+    ],
+    "effect": "No verdict change. Six closure assessments added. Added targeted closure tests after the frozen blind assessment. The Phase 1 report and its original test sources were not modified. A final targeted race test also refused fresh consumption after stage, contract, policy, lease-time, and route changes.",
+    "phase1_correction": "Initial ordinary integration-failure log was retained, but the initial race-failure log was not retained separately."
+  },
+  "repository_unchanged": true,
+  "final_freeze_ref": "freeze-end.json",
+  "evidence_refs": [
+    "EVIDENCE.json",
+    "COMMANDS.md",
+    "environment.json",
+    "source-extracts.txt",
+    "tracked-working-tree.patch",
+    "snapshot/"
+  ],
+  "jev_decision_trace": {
+    "available": false,
+    "fallback_actor": "independent auditor",
+    "decision": "stop",
+    "basis": "Mandatory scoped checks passed; no blocking finding or required test remains. Human D3 acceptance is pending."
+  },
+  "final_test_count": {
+    "independent_top_level_test_functions": 19,
+    "blind_functions": 11,
+    "closure_functions": 6,
+    "write_cut_functions": 1,
+    "fresh_denial_functions": 1
+  }
+}

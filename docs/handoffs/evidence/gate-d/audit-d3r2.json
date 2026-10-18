@@ -1,0 +1,864 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d3r2",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:0d90eed831741db297c220ee83f123e2554e06a0+diff:70b827844a42b0d90e6d0a7a6984f8ef73e2798e8f7de69d12a6d2c59828e072+freeze-start.json untracked hashes",
+  "isolation": "isolated",
+  "isolation_details": "Isolated auditor context and blinded initial pass on a shared host; no OS-level read-only isolation. See limitations.",
+  "verdict": "fix-required",
+  "hma_verdict": "FAIL",
+  "requirements": [
+    {
+      "id": "D3-01",
+      "requirement": "Replay first; same key/request returns unchanged reservation and no extra charge; different request returns HOST_RESERVATION_CONFLICT.",
+      "source": "gate-a-v4 \u00a73",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Replay/conflict independent test passed. One historical reservation survives 8 replays on the final charged slot.",
+      "tests": "TestAuditReplayAndConflict",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log"
+      ]
+    },
+    {
+      "id": "D3-02",
+      "requirement": "Admission binds controller run and envelope; requires active lease, exact route, stop escalation, and all ceiling amounts <= remaining; consumes nothing.",
+      "source": "gate-a-v4 \u00a73",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent attempts/minutes/spend/escalation and association negative controls passed. Admission consumed zero; later consumption did not rerun envelope-vs-remaining admission.",
+      "tests": "TestAuditAdmissionBudgetAndAssociationNegatives; TestAuditAdmissionRestartNoChargeLoss",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log"
+      ]
+    },
+    {
+      "id": "D3-03",
+      "requirement": "Consumption needs same admission, active lease, capacity and failure-signature rule; counts once; unknown launch stays counted; no cancellation.",
+      "source": "gate-a-v3 \u00a73.2; v4 \u00a73",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Charging and recovery passed; omission of the saved repeated failure signature granted a third attempt.",
+      "tests": "TestAuditAdmissionRestartNoChargeLoss; TestAuditRepeatedFailureOmittedAgainstState",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log"
+      ]
+    },
+    {
+      "id": "D3-04",
+      "requirement": "Per-unit counters remain monotonic across approved rewind/renewal; two concurrent callers cannot share last slot.",
+      "source": "gate-a-v3 \u00a73.2; v4 \u00a73",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Eight separate controller runs competed for one slot; exactly one grant and reservation. Existing rewind test and independent old-generation replay control passed.",
+      "tests": "TestAuditTwoControllerLastSlot; TestCountersCarryAcrossRewind; TestAuditLeaseBoundaryAndGeneration/renewal",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log",
+        "closure-controls.log"
+      ]
+    },
+    {
+      "id": "D3-05",
+      "requirement": "Exact route only and same material failure twice stops route; no non-stop escalation envelope.",
+      "source": "gate-a-v3 \u00a73.1; architecture \u00a717",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Wrong-route and non-stop escalation tests passed. Unit-wide repeated supplied signatures are refused, but an omitted signature bypasses the saved repeated failure.",
+      "tests": "TestDifferentRouteRefused; TestEscalateToMustBeStop; TestAuditBaselineStateBindingAndFailureAcrossRuns; TestAuditRepeatedFailureOmittedAgainstState",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log",
+        "closure-controls.log"
+      ]
+    },
+    {
+      "id": "D3-06",
+      "requirement": "Replay eligibility needs issuing lease active by time, stage, policy, contract, same generation, and no existing ledger run; charged last slot can launch once.",
+      "source": "gate-a-v5 \u00a72; v6 \u00a72-3",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Used replay, capacity-free last-slot replay, lease expiry/stage/policy/contract and old-generation refusals passed. First consumption granted an ID already present in the ledger.",
+      "tests": "TestAuditLeaseBoundaryAndGeneration; TestFinalSlotReplayAfterUseNotEligible; TestAuditFreshRequestForUsedDispatch",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log",
+        "closure-controls.log"
+      ]
+    },
+    {
+      "id": "D3-07",
+      "requirement": "Request binding covers controller state, envelope, store/run/unit, live root, baseline and ledger namespace; validity is half-open.",
+      "source": "gate-a-v4 \u00a74; v6 \u00a72/\u00a75; verify-loop interface",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Store/run/unit/controller/root/envelope/baseline/namespace controls passed. Saved attempt ID, index and last-check signature are not enforced.",
+      "tests": "TestAuditAdmissionBudgetAndAssociationNegatives; TestAttemptRequestBinding; TestAuditBaselineStateBindingAndFailureAcrossRuns; TestAuditCurrentAttemptStateBinding",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log",
+        "closure-controls.log"
+      ]
+    },
+    {
+      "id": "D3-08",
+      "requirement": "Real HMA endpoint satisfies eligible-true and resume-same-dispatch-ID controller endpoint tests.",
+      "source": "gate-c-scope \u00a70.1 rows 1,2,5; gate-a-v6 \u00a75",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Real HMA binary passed the existing two D5 endpoint tests and an independent authority_request/authorize_launch boundary exercise with same-ID replay and used-slot refusal. Persistence/report presentation were stubbed in the independent boundary test; no dispatcher launched.",
+      "tests": "TestD5HMABoundLaunchRequiresEligibleTrue; TestD5ResumeReplayUsesSameDispatchID; TestAuditControllerBoundaryRealEndpoint",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log"
+      ]
+    },
+    {
+      "id": "D3-09",
+      "requirement": "Preserve D1/D2, Gate B/C safety, human approval, route coherence, evidence integrity; no D4/D5 completion claim.",
+      "source": "objective \u00a75; architecture \u00a714/\u00a717/\u00a718; AGENTS.md",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Full go test ./..., go vet ./..., and go test -race ./... passed in the source copy after disabling VCS stamping. No tested D1/D2 or Gate B/C regression was observed. The unblinded D3 handoff explicitly excludes D4 and D5; it does not claim their completion.",
+      "tests": "verified-test.log; baseline-vet.log; verified-race.log",
+      "evidence_refs": [
+        "independent-frozen.log",
+        "d3-exit-tests.log",
+        "verified-test.log",
+        "verified-race.log",
+        "baseline-vet.log",
+        "docs/handoffs/2026-10-17-gate-d-d3.md:5"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D3R2-01",
+      "title": "New reservations do not bind the current attempt or failure signature to controller state",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "parseAttemptRequest validates the envelope and association, but does not compare saved attempt n, dispatch_run_id, route or last_check.signature with the request. Consumption trusts req.LastFailureSignature. A request with index 99 or another dispatch ID was granted. A request with the repeated saved signature was refused; the same attempt with signature omitted was granted and charged. This is an API binding failure under the explicit audit requirement. It requires an inconsistent caller request; an exploit through the unmodified trusted verify-loop controller was not demonstrated.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:185",
+          "observation": "Controller state is read, but the parser returns after envelope and baseline checks without checking st.Attempts."
+        },
+        {
+          "source": "cmd/hma/attempt.go:308",
+          "observation": "The repeated-failure rule uses only the request signature."
+        },
+        {
+          "source": "independent-frozen.log:55",
+          "observation": "The repeated-signature refusal control succeeded, then omitted signature yielded launch_eligible:true for audit-fail-3."
+        },
+        {
+          "source": "independent-frozen.log:118",
+          "observation": "Dispatch ID, attempt index, and signature mismatches each yielded a fresh launch grant."
+        }
+      ],
+      "affected_requirements": [
+        "D3-03",
+        "D3-05",
+        "D3-07"
+      ],
+      "fix_status": "OPEN",
+      "fix": {
+        "action": "Decode saved attempt n, dispatch_run_id, route and last_check.signature. Before creating a new reservation, require a matching pending controller attempt and derive the failure signature from that saved attempt. Reject contradictory request fields. Preserve replay-first lookup and historical reservation returns, with independent live eligibility.",
+        "why": "The endpoint must bind new authority to the controller state it claims to represent and must not let an omitted wire field bypass the saved failure evidence.",
+        "verification": [
+          {
+            "method": "Run TestAuditCurrentAttemptStateBinding and TestAuditRepeatedFailureOmittedAgainstState against the revised endpoint.",
+            "expected": "Every contradiction refuses without a new reservation. The repeated material signature remains refused when omitted on the wire."
+          },
+          {
+            "method": "Run the real-controller boundary, historical replay, resume, admission and last-slot tests with real pending-attempt fixtures.",
+            "expected": "Valid saved requests and historical idempotent replays retain their specified behavior."
+          }
+        ],
+        "tradeoffs": "Existing synthetic fixtures with empty attempts must become realistic. Do not add a controller-lock acquisition that deadlocks a controller holding that lock while calling the hook. The trusted controller snapshot remains the source of association; this does not solve hostile-host tampering.",
+        "alternative": "Generate the request in a dedicated trusted adapter from a saved attempt snapshot and require HMA to validate the bound snapshot digest. This needs coordinated controller-interface changes.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D3R2-02",
+      "title": "First consumption grants an already used dispatch ID",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "The new-reservation branch sets launch_eligible:true without checking the namespace runs/<dispatch_run_id> path. The used-ID check exists only in replayResult. Creating that path before the first hook call yields a new launch grant. This finding concerns endpoint eligibility, not D4 import reconciliation. No duplicate real worker launch was attempted; the trusted dispatcher may independently reject that ID.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:333",
+          "observation": "The first-consumption response defaults to an eligible launch and checks only time after commit."
+        },
+        {
+          "source": "cmd/hma/attempt.go:364",
+          "observation": "The ledger existence guard occurs only in replayResult."
+        },
+        {
+          "source": "independent-frozen.log:111",
+          "observation": "An existing runs/audit-already-used directory yielded launch_eligible:true and a new reservation."
+        }
+      ],
+      "affected_requirements": [
+        "D3-06"
+      ],
+      "fix_status": "OPEN",
+      "fix": {
+        "action": "Apply the fail-closed namespace dispatch-existence guard to first consumption as well as replay. Prefer refusing before append if the path already exists. If detected after a committed charge, retain the charge and return launch_eligible:false.",
+        "why": "A dispatch ID that is already used must not receive fresh endpoint launch eligibility. This can be done without implementing D4 reconciliation.",
+        "verification": [
+          {
+            "method": "Run TestAuditFreshRequestForUsedDispatch with a directory, file and symlink at runs/<id>, plus an absent-path positive control.",
+            "expected": "Existing or unreadable paths grant no launch; an absent path can grant exactly one charged reservation."
+          },
+          {
+            "method": "Re-run final-slot, replay, unknown-launch and charge-conservation tests.",
+            "expected": "No cancellation or charge deletion is introduced; unused reservations remain recoverable."
+          }
+        ],
+        "tradeoffs": "Ledger inspection is another filesystem check under run locks. A check alone does not atomically prevent a later launcher race; the trusted dispatcher must continue enforcing dispatch-ID uniqueness.",
+        "alternative": "Make the dispatcher atomically reject reused IDs and document the endpoint grant as provisional. This is weaker evidence for the explicit endpoint used-slot criterion.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    }
+  ],
+  "limitations": [
+    "Fresh audit context; no implementer chat or previous verdicts were inherited. Source/test comments naturally contain author claims and prior finding IDs; they were treated as artifact data.",
+    "No OS-level read-only mount or independent machine was established. The audit used a fresh context on a shared host. Repository access remained read-only by conduct. Tests ran in a source copy with cache and temporary Git fixtures under this output directory. Final HEAD, branch, status, tracked binary diff digest and every untracked-file hash match the start freeze.",
+    "The initial gate-a-v4 sed range accidentally printed \u00a71-2 in addition to requested \u00a73-4. This is a source-selection deviation, not prior-verdict exposure. No prohibited handoff or audit directory contents were read.",
+    "Initial full test and race runs failed only when endpoint builds attempted VCS stamping in the source copy. Repeated with GOFLAGS=-buildvcs=false; both passed. Raw initial failures are retained.",
+    "The independent tests reuse the existing synthetic setup helper. Independent assertions, negative cases, concurrency, and controller boundary code were written in the output directory.",
+    "D4 launch reconciliation, import generation rules, validity minimum over revocations, UNAUTHORIZED_DISPATCH, and D5 criterion credit/findings disposition are excluded. Full real worker launch and top-level controller resume were not executed.",
+    "No callable approved Jev tool was available. No substitute model or nested agent CLI/API was used. No authority or approval is conferred by this audit.",
+    "The fresh context was supplied through the task. This audit cannot externally attest the session ancestry or the declared model identity.",
+    "Used-ID and inconsistent-request tests exercise the endpoint directly. They do not demonstrate that the unmodified trusted controller produces those inconsistent requests or that the trusted dispatcher launches a duplicate.",
+    "No test changed the audited repository. Git fixture creation/commits inside the audit temporary directory were performed by the requested regression suites. No Git write command was run against the audited repository.",
+    "The Phase 1 JSON was structurally validated before this final report. Structural validation proves report form only. The final validation result is retained separately."
+  ],
+  "phase1_frozen": true,
+  "phase1_time": "2026-10-18T01:57:01.775998+00:00",
+  "phase1_version": 1,
+  "unblinded": true,
+  "source_requirements_file": "requirements-before-diff.json",
+  "evidence_checks": [
+    {
+      "name": "admission-exact",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAuditAdmissionBudgetAndAssociationNegatives",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:54:57.623497+00:00",
+      "elapsed_seconds": 8.086423873901367,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/admission-exact.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "8703189425a6e86f6a57fcfb5f9241adfeb1e69195987154b5d8e69c41c31d5b"
+    },
+    {
+      "name": "baseline-race",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:47:59.753703+00:00",
+      "elapsed_seconds": 146.5812690258026,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/baseline-race.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": ""
+      },
+      "log_sha256": "5d5f6c3ce5348fdb9e97f458e414b393dc972b0f77c4a66cc1958703d5329970"
+    },
+    {
+      "name": "baseline-test",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:47:59.751800+00:00",
+      "elapsed_seconds": 116.64122557640076,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/baseline-test.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": ""
+      },
+      "log_sha256": "b9e78dd116933a75567ed7730c48edb8fd3009ad4567c4a8cf4980bf6c1404de"
+    },
+    {
+      "name": "baseline-vet",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:47:59.769497+00:00",
+      "elapsed_seconds": 12.839830875396729,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/baseline-vet.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": ""
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "closure-controls",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay-closure.json",
+        "./cmd/hma",
+        "-run",
+        "TestAuditClosure",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:58:58.856397+00:00",
+      "elapsed_seconds": 18.686894178390503,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/closure-controls.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "a3216688720386fec1513068f2037ce8712b6f933cbff59cdce4beea84727233"
+    },
+    {
+      "name": "controller-boundary",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAuditControllerBoundaryRealEndpoint",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:52:21.283738+00:00",
+      "elapsed_seconds": 3.752776861190796,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/controller-boundary.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "e39458960cc4520e4ed738646c9981a4bde8531cf46f71a6c3f1e7c33fa24485"
+    },
+    {
+      "name": "d3-exit-tests",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./cmd/hma",
+        "-run",
+        "Test(ReservationIdempotent|ConcurrentLastAttempt|UnknownLaunchCounts|CountersCarryAcrossRewind|SameFailureSignatureTwiceRefused|DifferentRouteRefused|EscalateToMustBeStop|FinalSlotReplayLaunchesOnce|FinalSlotReplayAfterUseNotEligible|NewIDWithoutCapacityRefused|D5HMABoundLaunchRequiresEligibleTrue|D5ResumeReplayUsesSameDispatchID)$",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T02:00:18.318326+00:00",
+      "elapsed_seconds": 10.061217308044434,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/d3-exit-tests.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "08b60eb6224cc4771cd259b81c5ecf3dd159d1440876fb074a68b5f03214140a"
+    },
+    {
+      "name": "independent-final",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAudit",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:53:54.245261+00:00",
+      "elapsed_seconds": 17.177833318710327,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/independent-final.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "ffadc83c61be61ed9fbd8c0e81bb3ef56be9eab568c228b0122fb23415dd1733"
+    },
+    {
+      "name": "independent-frozen",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAudit",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:55:18.679117+00:00",
+      "elapsed_seconds": 14.338114976882935,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/independent-frozen.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "f7f18bd5b8495505396fe3d70959ad2df4e6a15b0d23fadf95b49c61fe5f4fca"
+    },
+    {
+      "name": "independent-race",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAudit",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:51:22.857405+00:00",
+      "elapsed_seconds": 17.040943384170532,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/independent-race.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "3fb2d54e14c99ed9e193e51c6ff15041b2942de3b5ba4ffb9edb5335fa97df8c"
+    },
+    {
+      "name": "independent-test",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay.json",
+        "./cmd/hma",
+        "-run",
+        "TestAudit",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:49:02.267836+00:00",
+      "elapsed_seconds": 11.429656744003296,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/independent-test.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": ""
+      },
+      "log_sha256": "30da23c50c4cc26d43a0f19475a2f74366f68186ece7164cb40da95362257c07"
+    },
+    {
+      "name": "negative-control-clock",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay-clock-mutant.json",
+        "./cmd/hma",
+        "-run",
+        "TestAuditLockWaitUsesFreshClock",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:53:55.687016+00:00",
+      "elapsed_seconds": 1.8911128044128418,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/negative-control-clock.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "9dbea1dbe3df89058af8deead2d425394fec253fa32461f17906ae5d4656cd63"
+    },
+    {
+      "name": "negative-control-failure",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay=/tmp/hma-gate-d-20261018-d3r2/overlay-failure-mutant.json",
+        "./cmd/hma",
+        "-run",
+        "TestAuditBaselineStateBindingAndFailureAcrossRuns",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:55:20.092810+00:00",
+      "elapsed_seconds": 2.130387544631958,
+      "exit_code": 1,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/negative-control-failure.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "389e990a4aca91794413e90e4a35f2329c6f8d7439b5eeb9db79de51124d33ce"
+    },
+    {
+      "name": "verified-race",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:50:52.532465+00:00",
+      "elapsed_seconds": 136.6588578224182,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/verified-race.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "26b2ed8306314f671359855a2ff2866e1a98ff90f2111388bbdadbef0016c0b3"
+    },
+    {
+      "name": "verified-test",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d3r2/snapshot",
+      "started_at": "2026-10-18T01:50:52.525536+00:00",
+      "elapsed_seconds": 115.29613876342773,
+      "exit_code": 0,
+      "log": "/tmp/hma-gate-d-20261018-d3r2/verified-test.log",
+      "truncated": false,
+      "environment": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d3r2/gocache",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d3r2/tmp",
+        "PATH_prefix": "/home/yeli/.local/go/bin",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "log_sha256": "c8ced3e3608bf90fa71db138343ac57b4ec734c02d4788affbf484f742571e20"
+    }
+  ],
+  "independent_test_sha256": "8269d64c2ace8c56f04e38724e83c7badf7594773a58a5ab422da8af0228bd89",
+  "report_time": "2026-10-18T02:02:06.395693+00:00",
+  "phase1_sha256": "fc5e4888b908c456ed4c2dc85c03ad789972f154ef299cd63c5a530c32ea6fab",
+  "scope": {
+    "branch": "main",
+    "head": "0d90eed831741db297c220ee83f123e2554e06a0",
+    "dispatch_id": "hma-gate-d-audit-20261018-d3r2",
+    "declared_reviewer": "jax / gpt-6.1-sol / high / review",
+    "runtime_identity_limit": "Route label supplied in task; exact runtime model/provider/access telemetry was not independently attested. No nested worker or model API was launched.",
+    "included": [
+      "cmd/hma/host.go",
+      "internal/host/host.go",
+      "cmd/hma/attempt.go",
+      "cmd/hma/gated_attempt_test.go",
+      "cmd/hma/gated_hook_test.go",
+      "D1/D2 and Gate B/C regression suites"
+    ],
+    "excluded": [
+      ".serena/",
+      "docs/handoffs/2026-10-16-arch-amendment-*.md",
+      "D4 import reconciliation and validity-minimum/generation-import rules",
+      "D5 criterion credit and findings disposition"
+    ],
+    "prebuilt_binary": "Untracked hma binary was hashed but not executed or assessed; endpoint binaries were built from the frozen source copy."
+  },
+  "freeze_verification": {
+    "unchanged": true,
+    "checks": {
+      "head": true,
+      "branch": true,
+      "status": true,
+      "diff_binary_sha256": true,
+      "untracked": true
+    },
+    "end_time": "2026-10-18T02:04:43.999355+00:00"
+  },
+  "prior_finding_closure": [
+    {
+      "id": "D3J-01",
+      "status": "FIXED",
+      "observation": "Both host-lock and core-lock wait controls passed for new consumption and replay, at exact lease expiry and in-window. Crossing preflight expiry during commit kept the reservation charged and returned false.",
+      "evidence_refs": [
+        "closure-controls.log:42",
+        "closure-controls.log:55",
+        "negative-control-clock.log:6"
+      ]
+    },
+    {
+      "id": "D3J-02",
+      "status": "FIXED",
+      "observation": "Sibling namespace refused before admission. Canonical namespace, dot alias, parent symlink and ledger symlink all detected used slots on replay. A dangling used-run symlink also refused replay eligibility. This closure is for namespace checking on replay; D3R2-02 covers first consumption.",
+      "evidence_refs": [
+        "closure-controls.log:81"
+      ]
+    },
+    {
+      "id": "D3J-03",
+      "status": "FIXED",
+      "observation": "A supplied repeated signature is refused across controller runs and within one unit. A distinct correction and another unit with the same signature remain allowed. D3R2-01 separately covers omission of the saved signature on the wire.",
+      "evidence_refs": [
+        "independent-frozen.log:106",
+        "closure-controls.log:121",
+        "negative-control-failure.log:6"
+      ]
+    },
+    {
+      "id": "D3J-04",
+      "status": "FIXED",
+      "observation": "Missing/empty inventories use the controller-defined {} default. A matching nonempty inventory is admitted. A wrong digest or inventory changed after digest computation creates neither admission nor reservation.",
+      "evidence_refs": [
+        "closure-controls.log:109"
+      ]
+    }
+  ],
+  "controlled_unblinding_addendum": {
+    "phase1_unchanged": true,
+    "phase1_sha256": "fc5e4888b908c456ed4c2dc85c03ad789972f154ef299cd63c5a530c32ea6fab",
+    "read_after_freeze": [
+      "/tmp/hma-gate-d-criteria/criteria-d3r2.json",
+      "docs/handoffs/2026-10-17-gate-d-d3.md"
+    ],
+    "new_evidence": [
+      "closure-controls.log",
+      "d3-exit-tests.log"
+    ],
+    "changes": "No finding or verdict was withdrawn. Added exact closure evidence and four FIXED dispositions. Confirmed the handoff excludes D4/D5. The older command section says failure signatures are controller-local; its r1 remediation section and implementation use the correct unit-wide rule. Treat the older sentence as stale documentation, not an implemented reset."
+  },
+  "toolchain": "go version go1.27.1 linux/amd64",
+  "criteria_sha256": "947bcf787af4745d360799b4842df9d3fbb57e358c785df5f1535429f13118ac",
+  "source_hashes": {
+    "cmd/hma/host.go": {
+      "repo_sha256": "52f5f1159677aab62218fb15cdffff48b0f1deed18c5b66a2b1fd4e06fbc6baf",
+      "snapshot_sha256": "52f5f1159677aab62218fb15cdffff48b0f1deed18c5b66a2b1fd4e06fbc6baf",
+      "equal": true
+    },
+    "cmd/hma/attempt.go": {
+      "repo_sha256": "97af3845125158820875b9e31b46d431b4b0faef26f0b27b1dac359082b717cf",
+      "snapshot_sha256": "97af3845125158820875b9e31b46d431b4b0faef26f0b27b1dac359082b717cf",
+      "equal": true
+    },
+    "internal/host/host.go": {
+      "repo_sha256": "54c59c7b8cb0dfed93ebce0d553077cb82fe55cd56526f1cd6ccceff4d451ef2",
+      "snapshot_sha256": "54c59c7b8cb0dfed93ebce0d553077cb82fe55cd56526f1cd6ccceff4d451ef2",
+      "equal": true
+    },
+    "cmd/hma/gated_attempt_test.go": {
+      "repo_sha256": "255e283dbab5b5324bcad20becd1ec03f618e76ec61cb01ef147497f190f7098",
+      "snapshot_sha256": "255e283dbab5b5324bcad20becd1ec03f618e76ec61cb01ef147497f190f7098",
+      "equal": true
+    },
+    "cmd/hma/gated_hook_test.go": {
+      "repo_sha256": "816ed6f2a933f1f33c367bcff0e0b4e8c7a39a9ec5bb24306299f481217d57ce",
+      "snapshot_sha256": "816ed6f2a933f1f33c367bcff0e0b4e8c7a39a9ec5bb24306299f481217d57ce",
+      "equal": true
+    },
+    "internal/engine/lease.go": {
+      "repo_sha256": "2bb86914199f33f024534650194f99b00269e7bd7837ab2210e1ad32d74f3ff0",
+      "snapshot_sha256": "2bb86914199f33f024534650194f99b00269e7bd7837ab2210e1ad32d74f3ff0",
+      "equal": true
+    },
+    "cmd/hma/loop.go": {
+      "repo_sha256": "f9a8d4975922c17d48c3056ad3a4d9832b72cba5b1f4a965a71b13cc6c569211",
+      "snapshot_sha256": "f9a8d4975922c17d48c3056ad3a4d9832b72cba5b1f4a965a71b13cc6c569211",
+      "equal": true
+    },
+    "internal/host/store.go": {
+      "repo_sha256": "2b33e89402e7d69e6d9330b0a3680491a826fa3794b795dde3b3d0fc7b5b2b14",
+      "snapshot_sha256": "2b33e89402e7d69e6d9330b0a3680491a826fa3794b795dde3b3d0fc7b5b2b14",
+      "equal": true
+    },
+    "verify-loop": {
+      "sha256": "a4a9bb2b1db130fa389c1e59b9058ae4c10cba6fcbb7cba698066b94a267248c"
+    }
+  },
+  "closure_test_sha256": "df285c99d5569eb0a9a86c9a668336cbd3c49aa61f849498f3937a93bd1c760c",
+  "exit_tests": [
+    {
+      "name": "TestReservationIdempotent",
+      "result": "PASS"
+    },
+    {
+      "name": "TestNewIDWithoutCapacityRefused",
+      "result": "PASS"
+    },
+    {
+      "name": "TestFinalSlotReplayLaunchesOnce",
+      "result": "PASS"
+    },
+    {
+      "name": "TestFinalSlotReplayAfterUseNotEligible",
+      "result": "PASS"
+    },
+    {
+      "name": "TestUnknownLaunchCounts",
+      "result": "PASS"
+    },
+    {
+      "name": "TestCountersCarryAcrossRewind",
+      "result": "PASS"
+    },
+    {
+      "name": "TestSameFailureSignatureTwiceRefused",
+      "result": "PASS"
+    },
+    {
+      "name": "TestDifferentRouteRefused",
+      "result": "PASS"
+    },
+    {
+      "name": "TestEscalateToMustBeStop",
+      "result": "PASS"
+    },
+    {
+      "name": "TestConcurrentLastAttempt",
+      "result": "PASS"
+    },
+    {
+      "name": "TestD5HMABoundLaunchRequiresEligibleTrue",
+      "result": "PASS"
+    },
+    {
+      "name": "TestD5ResumeReplayUsesSameDispatchID",
+      "result": "PASS"
+    }
+  ],
+  "test_summary": {
+    "repository_test": "PASS",
+    "repository_vet": "PASS",
+    "repository_race": "PASS",
+    "named_d3_exit_tests_passed": 12,
+    "named_d3_exit_tests_skipped": 0,
+    "independent_groups_passed": 8,
+    "independent_groups_failed": 3,
+    "independent_failures": "Five failing leaf cases grouped into two findings. Race detector reported no race.",
+    "closure_leaf_controls_passed": 21,
+    "negative_mutants": "Two deliberately broken variants failed as expected; neither was applied to the repository."
+  },
+  "opportunities": [
+    {
+      "id": "O-01",
+      "kind": "opportunity",
+      "title": "Make the external-controller integration job explicit",
+      "description": "The repository endpoint tests skip if a home-directory verify-loop installation is absent. They ran and passed here. A dedicated CI integration job can require the external fixture and report skipped integration as unavailable instead of appearing complete. This did not affect this audit verdict.",
+      "status": "defer; no implementation performed; Jev unavailable"
+    }
+  ],
+  "next_action": {
+    "action": "Return this failed D3 packet to the D3 implementation owner for bounded remediation of D3R2-01 and D3R2-02.",
+    "current_outcome": "FAIL; five requirements MET and four PARTIAL; all four previous findings FIXED under their closure criteria.",
+    "rationale": "The endpoint still grants authority for contradictory saved-attempt data and for an already used first-consumption dispatch ID. Passing existing tests does not remove these observed results.",
+    "owner": "Human coordinator and the existing approved D3 implementation owner.",
+    "proposed_route": "Existing human-approved D3 implementation route. The handoff names Ming / Anthropic / claude-opus-5-5 / Claude Code CLI; effort and current route eligibility are not attested. Confirm the exact recorded route and required hi preflight before dispatch. No dispatch occurs in this audit.",
+    "permission_envelope": "Proposed follow-up is bounded to D3 attempt binding, eligibility, associated tests and handoff corrections. No commit, push, release, permission widening, D4 import reconciliation or D5 criterion work is authorized by this report.",
+    "exact_approval_required": "This is an audit result, not a stage-transition approval. Apply existing human D3 remediation authorization; any change to approved route, scope or permission needs human confirmation under architecture \u00a717.",
+    "stop_conditions": [
+      "Unapproved route or permission change",
+      "Any remedy requires D4/D5 scope or a product-contract amendment",
+      "Remediation fails independent replay, charging or concurrency verification"
+    ]
+  }
+}
