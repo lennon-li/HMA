@@ -1,0 +1,994 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12",
+  "date": "2026-10-17T22:45:10.382874+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0+worktree-diff-sha256:35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f; untracked bytes in freeze-start.json",
+  "branch": "main",
+  "isolation": "isolated",
+  "isolation_details": "Fresh fact-first context; shared host filesystem; copied execution tree; procedural repository read-only. No inherited implementer narrative.",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_encoding": "FAIL is encoded as fix-required by the independent-audit report contract. This is one verdict.",
+  "requirements": [
+    {
+      "id": "D1-01",
+      "requirement": "Versioned immutable canonical acceptance contract contains run, intent, scope, non-goals, criteria/check/threshold/evidence, risk, deliverables, budget/route/permission ceilings; excludes result dispositions.",
+      "source": "v2 \u00a72.2; v3 \u00a72.1",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Schema represents combined intent/scope text, non-goals, criterion definitions and ceiling fields. Results remain in core criteria. Empty lists may be meaningful; mandatory scalar/plan completeness defects are assessed separately.",
+      "evidence_refs": [
+        "internal/model/contract.go:20",
+        "internal/model/contract.go:39"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "requirement": "Every material contract byte/semantic change changes digest; parse rejects ambiguous, invalid or noncanonical input.",
+      "source": "v2 \u00a72.2 canonical JSON; audit integrity focus",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Known fields are hashed after decoding; duplicate/case/unknown/trailing keys are refused. Invalid UTF-8 and lone UTF-16 surrogates are accepted and normalized to the same replacement character/digest.",
+      "evidence_refs": [
+        "independent-model.log",
+        "independent-controls.log",
+        "F04"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "requirement": "Core criterion ID set exactly equals contract criterion ID set.",
+      "source": "v2 \u00a72.2",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Acceptance and later transitions check exact criterion ID sets. Lease derivation does not recheck the current core criterion set.",
+      "evidence_refs": [
+        "internal/engine/contract_binding.go:75",
+        "independent-transition-corrected.log",
+        "F07"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "requirement": "Optional acceptance_contract_digest omitted empty; legacy serialization/digests unchanged.",
+      "source": "v3 \u00a72.1",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent exact-byte legacy serialization control passes. Nonempty new binding appears in JSON. Existing chain tests pass.",
+      "evidence_refs": [
+        "independent-controls.log",
+        "go-test-corrected.log"
+      ]
+    },
+    {
+      "id": "D1-05",
+      "requirement": "Acceptance-to-planning approval binds contract; every later approval carries it; mismatch/drop/swap refused; contract revision requires human rewind to acceptance.",
+      "source": "v2 \u00a72.2; v3 \u00a72.1; architecture \u00a76",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Existing tests refuse threshold changes, swapped/dropped bound digests and missing documents. Initial acceptance silently ignores a supplied document when its digest is omitted.",
+      "evidence_refs": [
+        "internal/transition/contract_test.go:101",
+        "independent-transition-corrected.log",
+        "F06"
+      ]
+    },
+    {
+      "id": "D1-06",
+      "requirement": "hma.plan/v1 canonical plan records all architecture \u00a710 unit fields, wall minutes, declared cost ceiling, policy digest; digest is accepted_plan_digest.",
+      "source": "v3 \u00a72.2; v4 \u00a72; architecture \u00a710",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Version, wall-time, cost and policy digest fields exist and accepted_plan_digest is checked. Complexity budget is absent; many required section 10 fields need not be populated or present.",
+      "evidence_refs": [
+        "internal/model/contract.go:65",
+        "internal/model/contract.go:297",
+        "F05"
+      ]
+    },
+    {
+      "id": "D1-07",
+      "requirement": "Plan validates IDs, criterion references, dependency graph/prior-unit constraints, ceilings and required fields; malformed or unavailable plan fails closed.",
+      "source": "v3 \u00a72.3; architecture \u00a710",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Unique IDs, unknown/self dependency refusal, acyclic graph, criterion references and three ceiling comparisons exist. Missing plan fields still permit a lease. No stricter array-order rule for the term prior units was inferred.",
+      "evidence_refs": [
+        "internal/model/contract_test.go:124",
+        "independent-model.log",
+        "independent-engine.log",
+        "F05"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "requirement": "Lease derives only from latest applicable approved unit transition to IMPLEMENTATION_AUTHORIZATION on either legal issuer edge. No host cache grants authority.",
+      "source": "v4 \u00a71",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent controls refuse no issuer, unapproved record, illegal issuer edge, different approval unit and missing plan/unit. Legal correction selects the new issuer. Input is assumed to be the verified core chain, not a forged slice.",
+      "evidence_refs": [
+        "independent-controls.log",
+        "independent-engine.log"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "requirement": "Presented plan digest equals issuer accepted_plan_digest; unit exists; contract digest/run/identity binding valid.",
+      "source": "v2 \u00a72.2; v3 \u00a72.2; architecture \u00a76",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Plan/run/contract digest mismatches fail closed under independent controls. Current core criterion IDs are not checked during lease derivation.",
+      "evidence_refs": [
+        "independent-controls.log",
+        "independent-transition-corrected.log",
+        "F07"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "requirement": "Terminal run or projected unit stage outside IMPLEMENTATION_AUTHORIZATION cannot keep lease.",
+      "source": "v3 \u00a72.2; v4 \u00a71",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent unit review and terminal controls refuse the lease. Whole-run rewind also refuses. This is per-unit replay, not a demand that another unit cannot move the global run stage.",
+      "evidence_refs": [
+        "independent-engine.log"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "requirement": "Later approved rewind of unit, run or transitive dependency invalidates lease, using approved plan graph.",
+      "source": "v3 \u00a72.3; v4 \u00a71",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Route/Planning and transitive dependency rewinds invalidate leases. Independent-validation correction of a dependency to implementation authorization leaves dependent leases active.",
+      "evidence_refs": [
+        "independent-engine.log",
+        "F02"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "requirement": "Elapsed approval wall time strictly below max_wall_minutes; future/invalid timestamps fail closed.",
+      "source": "v3 \u00a72.2; audit time focus",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Exact expiry boundary is refused. Expiry is computed from record time, not approval time; a real Apply chain grants an already-expired approval a new wall interval. Future-time requests are accepted.",
+      "evidence_refs": [
+        "independent-engine.log",
+        "independent-transition-corrected.log",
+        "F03"
+      ]
+    },
+    {
+      "id": "D2-06",
+      "requirement": "All applicable per-unit counters below ceilings; lease grant within contract ceilings and route/permission identity; conflicts fail closed.",
+      "source": "v2 \u00a72.2; v3 \u00a72.2; architecture \u00a710",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Attempts and cost compare at equality, and unit ceilings cannot exceed contract numeric ceilings. Contract permitted routes and permission envelope do not constrain the derived grant. Negative counters are accepted; D3-derived accounting is out of scope.",
+      "evidence_refs": [
+        "independent-controls.log",
+        "independent-engine.log",
+        "F01",
+        "F09"
+      ]
+    },
+    {
+      "id": "D2-07",
+      "requirement": "Current computed policy digest equals approved plan policy_digest; drift voids lease and escalates to human.",
+      "source": "v4 \u00a72",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent policy-drift control refuses mismatched policy digest. The trusted host supplies the current computed digest; recomputing it inside this pure function is not required. Host escalation wiring is outside D1/D2.",
+      "evidence_refs": [
+        "independent-engine.log",
+        "internal/engine/lease.go:166"
+      ]
+    },
+    {
+      "id": "D2-08",
+      "requirement": "Lease digest deterministically binds issuer transition digest, unit and plan digest.",
+      "source": "v3 \u00a72.2",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Digest is deterministic and bound to authenticated record anchor, unit and plan. Design names the approval transition digest; code uses record HeadAnchor. This is a protocol interpretation discrepancy, not demonstrated authority forgery.",
+      "evidence_refs": [
+        "independent-controls.log",
+        "independent-digest.log",
+        "F08"
+      ]
+    },
+    {
+      "id": "D2-09",
+      "requirement": "Independent validation correction approval can issue fresh lease; illegal review-to-authorization remains refused; later lease uses carried counters supplied by trusted host.",
+      "source": "v3 \u00a72.2; v4 \u00a71",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent correction test reissues on the legal edge and refuses carried counters at the attempt ceiling. Existing legal-edge controls refuse implementation-review to authorization. Counter persistence is deferred to D3.",
+      "evidence_refs": [
+        "independent-engine.log",
+        "internal/engine/lease_test.go:225",
+        "go-test-corrected.log"
+      ]
+    },
+    {
+      "id": "REG-01",
+      "requirement": "Existing transition human approval, exact binding, legal edges, Gate B and Gate C behavior preserved.",
+      "source": "architecture \u00a75-\u00a76; original objective",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "All 12 packages pass corrected baseline tests and race tests. Vet passes. This is regression evidence, not proof of every possible Gate B/C behavior.",
+      "evidence_refs": [
+        "go-test-corrected.log",
+        "go-race-corrected.log",
+        "go-vet.log"
+      ]
+    },
+    {
+      "id": "SCOPE-01",
+      "requirement": "D1/D2 expose pure derivation only; do not claim reservations, reconciliation, credit, disposition, or architecture amendment completion.",
+      "source": "audit scope",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Blind code inspection finds pure derivation, with reservation-derived counters explicitly deferred to D3. No launch, credit, disposition or amendment implementation is claimed by these code changes. Handoff narrative remains unread until after Phase 1. After the frozen blind pass, the handoff explicitly confirmed D3-D6 deferral and no command wiring.",
+      "evidence_refs": [
+        "internal/engine/lease.go:29",
+        "start-status.txt",
+        "unblinding.json"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "ValidatePlanAgainstContract checks contract/run/policy identity, criterion references, attempts, wall time and cost. It never consults PermittedRoutes or PermissionEnvelope. DeriveLease copies ImplementerRoute from the plan and has no approved route/permission projection to compare. A human-approved plan with an implementer route outside the separately accepted contract returns ReasonNone.",
+      "qualification": "This is a conflicting human-approved input, not a forged approval. The test proves the route-ceiling failure; the permission failure is the inspected absence of a comparison, not a separately executed launch.",
+      "evidence": [
+        {
+          "source": "internal/model/contract.go:366",
+          "observation": "No route or permission ceiling comparison exists in this validator."
+        },
+        {
+          "source": "internal/engine/lease.go:130",
+          "observation": "Returned route comes directly from unit.ImplementerRoute."
+        },
+        {
+          "source": "independent-engine.log:TestAuditorD12RouteCeiling",
+          "observation": "Contract permits route-approved/route-escalate/route-validator; plan names unapproved-provider-route; derivation returns active lease."
+        }
+      ],
+      "fix": {
+        "action": "Check every applicable plan route against the contract route ceiling. Bind or present the existing approved route projection to derivation and verify its route identity and permission classes against the plan and contract; fail closed when unavailable or conflicting.",
+        "why": "A later route approval must not broaden an immutable contract ceiling. A digest comparison alone does not establish route or permission compatibility.",
+        "verification": [
+          {
+            "method": "Run TestAuditorD12RouteCeiling with the out-of-contract route.",
+            "expected": "Derivation refuses; an in-ceiling route still succeeds."
+          },
+          {
+            "method": "Present a route with bounded_write against a read_only contract and vary approved route identity while preserving the plan.",
+            "expected": "Both permission broadening and identity mismatch refuse before a lease becomes active."
+          }
+        ],
+        "tradeoffs": "Requires an explicit projection/interface for existing route approval data. Preserve legacy runs without contracts and existing route-coherence checks; do not invent an authorization field.",
+        "alternative": "Validate route/permission compatibility at plan approval and persist a kernel-validated projection that derivation can verify. This moves validation earlier but still needs replayable evidence.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The dependency branch only invalidates targets before IMPLEMENTATION_AUTHORIZATION. The legal INDEPENDENT_VALIDATION -> IMPLEMENTATION_AUTHORIZATION correction is a rewind of that dependency, but does not satisfy isEarlierGate. With C depending on B depending on A, a later correction approval for A leaves C active.",
+      "qualification": "",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:154",
+          "observation": "Dependency invalidation tests isEarlierGate only."
+        },
+        {
+          "source": "internal/engine/lease.go:174",
+          "observation": "Implementation authorization is absent from the earlier-gate predicate."
+        },
+        {
+          "source": "independent-engine.log:TestAuditorD12LeaseControls/dependency_correction",
+          "observation": "ReasonNone after A correction; route rewind of A correctly refuses C; unrelated Z correction keeps C active."
+        }
+      ],
+      "fix": {
+        "action": "Treat an approved dependency correction from independent validation to implementation authorization as invalidating each direct and transitive dependent lease issued before that correction. Keep new issuance for the corrected unit separate from dependent invalidation.",
+        "why": "v3 section 2.3 voids leases of every transitive dependent when a unit rewinds; v4 section 1 explicitly makes this correction legal.",
+        "verification": [
+          {
+            "method": "Run dependency_correction, dependency_route_rewind and unrelated_correction controls.",
+            "expected": "Direct and transitive dependents refuse; unrelated unit stays active."
+          },
+          {
+            "method": "Approve a new legal issuing transition for an invalidated dependent.",
+            "expected": "Only that new generation can resume; old generation never revives."
+          }
+        ],
+        "tradeoffs": "Must distinguish correction from ordinary forward transition. Do not globally invalidate unrelated units.",
+        "alternative": "Use a shared approved-transition invalidation predicate across lease replay and the existing route replay path, with dependency closure supplied by the accepted plan.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "DeriveLease parses ir.Metadata.Timestamp instead of Approval.Timestamp. Apply writes Metadata.Timestamp at append time. A still-admissible two-minute-old approval for a one-minute plan therefore obtains a fresh minute. The lower wall-time bound is also absent, so Now before issuance succeeds.",
+      "qualification": "Future Now is an invalid trusted-host input or clock rollback case; the delayed-append defect is reproduced through the actual transition API with admissible approval inputs.",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:122",
+          "observation": "IssuedAt uses record timestamp; only Now.Before(until) is checked."
+        },
+        {
+          "source": "internal/transition/apply.go:171",
+          "observation": "Append timestamp is time.Now(), independent of the approved timestamp."
+        },
+        {
+          "source": "independent-transition-corrected.log:TestAuditorD12ApplyLateApprovalExtendsLease",
+          "observation": "Approval 2026-10-17T22:39:31Z; record 22:41:31.877466698Z; request 22:41:32Z active until 22:42:31.877466698Z."
+        },
+        {
+          "source": "independent-engine.log:TestAuditorD12LeaseControls/future_approval",
+          "observation": "Request before issuer time returns ReasonNone."
+        }
+      ],
+      "fix": {
+        "action": "Use the issuing approval timestamp for IssuedAt and expiry. Reject invalid/future approval time, reject Now before issuance, and validate the max-wall conversion before constructing time.Duration.",
+        "why": "The design bounds elapsed wall time since approval. Append latency must consume, rather than renew, that bound.",
+        "verification": [
+          {
+            "method": "Run the real Apply late-approval test with a one-minute plan and two-minute-old approval.",
+            "expected": "Transition may remain otherwise legal, but derivation refuses expired lease."
+          },
+          {
+            "method": "Test one nanosecond before expiry, exact expiry, and Now before approval.",
+            "expected": "Only the request inside [approval, expiry) succeeds."
+          }
+        ],
+        "tradeoffs": "Pending approvals can consume their entire lease before append, as the approved design requires. Duration overflow validation may reject formerly accepted extreme budgets.",
+        "alternative": "If append time is desired instead, obtain a design change and human approval for that changed timing contract; do not silently reinterpret the existing approval.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The new decoder checks keys and unknown fields but not UTF-8 or lone-surrogate integrity. Go replaces invalid UTF-8 and unpaired Unicode escapes with U+FFFD. Documents with 0xff, 0xfe, \\ud800 and \\ud801 in intent all parse to the same value and digest. Their original bytes cannot be recovered from the accepted canonical representation.",
+      "qualification": "",
+      "evidence": [
+        {
+          "source": "internal/model/contract.go:171",
+          "observation": "decodeCanonicalInput uses encoding/json after key checking without an encoding-integrity check."
+        },
+        {
+          "source": "independent-model.log:TestAuditorD12UnicodeIntegrity",
+          "observation": "Four distinct inputs decode to replacement character and digest 14bdbce57426415198e65ef79111a57df5bf125923b0e4c9cf2cc3ffee64ff13."
+        },
+        {
+          "source": "internal/host/exact_json.go:26",
+          "observation": "Existing host decoder already rejects invalid UTF-8; the new document path omits that guard."
+        }
+      ],
+      "fix": {
+        "action": "Reject non-UTF-8 raw input and reject unpaired UTF-16 surrogate escapes before decoding values. Apply the same strict value validation to both plan and contract parsing. Preserve valid surrogate pairs and legitimate U+FFFD text.",
+        "why": "Canonicalization may normalize JSON syntax, but must not silently replace data that different consumers reject or read differently.",
+        "verification": [
+          {
+            "method": "Run invalid_utf8, invalid_utf8_second, lone_surrogate and other_lone_surrogate tests for contracts and plans.",
+            "expected": "Each malformed input is rejected before any digest is returned."
+          },
+          {
+            "method": "Round-trip valid non-ASCII text, valid paired surrogates and explicit U+FFFD.",
+            "expected": "Valid scalar Unicode survives and material statement/check changes change the digest."
+          }
+        ],
+        "tradeoffs": "A raw UTF-8 check alone does not reject escaped lone surrogates. Avoid rejecting valid international text or escaped pairs. Ordinary whitespace/key-order equivalence is not a defect.",
+        "alternative": "Require exact canonical input bytes and compare against a separately specified valid-Unicode serializer. This is stricter and may break pretty-printed documents.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "ValidatePlan only requires behavior, implementer/validator routes, commands and three positive lease ceilings. A unit with no criteria advanced, allowed/forbidden scope, pre-change evidence, minimum implementation, reuse analysis, escalation route, independence rule, required evidence or stop/rollback/escalation conditions still obtains a lease. The schema has no complexity budget. ParsePlan also accepts a missing acceptance_contract_digest, although derivation later rejects that mismatch.",
+      "qualification": "",
+      "evidence": [
+        {
+          "source": "internal/model/contract.go:65",
+          "observation": "UnitBudgets has no complexity budget field."
+        },
+        {
+          "source": "internal/model/contract.go:297",
+          "observation": "Most architecture section 10 fields have no required-presence/value checks."
+        },
+        {
+          "source": "independent-engine.log:TestAuditorD12MissingPlanFields",
+          "observation": "Removing those fields still returns ReasonNone."
+        },
+        {
+          "source": "independent-model.log:TestAuditorD12PlanMissingRequiredFields",
+          "observation": "A minimal plan missing contract digest and most unit fields parses successfully."
+        }
+      ],
+      "fix": {
+        "action": "Define required fields and their explicit empty-list semantics for hma.plan/v1. Validate mandatory scalar fields, criterion coverage, scope/actions, all budget dimensions including complexity, escalation and independence, required evidence and stop/rollback/escalation declarations. Require the contract digest for the contract-backed format.",
+        "why": "Architecture section 10 defines the unit authorization envelope; struct fields alone do not make missing declarations valid.",
+        "verification": [
+          {
+            "method": "Delete one required field at a time from an otherwise complete unit and run ParsePlan and DeriveLease.",
+            "expected": "Each missing declaration is rejected; explicit empty lists only pass where the documented schema permits them."
+          },
+          {
+            "method": "Present an explicit complete unit with all required declarations.",
+            "expected": "Parsing and derivation continue to succeed."
+          }
+        ],
+        "tradeoffs": "Do not require every forbidden/non-goal/dependency list to be nonempty. Distinguish a deliberate empty declaration from omission. Adds compatibility constraints for new-format documents, not legacy approval JSON.",
+        "alternative": "Keep a separate draft-plan type and only construct an immutable validated plan when the full unit contract is present.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Transition binding checks the current core criterion ID set, but DeriveLease checks only contract/plan digests. A fresh legitimate Apply chain followed by a structurally valid criterion snapshot replacing C1 with OTHER still returns an active lease under the old contract.",
+      "qualification": "Fresh approval is used in the corrected reproduction. It does not depend on the separate clock defect. Criterion credit and disposition remain out of scope.",
+      "evidence": [
+        {
+          "source": "internal/engine/contract_binding.go:98",
+          "observation": "Transitions call criteriaMatchBound against the current core snapshot."
+        },
+        {
+          "source": "internal/engine/lease.go:115",
+          "observation": "Lease contract branch never compares ProjectStageState(...).Criteria to the contract."
+        },
+        {
+          "source": "independent-transition-corrected.log:TestAuditorD12CoreCriteriaMismatchLease",
+          "observation": "Store.Append and Load accept the criterion snapshot; projected IDs=[OTHER]; derivation returns ReasonNone."
+        }
+      ],
+      "fix": {
+        "action": "Compare the current projected core criterion ID set with ContractCriterionIDs before returning an active lease. Also verify it against the set at the latest acceptance transition, reusing the strict set comparison.",
+        "why": "The immutable criteria-set contract must apply when work authority is derived, not only at the next stage transition.",
+        "verification": [
+          {
+            "method": "Run the fresh-approval criterion mismatch reproduction; test renamed, missing, extra and duplicate IDs.",
+            "expected": "Each mismatch refuses a lease."
+          },
+          {
+            "method": "Change only a criterion disposition while preserving exact IDs.",
+            "expected": "The ID-set check remains satisfied; separate disposition policy still applies."
+          }
+        ],
+        "tradeoffs": "The test uses the core Store API, not an identified CLI criterion-edit command. The host is trusted; this is a missing deterministic consistency guard on a valid stored input, not malicious host forgery.",
+        "alternative": "Prevent criterion-ID mutations in the store unless a human-approved criteria rewind has been recorded, while retaining the derivation check as defense against historical inconsistent chains.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "At initial ACCEPTANCE_CRITERIA -> PLANNING, an empty approval contract digest returns ReasonNone before checking whether a document was supplied. Apply has already parsed that document, but records a legacy approval and BoundContractDigest remains empty.",
+      "qualification": "",
+      "evidence": [
+        {
+          "source": "internal/engine/contract_binding.go:63",
+          "observation": "Empty-digest legacy branch does not check doc != nil."
+        },
+        {
+          "source": "independent-transition-corrected.log:TestAuditorD12ApplyDropsPresentedContract",
+          "observation": "Apply accepts sequence 3 with a supplied contract; bound digest is empty."
+        }
+      ],
+      "fix": {
+        "action": "Reject a nonnil presented contract when its approving acceptance_contract_digest is empty, including the first acceptance. Preserve the both-absent legacy case.",
+        "why": "The approval must explicitly bind any contract being accepted. Silent downgrade obscures the actual accepted scope.",
+        "verification": [
+          {
+            "method": "Run ApplyDropsPresentedContract and a both-absent legacy control.",
+            "expected": "Presented-unbound contract refuses; legacy transition still succeeds."
+          },
+          {
+            "method": "Run a document with its correct digest and one with a different digest.",
+            "expected": "Only the exact matching contract is accepted."
+          }
+        ],
+        "tradeoffs": "Callers that supplied ignored documents must add explicit binding. This defect alone does not produce a lease; no bound contract still refuses derivation.",
+        "alternative": "Reject inconsistent document/binding presence at the transition input boundary before evaluating contract state.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "The design describes a lease digest over approval transition digest, unit and plan digest. The implementation hashes ir.Metadata.HeadAnchor instead of a.TransitionDigest. An auditor test holds the existing JSON envelope constant and changes only that input; the resulting hashes differ.",
+      "qualification": "Protocol interpretation risk. The test establishes the different input, not a cryptographic collision or unauthorized lease.",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:127",
+          "observation": "Hash input is {ir.Metadata.HeadAnchor, UnitID, planDigest}."
+        },
+        {
+          "source": "independent-digest.log:TestAuditorD12SpecifiedLeaseDigest",
+          "observation": "Actual 5f6f020e36530b112b9f3990cd1ed508e05e370816c10dffc1f6e30b8adb7c7e; transition-field input gives f9487876f12207a120a0681c64b4b7818115f6b311fc61bd8d60e9c4b0a33fe5."
+        }
+      ],
+      "fix": {
+        "action": "Specify the versioned lease-digest envelope and use Approval.TransitionDigest for the design-named input. If record-anchor identity is also required, include it explicitly under an approved clarified schema.",
+        "why": "Independent consumers need one reproducible definition of the same cache identity.",
+        "verification": [
+          {
+            "method": "Compute a reference digest from the documented envelope and Approval.TransitionDigest, unit and accepted plan digest.",
+            "expected": "Reference and implementation agree byte for byte."
+          },
+          {
+            "method": "Vary each documented identity field independently.",
+            "expected": "Every identity change alters the lease digest; identical input remains deterministic."
+          }
+        ],
+        "tradeoffs": "The authenticated record anchor already transitively binds the approval. This is not a demonstrated safety bypass. The report treats the design phrase as the existing ApprovalBinding.TransitionDigest field; that terminology could instead be clarified by the design owner.",
+        "alternative": "Explicitly amend the design to define approval transition digest as the record anchor, and publish a canonical test vector before D3 caches depend on it.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "before D1/D2 acceptance"
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "kind": "risk",
+      "mode": "code",
+      "severity": "low",
+      "confidence": "observed",
+      "diagnosis": "Attempts and CostSpent are signed values and only upper bounds are checked. Negative counts return ReasonNone. This weakens the pure function input contract, but no legitimate D3 reservation derivation producing negatives was demonstrated.",
+      "qualification": "",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:163",
+          "observation": "Only >= ceiling is checked."
+        },
+        {
+          "source": "independent-engine.log:TestAuditorD12LeaseControls/negative_counters",
+          "observation": "Attempts=-1 and CostSpent=-20 return ReasonNone."
+        }
+      ],
+      "fix": {
+        "action": "Reject negative Attempts and CostSpent before comparing ceilings. Document that D3 must carry cumulative nonnegative consumption across generations.",
+        "why": "Invalid counters should fail closed at the derivation boundary instead of creating artificial headroom.",
+        "verification": [
+          {
+            "method": "Run negative_counters separately for each signed counter and zero/below/equal ceiling controls.",
+            "expected": "Every negative input refuses; zero and valid below-ceiling inputs pass; equality refuses."
+          }
+        ],
+        "tradeoffs": "Trusted-host threat model limits adversarial significance. This does not audit reservation persistence, aggregate run accounting or reconciliation.",
+        "alternative": "Use validated nonnegative counter constructors or unsigned accounting types with checked arithmetic in D3.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "before D3 integration"
+    }
+  ],
+  "limitations": [
+    "Fresh audit context contains the neutral dispatch and authoritative requirements, with no implementer chat or prior audit findings. Source comments and tests are naturally visible as artifacts, not accepted as judgments.",
+    "Context isolation is isolated. Execution isolation is a copied source tree in a shared host filesystem, not a container or OS-enforced read-only mount. Repository read-only behavior is procedural; sandbox technically permits repository writes.",
+    "Threat model is a trusted host. DeriveLease is assumed to receive an ordered, validated core chain, accurate current policy digest and accurate counters. Forged core slices, altered anchors, malicious clocks and host model/API attacks are not claimed as in-scope exploits.",
+    "No nested agents, agent CLIs, model APIs or external communications were used. No approved Jev tool is exposed in host metadata; judgment fell back to this auditor. No worker dispatch was performed, so route hi preflight is not applicable.",
+    "All test artifacts, fixture repositories, cache and temporary files are under the audit output directory. Tests use fixture git writes only; no git write command targeted /home/yeli/repos. Git resolves to /usr/bin/git in the test environment.",
+    "Initial broad tests/race tests failed only in scripts/dogfood/hostinput because the auditor set GOTMPDIR and TMPDIR to different roots. Corrected aligned-temp runs pass. Both original and corrected logs are retained.",
+    "Auditor negative controls intentionally fail to show defects. Positive/mismatch/legacy controls pass. Full raw files are retained even where tool displays were truncated.",
+    "D3-D6 reservations, launcher reconciliation, criterion credit, findings disposition and architecture amendment are excluded. The excluded .serena and architecture-amendment files are hashed for freeze identity only.",
+    "The optional implementer D1/D2 handoff has not been read before this Phase 1 freeze. No /tmp/hma-gate-* directory other than this output directory and no /tmp/claude-* directory was read.",
+    "Current live HMA run state, approval challenge and implementer route are not part of this audit target. This report neither supplies approval nor advances a stage.",
+    "D2-08 has an explicit design-terminology interpretation. F08 does not establish forgery. Negative counters are invalid trusted-host input; F09 is a nonblocking boundary risk, not proof of broken future D3 accounting.",
+    "After Phase 1, only docs/handoffs/2026-10-17-gate-d-d1-d2.md was unblinded. It confirms that DeriveLease is not wired to host commands. D2 findings are reproduced function-level authority errors, not demonstrated current launch bypasses. D1 contract omission is reproduced through Apply. No finding changed."
+  ],
+  "phase1_frozen": true,
+  "freeze": {
+    "time": "2026-10-17T22:38:33.785843+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status_sha256": "f9ebf1c6858747ec738e99ce778da50103e9266f90608c884452cbbb73b26373",
+    "diff_sha256": "35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+    "untracked": [
+      {
+        "path": ".serena/.gitignore",
+        "sha256": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758"
+      },
+      {
+        "path": ".serena/project.yml",
+        "sha256": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d"
+      },
+      {
+        "path": "docs/handoffs/2026-10-16-arch-amendment-draft.md",
+        "sha256": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb"
+      },
+      {
+        "path": "docs/handoffs/2026-10-16-arch-amendment-trace.md",
+        "sha256": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5"
+      },
+      {
+        "path": "docs/handoffs/2026-10-17-gate-d-d1-d2.md",
+        "sha256": "892681a7c974e9aefde09ae6c2414c804988da8417862930bcc73054b440f946"
+      },
+      {
+        "path": "internal/engine/contract_binding.go",
+        "sha256": "713ad22aa86ea179de9d42739ce5701371a33f8bc6be353d9dffcf0d8c433295"
+      },
+      {
+        "path": "internal/engine/lease.go",
+        "sha256": "62c9fdd2002407ea84acd0f15f9c95dbae82a6627d86405c4150ff2b01f61b19"
+      },
+      {
+        "path": "internal/engine/lease_test.go",
+        "sha256": "6022008947eff119fc2fbc5909e0c2fc9ed3bb99ab44a4d783a09971a3633a34"
+      },
+      {
+        "path": "internal/model/contract.go",
+        "sha256": "1d05ce5b6e8a17c13ceacfc736261207630c2b7e8136931c6ed76b89ea738b27"
+      },
+      {
+        "path": "internal/model/contract_test.go",
+        "sha256": "ffb5598b335aafaef587fadba8257df077ce675a2500df9c385b04280e78db9c"
+      },
+      {
+        "path": "internal/transition/contract_test.go",
+        "sha256": "2ee4924e30ee77d95756621436a3864c3f143d08a978156f22d31180216b02ec"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:39:17.520466+00:00",
+      "end": "2026-10-17T22:40:56.513537+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "go-test.log",
+      "log_sha256": "eca605e633786f7fa52d60af85981fbae78912225a72ff43c2b9d05afc78eca0"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:39:17.522664+00:00",
+      "end": "2026-10-17T22:39:28.649429+00:00",
+      "exit_code": 0,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "go-vet.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:39:17.531461+00:00",
+      "end": "2026-10-17T22:41:22.099731+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "go-race.log",
+      "log_sha256": "f9844a54fff249acd926537e17ad75e749bf7d4d1db2323a26783bfed58c9ef2"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261017-d12/baseline-overlay.json",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:41:30.458794+00:00",
+      "end": "2026-10-17T22:43:01.800995+00:00",
+      "exit_code": 0,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "go-test-corrected.log",
+      "log_sha256": "dc70c155bbf0669bead4c162609fdf43913755e973285edc6e4123c6f7071092"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay",
+        "/tmp/hma-gate-d-20261017-d12/baseline-overlay.json",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:41:30.457607+00:00",
+      "end": "2026-10-17T22:43:21.228465+00:00",
+      "exit_code": 0,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "go-race-corrected.log",
+      "log_sha256": "17c8e4cb6024a31f0b91abc7b9cdebc1369e5452b865c250b10c30e909666985"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/engine",
+        "-run",
+        "^TestAuditorD12",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:40:18.882645+00:00",
+      "end": "2026-10-17T22:40:19.706071+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-engine.log",
+      "log_sha256": "354757f0063cd9f76e7b580f7d7d59f4f9c7f0b8df8cd688beccd10302ba3945"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/model",
+        "-run",
+        "^TestAuditorD12",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:40:20.211045+00:00",
+      "end": "2026-10-17T22:40:20.923943+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-model.log",
+      "log_sha256": "b76d1c2113f926752f29479f589d487a74e56d1f7fa3de703d644624bda8fdd9"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:41:04.428636+00:00",
+      "end": "2026-10-17T22:41:06.305773+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-transition.log",
+      "log_sha256": "39d7ab55456369c2ac2ce8d4c08fd636b90d4d4bebb3ce1c4b9b47e64f0cd97a"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:41:30.454341+00:00",
+      "end": "2026-10-17T22:41:32.409859+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-transition-corrected.log",
+      "log_sha256": "ed0fe0e398b5fd200da166e65fff1f3663470a5690abebb65192c9c8e0aeed81"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/engine",
+        "./internal/model",
+        "-run",
+        "^TestAuditorD12(IndependentBindings|LeaseDigestBinding|StrictJSONControls|LegacyApprovalSerialization)$",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:42:00.427238+00:00",
+      "end": "2026-10-17T22:42:01.265259+00:00",
+      "exit_code": 0,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-controls.log",
+      "log_sha256": "37c9dc61cfdcfe48220cd6b88835f313ece517a1176ed9d6d8c5ecf6bfdc0a58"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-v",
+        "./internal/engine",
+        "-run",
+        "^TestAuditorD12SpecifiedLeaseDigest$",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:43:04.363422+00:00",
+      "end": "2026-10-17T22:43:05.222933+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-digest.log",
+      "log_sha256": "5dbd97077d13b7326e9c3c40da5217835d4bd82cd3ce4268906c1f2bcb98ed49"
+    },
+    {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-json",
+        "./internal/model",
+        "./internal/engine",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12/snapshot",
+      "start": "2026-10-17T22:45:48.048532+00:00",
+      "end": "2026-10-17T22:45:49.909079+00:00",
+      "exit_code": 1,
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+      "log": "independent-all.log",
+      "log_sha256": "0c8397343cce6baa54981320c506bd34a04449f3df432a99aa071fb9361cb1db"
+    }
+  ],
+  "environment": {
+    "go": "go1.27.1 linux/amd64",
+    "git": "/usr/bin/git",
+    "GOCACHE": "/tmp/hma-gate-d-20261017-d12/gocache",
+    "initial_GOTMPDIR": "/tmp/hma-gate-d-20261017-d12/gotmp",
+    "initial_TMPDIR": "/tmp/hma-gate-d-20261017-d12/runtime-tmp",
+    "corrected_GOTMPDIR": "/tmp/hma-gate-d-20261017-d12/runtime-tmp",
+    "corrected_TMPDIR": "/tmp/hma-gate-d-20261017-d12/runtime-tmp",
+    "dependencies": "go.mod declares go 1.21; no external module requirements"
+  },
+  "next_action": {
+    "action": "Return failed Gate D D1/D2 to the implementation owner for correction.",
+    "current_outcome": "FAIL",
+    "supporting_evidence": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F07",
+      "independent-transition-corrected.log"
+    ],
+    "rationale": "Deterministic guards permit leases outside the approved contract or after invalidating changes. Green baseline checks do not satisfy the failing acceptance cases.",
+    "proposed_owner": "Ming / the human-designated Opus implementation orchestrator (author attribution observed after unblinding)",
+    "proposed_route": "Handoff only. No worker execution is requested by this report. A later repair dispatch must use its human-approved exact route and hi preflight; provider/model/access service were not supplied here.",
+    "permission_envelope": "Read the audit packet. This report grants no repository edits, launch, git write, stage change, commit, push or release.",
+    "exact_approval_required": "None for receipt of this audit. Any repair execution or stage transition must use a still-valid existing approval or a fresh challenge bound to its exact current HMA inputs; this audit creates none.",
+    "stop_conditions": "Do not declare D1/D2 accepted or proceed through the failed gate until corrective work passes scoped verification and independent re-audit. Stop if source freeze changes or required route/permission approval is absent.",
+    "escalation_conditions": "Escalate design ambiguities, wider scope, route or permission changes, and unresolved high-severity findings to the human."
+  },
+  "improvement_opportunities": [
+    "Use the auditor control matrix as the acceptance regression matrix after repair. This extends existing validation evidence without redesigning HMA or claiming D3-D6 completion."
+  ],
+  "phase1_sha256": "6bd56fecbbaf1f5a722ea63bc9225df70d64cbb27228e22877b0556e9899b98a",
+  "phase1_path": "PHASE1.json",
+  "finalized_at": "2026-10-17T22:47:00.666384+00:00",
+  "controlled_unblinding": {
+    "phase1_sha256": "6bd56fecbbaf1f5a722ea63bc9225df70d64cbb27228e22877b0556e9899b98a",
+    "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md",
+    "source_sha256": "892681a7c974e9aefde09ae6c2414c804988da8417862930bcc73054b440f946",
+    "observation": "Handoff explicitly defers D3-D6 and says pure lease derivation is not wired to a command. D1/D2 safety and validity defects remain; no current production launch bypass is claimed.",
+    "effect_on_findings": "No finding withdrawn or severity changed. SCOPE-01 confirmed. F08 remains a qualified digest-definition interpretation risk.",
+    "prohibited_other_context": "No other prohibited directory or excluded amendment content read."
+  },
+  "repository_freeze_verification": {
+    "timestamp": "2026-10-17T22:46:02.201765+00:00",
+    "unchanged": true,
+    "differences": {},
+    "tracked_and_scoped_source_content_changes": [],
+    "checks": "HEAD, branch, exact git status --short bytes, git diff --binary SHA-256, every untracked file SHA-256 including ignored-from-audit inputs, and all 215 copied source files"
+  },
+  "auditor_declared_route": {
+    "dispatch_id": "hma-gate-d-audit-20261017-d12",
+    "worker": "liz",
+    "provider": "OpenAI (declared model provider)",
+    "model": "gpt-6.1-sol (dispatch declaration, not independently attested)",
+    "effort": "high (dispatch declaration)",
+    "access_service": "Current Codex host; exact access-service identifier/digest not supplied",
+    "mode": "read-only repository review; write output directory only",
+    "subdispatches": 0
+  },
+  "auditor_test_summary": {
+    "leaf_tests": 47,
+    "passed": 31,
+    "failed": 16,
+    "skipped": 0,
+    "failed_tests": [
+      "github.com/lennon-li/HMA/internal/model:TestAuditorD12UnicodeIntegrity/invalid_utf8",
+      "github.com/lennon-li/HMA/internal/model:TestAuditorD12UnicodeIntegrity/invalid_utf8_second",
+      "github.com/lennon-li/HMA/internal/model:TestAuditorD12UnicodeIntegrity/lone_surrogate",
+      "github.com/lennon-li/HMA/internal/model:TestAuditorD12UnicodeIntegrity/other_lone_surrogate",
+      "github.com/lennon-li/HMA/internal/model:TestAuditorD12PlanMissingRequiredFields",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12LeaseControls/future_approval",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12LeaseControls/approval_aged_record_new",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12LeaseControls/dependency_correction",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12LeaseControls/negative_counters",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12RouteCeiling",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12MissingPlanFields",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12ContractDocumentDropped",
+      "github.com/lennon-li/HMA/internal/engine:TestAuditorD12SpecifiedLeaseDigest",
+      "github.com/lennon-li/HMA/internal/transition:TestAuditorD12ApplyDropsPresentedContract",
+      "github.com/lennon-li/HMA/internal/transition:TestAuditorD12ApplyLateApprovalExtendsLease",
+      "github.com/lennon-li/HMA/internal/transition:TestAuditorD12CoreCriteriaMismatchLease"
+    ],
+    "interpretation": "Failures are intentional falsification controls demonstrating defects, plus qualified protocol/counter boundary tests. They are not all separate high-severity defects."
+  },
+  "reproduce_commands": [
+    "python3 /tmp/hma-gate-d-20261017-d12/run-check.py rerun-auditor /home/yeli/.local/go/bin/go test -v ./internal/model ./internal/engine ./internal/transition -run ^TestAuditorD12 -count=1",
+    "python3 /tmp/hma-gate-d-20261017-d12/run-check.py rerun-baseline /home/yeli/.local/go/bin/go test -overlay /tmp/hma-gate-d-20261017-d12/baseline-overlay.json ./...",
+    "python3 /tmp/hma-gate-d-20261017-d12/run-check.py rerun-race /home/yeli/.local/go/bin/go test -race -overlay /tmp/hma-gate-d-20261017-d12/baseline-overlay.json ./...",
+    "python3 /tmp/hma-gate-d-20261017-d12/run-check.py rerun-vet /home/yeli/.local/go/bin/go vet -overlay /tmp/hma-gate-d-20261017-d12/baseline-overlay.json ./..."
+  ]
+}

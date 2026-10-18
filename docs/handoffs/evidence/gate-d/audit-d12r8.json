@@ -1,0 +1,685 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12r8",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0 + worktree diff sha256:c119b7f95c3cff42c5a2f13037bbef88fefbde6093a55c355a1ccbe64dca19fb + freeze-start.json untracked manifest",
+  "isolation": "partial",
+  "isolation_compromised": true,
+  "isolation_details": "Fresh auditor task with no implementer discussion inherited. No D1/D2 implementer handoff or prior audit files were read before Phase 1. An initial heading search accidentally displayed Gate A v3 \u00a71 design-summary rows R1/A1 and headings outside the requested sections, so the requested strict section isolation was not fully preserved. These are approved-design historical summaries, not D1/D2 verdicts. No restart or nested model was used. This report does not claim fully isolated independent-review certification.",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_mapping": "FAIL is the report-contract fix-required result; these name one decision.",
+  "phase1_frozen": true,
+  "phase1_time": "2026-10-18T00:35:27.664332+00:00",
+  "requirements": [
+    {
+      "id": "D1-01",
+      "requirement": "Versioned immutable canonical acceptance contract contains run, scope, non-goals, criteria statements/checks/thresholds/evidence, risk, deliverables and ceilings.",
+      "source": "v2 \u00a72.2; v3 \u00a72.1",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Strict canonical contract parsing accepts complete explicit documents. Exhaustive missing/null-field tests and Unicode/digest tests pass. Results remain in core criterion records.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "requirement": "Core criterion IDs exactly equal contract IDs; contract edits change digest; malformed/ambiguous input fails closed.",
+      "source": "v2 \u00a72.2",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Changed material text changes the digest. Invalid UTF-8, lone surrogates, duplicate/case/unknown keys and trailing documents refuse. Criterion rename, missing, extra and duplicate ID controls refuse; disposition-only change preserves the ID-set check.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "requirement": "Optional acceptance_contract_digest preserves legacy bytes; first acceptance binds a presented contract; later approvals retain exact binding; changes need approved acceptance rewind.",
+      "source": "v3 \u00a72.1; architecture \u00a75\u20136",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Real Apply refuses presented-unbound, digest-without-document, wrong digest, later drop, swap and wrong document. Both-absent legacy, exact match, carried binding and new acceptance after approved Grounding/Acceptance rewind pass. Golden legacy approval JSON bytes match.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "requirement": "hma.plan/v1 canonical document validates every architecture \u00a710 field, max wall time, cost and required effective policy digest; accepted_plan_digest binds it.",
+      "source": "v3 \u00a72.2; v4 \u00a72",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Every declared object field is removed and set to null independently for contracts and all four plan units. Each malformed document refuses. Explicit zero retries, empty argv/non-goals/dependencies controls pass. Unit budgets, graph validation and policy/contract binding have passing independent or original controls.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "requirement": "Only latest legal approved transition targeting IMPLEMENTATION_AUTHORIZATION issues a lease for its exact unit and plan. Legacy/missing/invalid plan refuses.",
+      "source": "v4 \u00a71; v3 \u00a72.3",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Initial issuer and document/plan/unit checks pass. A fresh correction issuer can reuse an earlier invalidated route approval. The actual global-core Apply path accepts this history; see F-D12R8-01.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "requirement": "Run nonterminal and unit in implementation authorization; rewinds void same unit, transitive dependents or entire run as scoped. Old generations never revive.",
+      "source": "v3 \u00a72.2\u20132.3; architecture \u00a75",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Post-issuer whole-run and direct/transitive dependency rewinds refuse; unrelated units remain active. New route issuers resume. Invalidation before a correction issuer is not replayed for its retained route approval; see F-D12R8-01.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "requirement": "Approval wall-time interval and all per-unit ceilings enforced; counters cannot widen grant; current policy and contract equal approved binding.",
+      "source": "v3 \u00a72.2; v4 \u00a72",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Now before approval and exact expiry refuse; one nanosecond before expiry succeeds. Real Apply with a two-minute-old approval and a one-minute lease remains expired. Negative/equal counters and changed/empty policy refuse. Valid below-ceiling inputs pass.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "requirement": "Route/permission/budget/risk grants stay within contract ceilings and selected core route approval identity; conflicts refuse, including rework.",
+      "source": "v2 \u00a72.2; architecture \u00a75\u20136,10",
+      "assessment": "NOT MET",
+      "status": "fail",
+      "observation": "Contract route, permission, attempt, wall-time and cost ceilings refuse broadening. Projection identity/reference/unit mismatch controls pass. However, a changed plan can select fallback while reusing the old primary route approval after a Grounding rewind. DeriveLease returns ReasonNone through a real Apply chain.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "requirement": "Lease identity is digest of approval transition digest, unit and plan digest; pure derivation grants no transition authority.",
+      "source": "v3 \u00a72.2; architecture \u00a75\u20136",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent reference SHA-256 of transition_digest, unit_id and plan_digest equals the implementation. Supplemental controls vary every identity field independently; identical input is deterministic and record-anchor edits preserve the digest. Host-written evidence and illegal issuing edges remain negative controls in the original suite. Pure derivation performs no I/O or stage advancement.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D2-06",
+      "requirement": "Bound waiver changes invalidate issuing and retained route approvals; inactive/replaced grants cannot issue fresh valid lease.",
+      "source": "architecture \u00a75.4,6",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Independent pure and real Apply controls refuse bound withdrawal, expiry, replacement, old grant at issuer, unknown and duplicate references. Current regrant, unbound, unrelated and freshly approved route controls succeed. Corrections do not restore routes invalidated by waivers.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "SCOPE",
+      "requirement": "D1/D2 preserve existing transition, Gate B/C behavior and make no implementation/completion claim for D3\u2013D6.",
+      "source": "Gate D objective; user scope",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Original suite and vet/race pass. Post-freeze handoff inspection explicitly defers D3\u2013D6 and does not claim complete Gate D. Pure lease derivation remains unwired to a command.",
+      "evidence_refs": [
+        "original-tests.log",
+        "repo/internal/model/auditor_documents_test.go",
+        "repo/internal/engine/auditor_d12_test.go",
+        "repo/internal/transition/auditor_apply_test.go",
+        "supplement.log",
+        "supplement-race.log",
+        "docs/handoffs/2026-10-17-gate-d-d1-d2.md (read after Phase 1)"
+      ]
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "status": "FIXED",
+      "observation": "TestAuditorD12BoundsAndIdentity rejects out-of-contract routes and permission broadening; matching controls pass. Retained-route generation defect is separate.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "status": "FIXED",
+      "observation": "TestAuditorD12Rewinds rejects direct/transitive dependency corrections and route/plan rewinds, preserves unrelated units and permits a new route issuer. No old post-issuer generation revives in these controls.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "status": "FIXED",
+      "observation": "TestAuditorD12RealApplyLateApproval and boundary controls enforce human approval time, not append time.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "status": "FIXED",
+      "observation": "TestAuditorD12UnicodeAndCanonicalIntegrity rejects both malformed UTF-8 controls and multiple lone surrogates for both formats; valid scalar/paired-surrogate/U+FFFD controls pass.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "status": "FIXED",
+      "observation": "TestAuditorD12AllFieldsDeclared exhaustively removes/nulls each field in complete units; ParsePlan rejects them. Independent missing-retry derivation refuses before active lease.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "status": "FIXED",
+      "observation": "TestAuditorD12Rewinds rejects renamed/missing/extra/duplicate core IDs and accepts disposition-only updates with the same IDs.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "status": "FIXED",
+      "observation": "TestAuditorD12ApplyContractBinding reproduces presented-unbound refusal and both-absent, matching and mismatched controls through real Apply.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "status": "FIXED",
+      "observation": "TestAuditorD12BoundsAndIdentity computes the independent reference digest using Approval.TransitionDigest. TestAuditorD12EachLeaseIdentityField varies transition, unit and plan independently; every change changes the digest. Identical inputs are deterministic and record-anchor-only edits preserve it.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "status": "FIXED",
+      "observation": "TestAuditorD12BoundsAndIdentity independently rejects negative attempts/cost and equal-ceiling controls; zero/below controls pass.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D12R2-01",
+      "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+      "status": "FIXED",
+      "observation": "Exhaustive recursive missing/null field tests pass. Explicit zero retries/empty argv controls pass. Missing-retry plan cannot derive a lease. Original test/vet/race and legacy-byte control pass.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F-D12R3-01",
+      "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+      "status": "PARTIAL",
+      "observation": "Post-issuer Grounding/Acceptance rewind controls now refuse regardless of unit tag; real Release-and-closure -> Acceptance rewind and fresh-issuer controls also pass. A later correction can still reuse a route from before a whole-run rewind, including a changed plan route. Therefore the broader no-remaining-rewind-bypass exit criterion is not met. See F-D12R8-01.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D12R4-01",
+      "title": "Selected-route coherence is absent from the pure lease interface",
+      "status": "PARTIAL",
+      "observation": "Fixed-plan selected profile, permission, approval-reference and unit controls pass, as does ordinary rework. Cross-generation coherence remains incomplete: a changed plan selects fallback using a stale primary approval. See F-D12R8-01.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D12R5-01",
+      "title": "A lease stays active after a bound waiver invalidates its issuing approval",
+      "status": "FIXED",
+      "observation": "TestAuditorD12Waivers and real Apply generation controls cover bound/unbound/unrelated scopes, replacement and fresh current issuers. Missing/duplicate references refuse. Earlier generations remain invalidated.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "D12R6-01",
+      "title": "A new issuer can bind an inactive or replaced waiver grant and obtain a lease",
+      "status": "FIXED",
+      "observation": "TestAuditorD12RealApplyWaiverGeneration refuses withdrawn/expired/old-after-regrant and accepts current-after-regrant. Pure controls also cover changes before and after the issuer.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    },
+    {
+      "id": "F-D12R7-01",
+      "title": "Correction lease reuses a route approval invalidated by a bound waiver",
+      "status": "FIXED",
+      "observation": "Waiver-specific retained-route controls refuse route_withdraw/route_expire/route_replace even when the correction binds current waivers. route_fresh passes. This does not establish route validity after non-waiver rewinds.",
+      "evidence_refs": [
+        "auditor-tests.log",
+        "auditor-race.log",
+        "supplement.log",
+        "supplement-race.log",
+        "original-tests.log",
+        "original-race.log",
+        "vet.log",
+        "supplement.log",
+        "supplement-race.log"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-D12R8-01",
+      "title": "Correction issuer reuses a route approval invalidated by a plan or whole-run rewind",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "requirements": [
+        "D2-01",
+        "D2-02",
+        "D2-04"
+      ],
+      "diagnosis": "DeriveLease scans rewind events only after the latest implementation-authorization issuer (lease.go:160\u2013189). For a correction issuer it then selects an earlier route approval (194\u2013203, 305\u2013313). Only waiver invalidation is replayed for that retained route. Planning/Grounding/Acceptance invalidation between route approval and correction issuer is lost. A validated core chain can therefore obtain an active lease from an invalidated route approval. A stronger real Apply reproduction changes A's plan route from primary to fallback after a Grounding/Acceptance rewind and still obtains ReasonNone using the old primary approval reference. This violates architecture \u00a75.4 plan/whole-run invalidation and the approved route-identity precedence.",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:160\u2013203,305\u2013313",
+          "observation": "Rewinds are checked only after issuer; retained route has waiver-only invalidation replay."
+        },
+        {
+          "source": "auditor-tests.log: TestAuditorD12ReworkAfterInvalidatedRoute",
+          "observation": "Unit A and whole-run Planning rewind cases unexpectedly return ReasonNone. Unrelated D control passes."
+        },
+        {
+          "source": "auditor-tests.log: TestAuditorD12RealApplyInvalidatedRoute",
+          "observation": "The same unit and whole-run cases are accepted by real Apply and obtain active leases. Unrelated D and fresh route controls pass."
+        },
+        {
+          "source": "auditor-tests.log: TestAuditorD12RealApplyChangedPlanRoute",
+          "observation": "After a tagged global Grounding rewind and new acceptance, plan route fallback obtains an active lease citing the earlier primary route approval."
+        },
+        {
+          "source": "auditor-race.log",
+          "observation": "The same failures reproduce under the race detector. No data-race diagnostic is needed to trigger the defect."
+        },
+        {
+          "source": "traces/",
+          "observation": "Machine-readable documents, chain records, route projection, returned lease and empty refusal reason preserve the real Apply reproductions."
+        }
+      ],
+      "reproduction": [
+        "Accept contract and plan. Approve A through Route selection -> Implementation authorization -> Implementation review -> Verification -> Independent validation.",
+        "Approve A (or the whole run) back to Planning. Approve independent D through Route selection, authorization, review, verification and Independent validation.",
+        "Approve Independent validation -> Implementation authorization for A. Derive A using its pre-rewind route approval. Actual result: ReasonNone. Expected: refuse until a new valid A route approval exists.",
+        "Stronger control: rewind A to Grounding, return through Acceptance criteria, change A's plan implementer route to fallback, accept the changed plan, progress D, then approve correction A. Derivation accepts fallback with the old primary route approval."
+      ],
+      "fix": {
+        "action": "In internal/engine/lease.go, validate the retained route approval across its whole lifetime before accepting a correction issuer. Replay applicable whole-run and unit-scoped route/plan invalidations from the route approval through the issuer and current tail. Use the approved plan graph for applicable dependency effects. A rewind that invalidates that route must require a new Route selection -> Implementation authorization approval; never search backward for an older approval. Preserve normal forward review/verification/validation and unrelated-unit controls.",
+        "why": "The correction issuer starts a new lease generation but cannot restore a route approval whose input/gate was invalidated earlier. Moving the rewind scan start to the route approval without classifying forward versus invalidating transitions would reject valid rework, so the check must use invalidation semantics.",
+        "verification": [
+          {
+            "method": "Run the preserved TestAuditorD12ReworkAfterInvalidatedRoute and TestAuditorD12RealApplyInvalidatedRoute in normal and race modes.",
+            "expected": "Affected-unit and whole-run Planning rewind cases refuse. Unrelated-unit and fresh-route cases remain active."
+          },
+          {
+            "method": "Run TestAuditorD12RealApplyChangedPlanRoute and add equivalent accepted criteria/route rewind cases with unit tags.",
+            "expected": "A changed plan route cannot use a pre-rewind approval; a new matching route approval restores eligibility."
+          },
+          {
+            "method": "Run all original tests/vet/race, waiver-generation, ordinary legal correction, route mismatch, dependency, wall-time and legacy-byte controls; obtain a clean isolated follow-up audit.",
+            "expected": "All controls pass without waiving binding, independence, human approval or route constraints."
+          }
+        ],
+        "tradeoffs": "Requires careful invalidation scope so unrelated unit activity and ordinary legal rework do not spuriously revoke a valid route. This is additional pure replay work, not permission to add D3\u2013D6 behavior. A minimal fail-closed guard can temporarily refuse only affected correction paths until route reapproval.",
+        "alternative": "Track an explicit per-unit route-generation validity projection derived from the core chain and require corrections to reference a live generation. This can centralize lifecycle rules but adds more state/projection plumbing than a scoped replay guard.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    }
+  ],
+  "checks": {
+    "env": {
+      "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+      "GOCACHE": "/tmp/hma-gate-d-20261017-d12r8/gocache",
+      "TMPDIR": "/tmp/hma-gate-d-20261017-d12r8/tmp",
+      "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r8/tmp",
+      "HMA_AUDIT_OUT": "/tmp/hma-gate-d-20261017-d12r8/traces"
+    },
+    "checks": [
+      {
+        "label": "original-tests",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-skip",
+          "^TestAuditor",
+          "./..."
+        ],
+        "cwd": "/tmp/hma-gate-d-20261017-d12r8/repo",
+        "exit_code": 0,
+        "seconds": 72.8,
+        "log": "original-tests.log"
+      },
+      {
+        "label": "vet",
+        "command": [
+          "go",
+          "vet",
+          "./..."
+        ],
+        "cwd": "/tmp/hma-gate-d-20261017-d12r8/repo",
+        "exit_code": 0,
+        "seconds": 0.31,
+        "log": "vet.log"
+      },
+      {
+        "label": "original-race",
+        "command": [
+          "go",
+          "test",
+          "-race",
+          "-count=1",
+          "-skip",
+          "^TestAuditor",
+          "./..."
+        ],
+        "cwd": "/tmp/hma-gate-d-20261017-d12r8/repo",
+        "exit_code": 0,
+        "seconds": 86.387,
+        "log": "original-race.log"
+      },
+      {
+        "label": "auditor-tests",
+        "command": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "./internal/model",
+          "./internal/engine",
+          "./internal/transition",
+          "-run",
+          "^TestAuditor"
+        ],
+        "cwd": "/tmp/hma-gate-d-20261017-d12r8/repo",
+        "exit_code": 1,
+        "seconds": 22.748,
+        "log": "auditor-tests.log"
+      },
+      {
+        "label": "auditor-race",
+        "command": [
+          "go",
+          "test",
+          "-race",
+          "-count=1",
+          "-v",
+          "./internal/model",
+          "./internal/engine",
+          "./internal/transition",
+          "-run",
+          "^TestAuditor"
+        ],
+        "cwd": "/tmp/hma-gate-d-20261017-d12r8/repo",
+        "exit_code": 1,
+        "seconds": 30.223,
+        "log": "auditor-race.log"
+      }
+    ]
+  },
+  "supplemental_checks": {
+    "normal": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12(EachLeaseIdentityField|MultipleWaiverGrants|ReleaseAcceptanceRewind)$"
+      ],
+      "exit_code": 0,
+      "log": "supplement.log"
+    },
+    "race": {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12(EachLeaseIdentityField|MultipleWaiverGrants|ReleaseAcceptanceRewind)$"
+      ],
+      "exit_code": 0,
+      "seconds": 12.607831478118896,
+      "log": "supplement-race.log"
+    }
+  },
+  "inventory": "evidence-inventory.json",
+  "initial_freeze": "freeze-start.json",
+  "limitations": [
+    "Isolation is partial because the initial heading search exposed two historical Gate A design-summary rows outside the requested source sections. This is disclosed rather than represented as a clean isolated audit.",
+    "The trusted-host threat model is assumed. Pure LeaseRequest inputs are assumed to contain the validated core chain and honest current policy/route/counter projections. No malicious-store-forgery or host-bypass claim is made.",
+    "Tests run on a matching source copy outside the repository. There is no OS-level read-only mount of the target; access was operationally read-only, with a start/end freeze required. Fixture git operations occur only under the audit TMPDIR.",
+    "Original historical overlays were not read or reused. Closure criteria were reimplemented with auditor-owned controls. Closure decisions are scoped to those criteria and evidence, not a blanket assertion that Gate D is safe.",
+    "Reservations, consumption-counter derivation, launch reconciliation, criterion credit, findings disposition and architecture amendment are D3\u2013D6 and were not evaluated. This audit does not authorize launches or complete Gate D.",
+    "Testing is finite. The preserved tests do not prove absence of every possible invalid history. The demonstrated high-severity defect is sufficient for FAIL.",
+    "The handoff was read only after the Phase 1 digest was recorded. No prior audit directory was unblinded. Existing host commands do not yet consume DeriveLease. No current host launch bypass is claimed.",
+    "Trace files retain the last full auditor race run. The earlier normal-run logs and test sources remain available. Test fixture repository paths are temporary and may have been removed by go test cleanup."
+  ],
+  "jev": "No approved Jev tool was exposed in the host tool inventory. Auditor/human fallback used. No worker dispatch or model API was performed.",
+  "opportunities": [],
+  "next_action": {
+    "action": "Return the frozen F-D12R8-01 packet to the human coordinator for bounded remediation assignment.",
+    "rationale": "An active lease can use an invalidated route approval, so D1/D2 acceptance is not supported.",
+    "owner": "Human coordinator",
+    "route": "Human review; no coding worker is dispatched by this audit. Any later coding route requires its own eligible route and exact-route preflight.",
+    "permission_envelope": "Review this evidence and assign a bounded fix; this auditor remains repository read-only.",
+    "exact_approval_required": "No stage or release approval is requested or granted. The human must decide the remediation assignment.",
+    "stop_escalation_conditions": "Do not accept D1/D2 or proceed on a claim of a valid lease until the retained-route invalidation defect is corrected and independently retested. Escalate if the fix changes architecture, route authority, permission ceilings or D3\u2013D6 scope."
+  },
+  "report_time": "2026-10-18T00:36:44.706222+00:00",
+  "phase1_sha256": "097c413fccd603832381674867d13cd9869ae8cd56b765c46ad0670df64a64df",
+  "final_freeze": "freeze-end.json",
+  "repository_unchanged": true,
+  "controlled_unblinding": {
+    "time": "2026-10-18T00:36:44.706222+00:00",
+    "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md",
+    "source_sha256": "d216fa410b31fe3a953b52c7c13fc5397b22dfb303d2f64ac7e398d61b4df72e",
+    "phase1_frozen_before_read": true,
+    "scope_observation": "The handoff explicitly defers D3 reservations, D4 launch reconciliation, D5 criterion credit/findings/full packet, and D6 architecture amendment. It says pure lease derivation is not yet wired to a command. No claim of complete Gate D was found.",
+    "finding_changes": "None. The existing host route path retains its conservative invalidation rule. The finding concerns the required pure D2 authority derivation, not a demonstrated current host launch bypass. Replaying only waiver invalidation for a retained route remains insufficient after a plan or whole-run rewind."
+  },
+  "prior_finding_counts": {
+    "FIXED": 13,
+    "PARTIAL": 2
+  },
+  "reproduction_summary": "reproduction-summary.json"
+}

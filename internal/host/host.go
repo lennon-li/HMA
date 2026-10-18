@@ -452,6 +452,24 @@ func RouteDigest(r Route) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
+// RouteIdentity is a route's stable identity: the digest of the exact route
+// (profile, provider, model, effort, access service, runtime, context,
+// classes) without its approval reference. hma.plan/v1 route strings are
+// route identities, so a plan can name a route before it is approved.
+func RouteIdentity(r Route) (string, error) {
+	r.RouteApprovalDigest = "identity"
+	return RouteDigest(r)
+}
+
+// RouteGrant projects a selected route for lease derivation.
+func RouteGrant(r Route) (model.RouteGrant, error) {
+	id, err := RouteIdentity(r)
+	if err != nil {
+		return model.RouteGrant{}, err
+	}
+	return model.RouteGrant{Identity: id, PermissionClasses: append([]string(nil), canonicalRoute(r).PermissionClasses...), ApprovalDigest: r.RouteApprovalDigest}, nil
+}
+
 func sameRoute(a, b Route) bool {
 	da, errA := RouteDigest(a)
 	db, errB := RouteDigest(b)

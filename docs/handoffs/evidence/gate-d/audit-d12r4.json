@@ -1,0 +1,561 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12r4",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0+working-tree-diff-sha256:35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+  "isolation": "isolated",
+  "isolation_compromised": false,
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_mapping": "FAIL maps to fix-required in the independent-audit report contract; this is one substantive verdict.",
+  "phase1_frozen": true,
+  "created_utc": "2026-10-17T23:34:13.053322+00:00",
+  "requirements": [
+    {
+      "id": "D1-01",
+      "title": "Contract schema and canonical digest",
+      "source": "v2 §2.2; v3 §2.1",
+      "acceptance": "Required version/run/scope/non-goals/criteria/check/risk/deliverables/budget/route/permission fields; reject ambiguous bytes; material content changes digest.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Strict typed parsing rejects malformed Unicode, missing/null keys, duplicate/unknown keys and trailing data. Valid scalar text survives. Material changes alter canonical digests.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "title": "Core criterion ID equality",
+      "source": "v2 §2.2",
+      "acceptance": "Exact contract/core criterion ID sets, reject duplicates; dispositions remain core.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Exact core/contract ID-set checks reject renamed, missing, extra and duplicate IDs; disposition-only change preserves the ID check.",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "title": "Optional approval binding compatibility",
+      "source": "v3 §2.1; architecture §6",
+      "acceptance": "Only acceptance_contract_digest is additive and omitted empty; legacy digests stay unchanged.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "One optional acceptance_contract_digest field is omitted empty. Independently specified legacy approval JSON is byte-identical.",
+      "evidence_refs": [
+        "E05",
+        "E06",
+        "E08"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "title": "Transition contract continuity",
+      "source": "v3 §2.1; architecture §5/6",
+      "acceptance": "Initial presented contract binds exactly; later approvals carry digest; swaps/drops refuse; replacement only after approved acceptance rewind.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Apply refuses presented-unbound initial contract, mismatch, later drop and swap. Both-absent legacy succeeds. Replacement succeeds only on legal return to acceptance, and prior contract use cannot be dropped there.",
+      "evidence_refs": [
+        "E05",
+        "E06",
+        "E08"
+      ]
+    },
+    {
+      "id": "D1-05",
+      "title": "Plan schema and bounded units",
+      "source": "v3 §2.2; v4 §2; architecture §10",
+      "acceptance": "Canonical hma.plan/v1 with all §10 declarations, explicit budgets incl wall/cost, policy digest, valid prior-unit dependency DAG; exact bytes read consistently.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "All declared fields are present and non-null; valid zero retry and empty argv/dependencies pass. Invalid bounded declarations and dependency cycles/unknown dependencies are rejected by code and suite.",
+      "evidence_refs": [
+        "E03",
+        "E04"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "title": "Legal and latest approval issuer",
+      "source": "v4 §1; architecture §5/6",
+      "acceptance": "Only latest unit approval targeting implementation authorization via route-selection or independent-validation legal edge grants; no synthetic lease grants.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Only latest applicable approved Route selection or Independent validation transition into Implementation authorization issues; illegal review edge and absent issuer refuse.",
+      "evidence_refs": [
+        "E04",
+        "E05"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "title": "Plan/contract/route/permission binding",
+      "source": "v2 §2.2; v3 §2.2",
+      "acceptance": "Recomputed plan digest matches approval and contains unit; current contract matches; per-unit grant under all contract ceilings; approved route identity matches.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Recomputed plan/contract digests, run, unit, policy, plan route names, declared permissions and budget ceilings are checked. Selected-route identity/permission coherence cannot be established from this API; explicit F01 identity closure is unmet.",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E11"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "title": "Stage, terminal and rewind invalidation",
+      "source": "v3 §2.2/2.3; v4 §1",
+      "acceptance": "Only nonterminal implementation-authorization unit; invalidate old issuer on unit/global/dependency rewind incl transitive; unrelated scoped rewind preserves independent unit; new legal issuer needed.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Global Grounding/Acceptance targets void all old generations regardless of unit tag. Dependency correction/route/plan rewinds void direct/transitive leases. Genuinely independent scoped rewind preserves unrelated unit. New issuer is necessary to resume.",
+      "evidence_refs": [
+        "E04",
+        "E05",
+        "E08",
+        "E09"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "title": "Wall time, counters, policy",
+      "source": "v3 §2.2; v4 §2",
+      "acceptance": "Active interval [human approval time, expiry); all signed counters nonnegative and below ceilings; current computed policy == plan policy.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Uses human approval timestamp; only [approval, expiry) active. Negative and equal-ceiling counters refuse; below ceilings pass; current policy mismatch refuses.",
+      "evidence_refs": [
+        "E04",
+        "E05"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "title": "Deterministic lease identity and purity",
+      "source": "v3 §2.2",
+      "acceptance": "Lease digest hashes approval transition digest, unit, plan digest; pure derivation writes nothing; old planless runs cannot get lease.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Reference digest matches documented transition_digest/unit_id/plan_digest envelope; every identity component changes digest; same input is deterministic and not mutated; planless input refuses.",
+      "evidence_refs": [
+        "E04"
+      ]
+    },
+    {
+      "id": "REG-01",
+      "title": "Existing core/Gate B/Gate C safety",
+      "source": "Gate D objective; architecture §5/6",
+      "acceptance": "No illegal transition, approval replay/broadening, or legacy regression; go test/vet/race required.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Full existing core, Gate B and Gate C suites, vet and race pass in isolated copy. No repository edit.",
+      "evidence_refs": [
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ]
+    },
+    {
+      "id": "SCOPE-01",
+      "title": "D1/D2 boundary",
+      "source": "user scope",
+      "acceptance": "No claim to implement reservation, launch reconciliation, criterion credit, findings disposition or architecture amendment.",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Code implements pure derivation and transition/document binding. Counters are supplied by trusted host; no reservation, launch reconciliation, criterion credit or disposition feature is credited as complete.",
+      "evidence_refs": [
+        "E11"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D12R4-01",
+      "prior_finding": "F01",
+      "title": "Selected-route coherence is absent from the pure lease interface",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Plan-to-contract route and declared-permission ceilings now work. The requested remaining F01 check is not implementable at DeriveLease: no input supplies the selected route identity, resolved route permissions, or an approval-bound projection of that route. The core approval carries an opaque transition digest; DeriveLease never resolves its route payload. Therefore D2 cannot establish that selected route == approved plan route, or that selected route permissions fit the grant, before reporting an active lease. This is an observed interface/validation gap and a mandatory closure failure. It is not a reproduced unauthorized dispatch. Launch admission remains D3–D6 scope.",
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:38–47,86–198; internal/model/contract.go:544–580; internal/model/types.go:173–198; cmd/hma/transition.go:204–249",
+          "observation": "LeaseRequest has no selected/approved route projection. DeriveLease compares route labels in plan with contract labels, then copies plan ImplementerRoute into Lease. It does not compare a selected profile or its permissions with the plan grant. Core route binding exposes an opaque transition digest, not the route payload."
+        },
+        {
+          "source": "/tmp/hma-gate-d-criteria/criteria-d12r4.json:F01",
+          "observation": "The supplied closure criterion explicitly requires permission broadening and approved route identity mismatch to refuse before the lease becomes active."
+        },
+        {
+          "source": "auditor-engine-final.log:TestAuditorLeasePlanCeilings; auditor-model-engine.log:TestAuditorPlanAndContractCeilings",
+          "observation": "Out-of-contract plan labels and read_only -> bounded_write plan broadening refuse. These controls test declarations only, not the selected route."
+        }
+      ],
+      "fix": {
+        "action": "Define route strings as stable identities and extend the pure request with a trusted host projection of the selected route plus its approval-bound identity/permission grant. Verify that the projection references the active core route approval and matches the selected plan unit; compare resolved permissions with both unit and contract ceilings before ReasonNone. Refuse an absent projection for contract-backed leases. Preserve legal Independent validation correction issuers by retaining the preceding valid route binding.",
+        "why": "The comparison needs both sides: the approved plan declaration and the route actually selected under a core approval. The current request has only the first side.",
+        "verification": [
+          {
+            "method": "Keep contract, plan bytes and accepted_plan_digest fixed. Supply matching selected profile and approval as a positive control. Then vary profile identity, permission class, approval reference and unit independently.",
+            "expected": "Matching selection succeeds. Each mismatch and missing projection refuses before the lease is active."
+          },
+          {
+            "method": "Use a selected bounded_write route under a read_only unit/contract, then restore read_only; include legal Independent validation -> Implementation authorization rework.",
+            "expected": "Broadening refuses. Matching read_only and legal rework succeed with the proper route binding."
+          },
+          {
+            "method": "Rerun existing full test/vet/race and independent lease/rewind/legacy-byte controls.",
+            "expected": "All pass; no illegal issuer, scope widening or legacy serialization change."
+          }
+        ],
+        "tradeoffs": "A required route projection changes callers of the new D2 API and needs an explicit identity convention. It must not add another authority source or treat host telemetry as human approval. This remedy is proposed; no implementation was made.",
+        "alternative": "Keep DeriveLease explicitly as a route-scoped grant and move selected-route admission to a separate deterministic API. That can be sound only after the human authoritatively amends the present F01 before-active closure criterion; the auditor cannot waive it.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": 1
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "status": "PARTIAL",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E11"
+      ],
+      "observation": "Plan-to-contract route and permission ceilings fixed. Selected-route identity and resolved permissions are not inputs to derivation; the required mismatch check remains absent."
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "D12R2-01",
+      "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "observation": "Independent reproductions and source checks satisfy the scoped closure criteria."
+    },
+    {
+      "id": "F-D12R3-01",
+      "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+      "status": "FIXED",
+      "evidence_refs": [
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09"
+      ],
+      "observation": "Six real legal Apply rewind cases pass in normal and race modes. Old A remains void after D progress. Fresh A issuer resumes. Mutation removing the global check reproduces failure for unrelated D."
+    }
+  ],
+  "evidence_ledger": {
+    "E01": {
+      "source": "freeze-start.json; copy-manifest.json",
+      "observation": "HEAD bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0 on main; dirty diff frozen; all 215 copied target files match source hashes."
+    },
+    "E02": {
+      "source": "requirements-derived.json; requirements-source-excerpts.txt",
+      "observation": "Requirements derived before diff inspection. Gate A sections restricted to v2 §2.2, v3 §2.1–2.3 and v4 §1–2."
+    },
+    "E03": {
+      "source": "auditor-model-engine.log; worktree/internal/model/auditor_d12_test.go",
+      "observation": "Independent recursive omission/null tests, valid empty list/zero controls, malformed/valid Unicode, material digest changes and ceiling negatives passed."
+    },
+    "E04": {
+      "source": "auditor-engine-final.log; worktree/internal/engine/auditor_d12_test.go",
+      "observation": "Independent legal/illegal issuer, plan/contract mismatch, terminal, counter/time/policy boundaries, lease reference digest, purity, criterion drift, direct/transitive dependency and new-generation controls passed."
+    },
+    "E05": {
+      "source": "auditor-transition.log; worktree/internal/transition/auditor_d12_test.go",
+      "observation": "Real Apply global rewind tests passed for Grounding and Release-and-closure -> Acceptance criteria with unit tags empty/A/D; old A stayed void after D progress; only fresh A issuer resumed. Late-approval expiry, contract continuity and exact legacy serialization controls passed."
+    },
+    "E06": {
+      "source": "go-test-final.log",
+      "observation": "TMPDIR=GOTMPDIR=<output>/runtime GOCACHE=<output>/gocache ~/.local/go/bin/go test -count=1 ./... exited 0; all 12 packages passed, including auditor tests."
+    },
+    "E07": {
+      "source": "go-vet-final.log",
+      "observation": "Same environment; ~/.local/go/bin/go vet ./... exited 0."
+    },
+    "E08": {
+      "source": "go-race-final.log",
+      "observation": "Same environment; ~/.local/go/bin/go test -race -count=1 ./... exited 0; all 12 packages passed, including real Apply rewind tests."
+    },
+    "E09": {
+      "source": "negative-control-rewind-overlay.json; negative-control-rewind.log",
+      "observation": "Removing only the new global target check caused auditor real Apply tests to fail for Grounding/D and Acceptance criteria/D; exit 1 as expected."
+    },
+    "E10": {
+      "source": "negative-control-fields-overlay.json; negative-control-fields.log",
+      "observation": "Removing requireAllKeys caused independent missing/null tests to fail for contract non_goals/deliverables and plan max_retries; exit 1 as expected."
+    },
+    "E11": {
+      "source": "internal/engine/lease.go:38–47,86–198; internal/model/contract.go:544–580; internal/model/types.go:173–198; cmd/hma/transition.go:204–249",
+      "observation": "LeaseRequest has no selected/approved route projection. DeriveLease compares route labels in plan with contract labels, then copies plan ImplementerRoute into Lease. It does not compare a selected profile or its permissions with the plan grant. Core route binding exposes an opaque transition digest, not the route payload."
+    },
+    "E12": {
+      "source": "freeze-end.json; PHASE1.sha256",
+      "observation": "All required start/end freeze checks equal. PHASE1 bytes retain their recorded digest after optional unblinding."
+    }
+  },
+  "limitations": [
+    "Fresh audit context contains the user dispatch and allowed neutral closure criteria. No implementer narrative or prior audit verdict was read before this freeze. Code comments and author-written tests were inspected as artifacts, not accepted as proof.",
+    "Isolation is a separate fresh auditor context and a filesystem copy. It is not a separate VM or container trust boundary. The OS, host-managed chain and caller-provided current policy/counters are trusted, as scoped.",
+    "Only D1 and pure D2 are evaluated. No operational admission, reservation accounting, reconciliation, criterion credit, finding disposition, architecture amendment, release or full Gate D completion is certified.",
+    "The F01 selected-route mismatch is an observed API gap. No valid runtime mismatch test can be passed into the current request type. No unauthorized launch is claimed.",
+    "Pure dependency and counter tests use independently authored synthetic records. Six whole-run rewind scenarios also traverse the real Apply/store path with fresh approvals. Real Apply tests reuse existing low-level Git fixture and approval-construction helpers; acceptance assertions and test sequences are auditor-authored.",
+    "Initial full normal/race runs failed the scratch-store location assertion because the copy was under /tmp. A second environment placed GOTMPDIR outside TMPDIR and failed scratch positive controls. Final runs set both to <output>/runtime, outside the worktree, and passed. All failed logs are retained.",
+    "No Jev decision tool is available. Auditor judgments use the documented direct fallback. No worker/model API or nested agent was dispatched.",
+    "Go toolchain is go1.27.1 linux/amd64; module declares go 1.21. No other Go version or platform was tested.",
+    "The repository was read-only by audit conduct and sandbox protection of Git internals, not mounted as an immutable snapshot. Start/end HEAD, status, binary diff digest and every untracked hash match; this does not prove no transient concurrent change occurred. The tested copied target bytes also match the source manifest.",
+    "Displayed tool output was sometimes truncated. Complete test logs, the copied source and the independently authored test files remain in the output directory. An initial auditor fixture draft had a syntax error; it was corrected before acceptance runs. No product finding relies on that draft failure."
+  ],
+  "scope": {
+    "included": [
+      "D1 acceptance contract/approval/transition/plan validation",
+      "D2 pure lease derivation"
+    ],
+    "excluded": [
+      ".serena/",
+      "docs/handoffs/2026-10-16-arch-amendment-*.md",
+      "D3-D6"
+    ],
+    "trusted_host": true
+  },
+  "freeze": {
+    "utc": "2026-10-17T23:27:00.928843+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "status_short": " M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_binary_sha256": "35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "2c007b845a9ca9c3f104b9b6269b65d8dfcf5d888d773c1e14e0356e0fd6b4a2",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "691fd34c368ae66f8b9ecdde1a6cdd6ba2e21de0aee2e7c7ed2e4f2ee9ce7fed",
+      "internal/engine/lease_test.go": "657b826c29e24c6f8a381cccb33fc4387b75ebcf35716412e0bfe1f1d78b4c02",
+      "internal/model/contract.go": "ed79c814191630c482296295a0a43b6215ec6b655a0400166eeb273cd81e6282",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    }
+  },
+  "test_execution": {
+    "go_test_final": {
+      "exit_code": 0,
+      "log": "go-test-final.log"
+    },
+    "go_vet_final": {
+      "exit_code": 0,
+      "log": "go-vet-final.log"
+    },
+    "go_race_final": {
+      "exit_code": 0,
+      "log": "go-race-final.log"
+    },
+    "rewind_mutant": {
+      "exit_code": 1,
+      "expected": true,
+      "log": "negative-control-rewind.log"
+    },
+    "fields_mutant": {
+      "exit_code": 1,
+      "expected": true,
+      "log": "negative-control-fields.log"
+    }
+  },
+  "improvement_opportunities": [
+    {
+      "id": "O01",
+      "observation": "The auditor mutation controls distinguish the repaired behavior from the prior missing-field and whole-run rewind failures.",
+      "recommendation": "Retain these evidence artifacts for the independent retest; no extra implementation is recommended beyond the F01 remedy."
+    }
+  ],
+  "next_action": {
+    "action": "Human owner reviews this packet and returns F01 for a bounded route-binding correction before accepting D1+D2.",
+    "current_outcome": "D1 requirements MET; D2 selected-route coherence PARTIAL; 10 prior findings FIXED and F01 PARTIAL. Full checks pass.",
+    "rationale": "The supplied mandatory F01 before-active mismatch criterion is not established.",
+    "proposed_owner": "Human HMA gate owner; implementation owner to be assigned through the approved route process.",
+    "agent_model_route": "No execution route selected by this audit. This next action is human review; any later coding dispatch needs an eligible human-approved route and exact-route hi preflight.",
+    "permission_envelope": "Audit stays read-only on /home/yeli/repos/HMA; artifacts only under /tmp/hma-gate-d-20261017-d12r4. No commit, push or stage transition.",
+    "exact_approval_required": "Human challenge-bound approval of the concrete correction packet and its route/envelope before any HMA stage transition; this audit grants none.",
+    "stop_conditions": "Do not accept D1+D2 or advance on this packet while F01 remains partial.",
+    "escalation_conditions": "Escalate to the human if the team proposes moving the explicit F01 criterion to D3 or changing its meaning."
+  },
+  "phase1_sha256": "eab409c00bd57a18c60ae0c9bb814342d3efdd44cb409c87df3141a8b25f50a1",
+  "freeze_end": {
+    "utc": "2026-10-17T23:35:05.229999+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status_short": " M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_binary_sha256": "35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "2c007b845a9ca9c3f104b9b6269b65d8dfcf5d888d773c1e14e0356e0fd6b4a2",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "691fd34c368ae66f8b9ecdde1a6cdd6ba2e21de0aee2e7c7ed2e4f2ee9ce7fed",
+      "internal/engine/lease_test.go": "657b826c29e24c6f8a381cccb33fc4387b75ebcf35716412e0bfe1f1d78b4c02",
+      "internal/model/contract.go": "ed79c814191630c482296295a0a43b6215ec6b655a0400166eeb273cd81e6282",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    },
+    "unchanged_checks": {
+      "head": true,
+      "status_short": true,
+      "diff_binary_sha256": true,
+      "untracked_sha256": true
+    },
+    "unchanged": true
+  },
+  "controlled_unblinding": {
+    "utc": "2026-10-17T23:35:05.246142+00:00",
+    "read_after_phase1": [
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md"
+    ],
+    "observation": "The current handoff confirms that command wiring and launch consumption are deferred to D3. It describes the same plan-to-contract label checks. It supplies no selected-route identity projection or independent evidence satisfying the remaining F01 before-active criterion. It makes no claim that D3–D6 or full Gate D are complete.",
+    "effect": "No change to the frozen findings or verdict. D1+D2 scope claims remain accurately bounded.",
+    "prior_audit_files_read": []
+  },
+  "auditor_route_provenance": {
+    "requested_worker": "liz",
+    "requested_provider": "OpenAI (as supplied by dispatch)",
+    "requested_model": "gpt-6.1-sol",
+    "requested_effort": "high",
+    "mode": "review/read-only",
+    "access_service": "current Codex host",
+    "attestation": "The worker/model/effort values are dispatch metadata. This audit did not independently attest the host model or run a model preflight. No nested agent or model API was invoked."
+  }
+}

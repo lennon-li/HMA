@@ -1,0 +1,485 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12r7",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0;dirty-diff-sha256:c119b7f95c3cff42c5a2f13037bbef88fefbde6093a55c355a1ccbe64dca19fb;untracked:freeze-start.json",
+  "isolation": "isolated",
+  "isolation_detail": "Fresh auditor context; same-host copy execution; no hardened filesystem isolation.",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_encoding": "The report-contract value fix-required encodes the single gate verdict FAIL.",
+  "phase1_frozen": true,
+  "phase1_time": "2026-10-18T00:20:02.689047+00:00",
+  "requirements": [
+    {
+      "id": "D1-01",
+      "requirement": "Immutable canonical acceptance contract with all required fields; material content changes change digest; reject ambiguous JSON and malformed Unicode.",
+      "source": "v2 \u00a72.2; v3 \u00a72.1",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Strict parser rejects missing/null fields, malformed Unicode, duplicate/case/unknown keys and trailing documents. Independent edits to statements, checks and thresholds change the digest.",
+      "evidence_refs": [
+        "E03",
+        "E04"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "requirement": "Contract criterion IDs exactly equal current core criterion IDs.",
+      "source": "v2 \u00a72.2",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Acceptance compares exact ID sets. Lease derivation refuses renamed/extra/duplicate IDs and preserves disposition-only changes. sameIDs also checks cardinality.",
+      "evidence_refs": [
+        "E03",
+        "E07"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "requirement": "Optional approval field omitted when empty preserves legacy digests; presented contract cannot be dropped, swapped or accepted unbound; later approvals carry same digest until human approved rewind.",
+      "source": "v3 \u00a72.1; architecture \u00a75\u20136",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Real Apply refuses presented-unbound and wrong-digest contracts. Exact and both-absent legacy controls pass. Existing carried-digest, drop/swap and legacy-byte checks pass.",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "requirement": "hma.plan/v1 canonical document includes every \u00a710 declaration plus policy, wall time and cost; validates graph and budgets.",
+      "source": "v3 \u00a72.2; v4 \u00a72; architecture \u00a710",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Every serialized document field is checked for omission/null, including zero retries. Incomplete unit and budget fields refuse DeriveLease. Plan graph, policy, contract, route and budget validation are present.",
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "requirement": "Lease uses latest legal human-approved issuer targeting IMPLEMENTATION_AUTHORIZATION; no record or illegal edge grants authority; identity binds approval transition digest, unit and plan digest.",
+      "source": "v4 \u00a71; v3 \u00a72.2",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Only Route selection and Independent validation issuers are accepted. Reference lease digest agrees with transition/unit/plan fields; unit, transition and plan identity changes alter it.",
+      "evidence_refs": [
+        "E03",
+        "E04"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "requirement": "Plan digest equals accepted plan; contract and criterion IDs match; grants stay inside contract and selected approved route and permissions.",
+      "source": "v2 \u00a72.2; v3 \u00a72.1\u20132.2; architecture \u00a75\u20136",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Plan, contract, criterion, route identity, permission and approval-reference checks pass. The retained route approval can nevertheless be invalidated by its bound waiver and still authorize a correction lease.",
+      "evidence_refs": [
+        "E03",
+        "E05",
+        "E06"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "requirement": "Lease active only in authorized projected stage and nonterminal run; unit, whole-run and transitive dependency rewind invalidate old issuers without revival.",
+      "source": "v3 \u00a72.2\u20132.3; v4 \u00a71; architecture \u00a75",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Unit and transitive dependency corrections/route/plan rewinds refuse old leases. Whole-run Grounding/Acceptance rewinds refuse for empty/self/unrelated unit tags. Actual legal rework and fresh-issuer controls pass; all terminal outcomes refuse.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "requirement": "Wall time uses human approval timestamp and [approval,expiry) interval; counters are nonnegative and strictly below ceilings.",
+      "source": "v3 \u00a72.2; architecture \u00a710",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Real Apply accepts a two-minute-old approval within the approval freshness window, but a one-minute lease refuses. Before/equal expiry and negative/zero/below/equal counters behave as required.",
+      "evidence_refs": [
+        "E03"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "requirement": "Current effective policy equals plan-bound policy; bound approval inputs including active waiver generation cannot become stale or inactive.",
+      "source": "v4 \u00a72; architecture \u00a76",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Policy changes refuse. Current issuer waiver references must be live and unique, including withdrawal/expiry/regrant controls. The retained route approval receives no corresponding validity check.",
+      "evidence_refs": [
+        "E03",
+        "E05",
+        "E06"
+      ]
+    },
+    {
+      "id": "D2-06",
+      "requirement": "Pure derivation fails closed for absent, malformed or legacy plan; existing transitions, Gate B/C, legacy bytes remain valid; D3\u2013D6 not claimed.",
+      "source": "v3 \u00a72.3; original scope",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Absent/malformed plans fail closed. Full original test/vet/race passes on the frozen source copy. Code describes D3 consumption derivation as future work; no launch/credit/closure completeness is inferred.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E07"
+      ]
+    }
+  ],
+  "part_assessments": {
+    "D1": "MET",
+    "D2": "PARTIAL"
+  },
+  "findings": [
+    {
+      "id": "F-D12R7-01",
+      "title": "Correction lease reuses a route approval invalidated by a bound waiver",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "requirements": [
+        "D2-02",
+        "D2-05"
+      ],
+      "diagnosis": "DeriveLease validates waiver liveness only for the latest lease issuer at internal/engine/lease.go:157. A correction issuer comes from INDEPENDENT_VALIDATION, while routeApprovalFor at lines 298\u2013306 returns the earlier ROUTE_SELECTION issuer digest without validating that approval. Withdrawing, expiring, or replacing a waiver bound by the route approval invalidates that approval. A new correction issuer bound to the truthful current waiver set still obtains ReasonNone through the invalid route approval. The strongest reproduction uses actual Apply transitions, Store-validated records, EvaluateResolution-approved artifact waiver operations, and host.RouteIdentity/RouteGrant. No forged chain, malformed document, broadened permission, or stale current-issuer waiver is required.",
+      "evidence": [
+        {
+          "source": "current-waivers.log; current-waivers-race.log; snapshot/internal/transition/auditor_d12r7_test.go:323",
+          "observation": "withdraw, expire and replace fail the independent refusal assertion in normal and race modes. DeriveLease returns ReasonNone. For withdrawal/expiry the new issuer binds [] and the current live-waiver map is empty. For replacement it binds the new live grant. The fresh_route_control passes."
+        },
+        {
+          "source": "reproductions/current-waivers/current-waivers-withdraw.json; reproductions/current-waivers/current-waivers-replace.json",
+          "observation": "Complete replay inputs, validated core records, plan/contract bytes and resulting active lease are retained. The files reflect the final race reproduction."
+        },
+        {
+          "source": "internal/engine/lease.go:157,194\u2013195,298\u2013306; docs/architecture.md:164\u2013165,201; Gate A v2 \u00a72.2; v4 \u00a71",
+          "observation": "Only the current issuer is checked by issuerWaiversChanged. Selected route approval is matched by transition digest alone. The normative contract invalidates actually bound approvals and preserves route authority in the core approval."
+        }
+      ],
+      "fix": {
+        "action": "In internal/engine/lease.go, retain the selected route approval record index as well as its transition digest. Before activating any lease, validate the retained route approval against waiver history through the full current chain, using the existing issuerWaiversChanged logic (or a shared approval-validity helper). Reject if either the lease issuer or route approval is invalid. Do not fall back to an older valid route approval. Require a fresh legal Route selection -> Implementation authorization approval after route invalidation.",
+        "why": "A legal correction approval renews implementation authority but does not revive an invalidated route-selection approval. Both approvals are dependencies of the correction lease.",
+        "verification": [
+          {
+            "method": "Run TestAuditorD12CurrentWaiversDoNotRestoreOldRoute with and without -race.",
+            "expected": "withdraw, expire and replace return a refusal before an active lease. fresh_route_control remains active."
+          },
+          {
+            "method": "Run TestAuditorD12ReworkMustRetainValidRouteApproval and the direct issuer waiver, route mismatch, rewind, legacy-byte, full test/vet/race controls.",
+            "expected": "Bound route changes refuse. Live, unrelated, unbound and freshly reapproved route controls pass. Existing Gate B/C behavior remains passing."
+          }
+        ],
+        "tradeoffs": "The helper must receive the full history, not only records through the correction issuer, or later withdrawal can be missed. Valid unbound and unrelated scopes must remain usable. This adds a second bounded history replay. Existing correction leases that depended on an invalid route will now require human route reapproval.",
+        "alternative": "Fail closed for every correction whose original route approval bound any waiver, and require route reapproval. This is simpler containment but refuses valid corrections while the bound grant is still live. Copying old waiver references onto a new issuer is insufficient: they may already be inactive or replaced.",
+        "effort": "small",
+        "priority": "P1; gate-blocking",
+        "status": "proposed"
+      }
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Independent out-of-contract route, permission and budget tests refuse; matching route passes.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Direct/transitive correction, route and plan rewind tests refuse; unrelated and new-issuer controls pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Actual Apply late approval and [approval,expiry) boundaries pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Contract/plan malformed UTF-8 and surrogate controls refuse; valid Unicode and material digests pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Every unit/budget declaration omission/null refuses parsing and derivation; complete positive fixture passes.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Current exact-ID comparison and independent drift/disposition controls pass. Missing-ID cardinality is checked in sameIDs and existing acceptance tests.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Actual Apply presented-unbound/wrong-digest refuse; exact and both-absent legacy controls pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Independent reference digest and independent transition/unit/plan identity mutations pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Each negative counter refuses; zero/below pass and equality refuses.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D12R2-01",
+      "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "All serialized document fields are exhaustively removed/nullified. Missing/null zero-retry declarations refuse, including DeriveLease. Empty argv/non-goals and zero retries pass. Full regressions and literal legacy bytes pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "F-D12R3-01",
+      "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Actual Apply whole-run Grounding and legal Release -> Acceptance rewinds refuse for all three tags. Progress does not revive the old issuer; a new legal issuer succeeds. Dependency/unrelated controls pass in normal/race.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D12R4-01",
+      "title": "Selected-route coherence is absent from the pure lease interface",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "The supplied identity/permission/approval-reference/unit/missing-projection and legal-correction closure checks pass. This is a narrow closure; route-approval validity is separately blocked by F-D12R7-01.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D12R5-01",
+      "title": "A lease stays active after a bound waiver invalidates its issuing approval",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "The supplied checks for waiver changes to the lease issuer pass, with unrelated/unbound/new-issuer/multiple/malformed controls. The distinct retained-route-approval case is F-D12R7-01.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    },
+    {
+      "id": "D12R6-01",
+      "title": "A new issuer can bind an inactive or replaced waiver grant and obtain a lease",
+      "status": "FIXED",
+      "scope": "supplied closure criteria; no claim of complete Gate D correctness",
+      "observation": "Actual Apply issuer cases withdrawn/expired/old-after-regrant refuse at derivation; current-after-regrant passes. Direct issuer live/duplicate/missing/after-change controls and full regressions pass.",
+      "evidence_refs": [
+        "E02",
+        "E03",
+        "E04",
+        "E07"
+      ]
+    }
+  ],
+  "evidence_ledger": [
+    {
+      "id": "E01",
+      "source": "freeze-start.json; snapshot-manifest.json; requirements-before-diff.json",
+      "observation": "Target metadata, tracked diff SHA-256, every untracked file SHA-256, recoverable source copy and requirements recorded before diff inspection."
+    },
+    {
+      "id": "E02",
+      "source": "regression-checks.json; regression-test.log; regression-vet.log; regression-race.log",
+      "observation": "On a separate manifest-matched copy without auditor tests: go test -count=1 ./..., go vet ./..., go test -race -count=1 ./... all exit 0; 12 packages pass. TMPDIR and GOTMPDIR match under audit output."
+    },
+    {
+      "id": "E03",
+      "source": "final-independent-checks.json; final-normal.log; final-race.log; snapshot/internal/{engine,model,transition}/auditor_d12r7_test.go",
+      "observation": "Independent normal/race controls cover issuer, plan/contract mismatch, routes, dependencies, global rewinds, wall-time, ceilings, terminal state, policy, waiver generation, documents and actual Apply. Expected blocking route-approval tests fail; other controls pass."
+    },
+    {
+      "id": "E04",
+      "source": "independent-extra-checks.json; independent-extra.log; independent-extra-race.log; snapshot/internal/model/auditor_legacy_d12r7_test.go",
+      "observation": "Incomplete plan derivation, digest identity fields and literal legacy approval serialization pass with and without race."
+    },
+    {
+      "id": "E05",
+      "source": "current-waivers-checks.json; current-waivers.log; current-waivers-race.log; reproductions/current-waivers/",
+      "observation": "Strongest failure: exact current waiver set on the new issuer still permits invalid retained route. Three failing cases, one fresh-route positive control, in normal/race."
+    },
+    {
+      "id": "E06",
+      "source": "internal/engine/lease.go:157,194\u2013195,298\u2013306; internal/engine/invalidation.go:315; docs/architecture.md \u00a75\u20136",
+      "observation": "Primary source trace of selected-route approval reuse and normative scoped invalidation."
+    },
+    {
+      "id": "E07",
+      "source": "regression/internal/model/contract.go; regression/internal/engine/contract_binding.go; regression/internal/transition/contract_test.go; regression/internal/engine/lease_test.go",
+      "observation": "Original primary code/test artifacts; implementation tests are regression evidence, not substitutes for independent tests."
+    },
+    {
+      "id": "E08",
+      "source": "negative-controls.json; negative-control-{waiver,unicode,contract}.{go,json,log}",
+      "observation": "Three deliberate guard-removal overlays each cause the independently written corresponding test to fail. All overlays affect only the audit copy."
+    },
+    {
+      "id": "E09",
+      "source": "PHASE1.json; PHASE1.sha256; docs/handoffs/2026-10-17-gate-d-d1-d2.md",
+      "observation": "Phase 1 frozen before controlled unblinding. Later handoff scope check introduced no verdict change."
+    },
+    {
+      "id": "E10",
+      "source": "freeze-end.json; freeze-verification.json",
+      "observation": "HEAD, branch, full status, tracked diff hash, every untracked file hash, and every audited source-manifest hash unchanged."
+    }
+  ],
+  "limitations": [
+    "Isolation is fresh model context with the user-authorized objective and stripped closure criteria. No implementation chat, prior audit reports, or prohibited temporary directories were read. The auditor cannot independently attest the model/session identity supplied by the dispatch prompt.",
+    "Execution uses source copies and temporary fixture repositories on the same trusted host. This is not a separate VM or an OS-enforced read-only mount. The host sandbox permits repository writes; the auditor performed none. Test fixture Git writes occur only beneath the output directory.",
+    "The dirty/untracked implementation is not an immutable commit. Freeze hashes plus the source manifest define the audited target; final equality verification is required. Excluded .serena and architecture-amendment files are fingerprinted only, not assessed.",
+    "Some setup helpers from existing model and transition tests are reused. Engine fixtures, requirement reconstruction, adversarial mutations, expected results, literal byte reference and new failure assertions are auditor-authored.",
+    "D3\u2013D6 reservations, reconciliation, criterion credit, findings disposition and architecture amendment are outside this verdict. No command-launch integration or complete Gate D safety is claimed.",
+    "Jev is absent from the exposed host tool inventory. Auditor judgment is the recorded fallback.",
+    "The initial independent run over-specified the refusal code after Release -> Acceptance. The oracle was corrected to require refusal; this was an auditor-test error, not a product defect. Earlier logs are retained.",
+    "The audit is finite testing and source review, not a proof. No fix was applied or validated.",
+    "Some initial combined source listings were truncated by the tool display. Relevant code was inspected in smaller spans. Full executed test logs, request packets, manifests, and source copies remain on disk without that display truncation."
+  ],
+  "source_priority": [
+    "architecture and human-gated kernel",
+    "approved Gate A v4 \u00a71\u20132",
+    "Gate A v3 \u00a72.1\u20132.3",
+    "Gate A v2 \u00a72.2",
+    "outcome objective \u00a75"
+  ],
+  "improvement_opportunities": [],
+  "opportunity_assessment": "No separate redesign is recommended. Reuse one approval-validity helper for lease issuer and retained route approval as the smallest targeted remedy.",
+  "next_action": {
+    "action": "Return D1+D2 to the human gate owner for bounded remediation of F-D12R7-01.",
+    "owner": "Human gate owner; implementation owner Opus after approval.",
+    "route": "No model execution for the review decision. The orchestrator must select and preflight an eligible implementation route before any repair dispatch; provider/model/effort/access are not supplied by this audit.",
+    "permission_envelope": "Review these artifacts only. This audit grants no repository write, stage advance, commit, push, release or wider execution permission.",
+    "exact_approval_required": "Human approval of a repair scoped to retained route-approval validity and its regression tests; a repair must receive a fresh independent audit before the gate is reconsidered.",
+    "rationale": "A current correction issuer can obtain an active lease through an invalid route approval. Full existing regressions do not exercise that composition.",
+    "stop_and_escalation_conditions": "Keep D1+D2 failed and do not authorize progression to D3 on this packet. Escalate any proposed product-contract change or broader permission request to the human."
+  },
+  "completed_at": "2026-10-18T00:21:01.564146+00:00",
+  "phase1_sha256": "477e7d292fea64f470618eaa20cdf5f492d95bc1b9f1ef6761b23c50f45ef61f",
+  "freeze_verification": {
+    "verified_at": "2026-10-18T00:20:09.925902+00:00",
+    "checks": {
+      "head": true,
+      "branch": true,
+      "status_short": true,
+      "diff_binary_sha256": true,
+      "untracked": true,
+      "audited_source_manifest": true
+    },
+    "all_unchanged": true,
+    "changed_audited_files": []
+  },
+  "controlled_unblinding": {
+    "after_phase1_sha256": "477e7d292fea64f470618eaa20cdf5f492d95bc1b9f1ef6761b23c50f45ef61f",
+    "read": [
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md"
+    ],
+    "observation": "The implementation handoff explicitly limits delivery to D1+D2 and says DeriveLease is pure and not wired to a command. It assigns reservations, reconciliation, criterion credit/findings disposition, and the architecture amendment to later parts. Its r4 retained-route behavior and r5/r6 issuer-only waiver description agree with the inspected code. These are treated as claims, not proof. No finding, requirement judgment, or gate verdict changed. No prior audit directory or claude temporary directory was opened.",
+    "changes_to_findings": []
+  },
+  "report_contract_validation": {
+    "validator": "/home/yeli/obsidian/AgentSystem/agent-memory/skills/independent-audit/scripts/validate_report.py",
+    "phase1": "validated form only, exit 0",
+    "final": "see report-validation.log; not evidence of substantive correctness"
+  }
+}

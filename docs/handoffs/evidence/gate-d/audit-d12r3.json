@@ -1,0 +1,702 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12r3",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0+diff-sha256:35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f+untracked:freeze-start.json",
+  "isolation": "compromised",
+  "isolation_compromised": true,
+  "isolation_disclosure": "Accidental Gate A v3 lines 1-28 exposed historical Gate A audit verdicts and author change summary before required sections. No prior Gate D verdicts or forbidden handoff read.",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "phase1_frozen": true,
+  "phase1_time": "2026-10-17T23:20:37.400110+00:00",
+  "phase1_version": 1,
+  "requirements": [
+    {
+      "id": "D1-01",
+      "source": "v2 \u00a72.2; v3 \u00a72.1",
+      "requirement": "Versioned immutable canonical acceptance contract declares run, intent/scope, non-goals, criteria (ID, statement, executable/argv/working_dir, threshold, evidence requirement), risk, deliverables and route/permission/budget ceilings; no criterion results.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "All declared contract fields are represented. Results are rejected as unknown fields. Explicit empty contract non-goals/deliverables and check argv parse; all field omissions/nulls refuse.",
+      "evidence_refs": [
+        "internal/model/contract.go:26",
+        "internal/model/contract.go:385",
+        "auditor-engine.log:TestAuditorD12EveryFieldDeclared"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "source": "v2 \u00a72.2; architecture \u00a76",
+      "requirement": "Material statement/check/threshold/ceiling changes alter digest; parser must not silently discard or reinterpret document bytes; malformed documents fail closed.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Strict UTF-8, surrogate, unique/case-exact key, unknown-field, trailing-document and presence checks reject malformed/ambiguous input before a digest. Valid scalar text and surrogate pair controls pass. Canonical digest follows semantic content.",
+      "evidence_refs": [
+        "internal/model/contract.go:179",
+        "auditor-engine.log:TestAuditorD12UnicodeAndExactJSON",
+        "negative-control-field-guard.log"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "source": "v3 \u00a72.1; architecture \u00a75-6",
+      "requirement": "Optional acceptance_contract_digest preserves legacy serialization when absent; initial criteria->planning requires binding when contract presented; every later approval carries exact accepted digest; missing/mismatched/swapped contracts refuse; changed criteria need human rewind.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Real Apply refuses presented-unbound, missing, wrong-run and mismatched documents. Later digest omission/change refuses. Human rewind and new contract acceptance work. Empty additive field preserves exact legacy approval bytes.",
+      "evidence_refs": [
+        "internal/model/types.go:198",
+        "internal/transition/apply.go:147",
+        "internal/engine/contract_binding.go:60",
+        "auditor-transition.log:TestAuditorD12ApplyContractMatrix",
+        "auditor-transition.log:TestAuditorD12ApplyReacceptAndCarry",
+        "auditor-legacy.log"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "source": "v2 \u00a72.2",
+      "requirement": "Current core criterion IDs exactly equal contract IDs; duplicates/missing/extra IDs refuse; dispositions remain core records.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Exact ID comparison refuses renamed/missing/extra/duplicate IDs at lease derivation. ID-preserving disposition updates pass the ID check.",
+      "evidence_refs": [
+        "internal/engine/contract_binding.go:130",
+        "auditor-engine.log:TestAuditorD12Criteria"
+      ]
+    },
+    {
+      "id": "D1-05",
+      "source": "v3 \u00a72.2-2.3; v4 \u00a72; architecture \u00a710",
+      "requirement": "Canonical hma.plan/v1 contains all required bounded unit declarations, max_wall_minutes, cost ceiling and policy_digest; validates unit identity, references and acyclic prior-unit dependencies; digest bound by accepted_plan_digest.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Every plan/unit/budget/check field omission and null rejects in ParsePlan and derivation, including missing/null max_retries. Explicit zero retries and [] argv/dependencies pass. Unknown/self/cyclic dependencies refuse.",
+      "evidence_refs": [
+        "internal/model/contract.go:430",
+        "internal/model/contract.go:544",
+        "auditor-engine.log:TestAuditorD12EveryFieldDeclared",
+        "auditor-engine.log:TestAuditorD12UnicodeAndExactJSON/plan_graph"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "source": "v4 \u00a71; architecture \u00a75",
+      "requirement": "Only latest approved legal route-selection->implementation-authorization or independent-validation->implementation-authorization transition issues lease; no issuer before approval; core unit must currently project implementation authorization; illegal review->authorization stays forbidden.",
+      "status": "fail",
+      "assessment": "PARTIAL",
+      "observation": "Legal issuer, no-issuer, unapproved/foreign-unit/illegal-issuer and progression/correction controls pass. A whole-run Grounding rewind tagged with an unrelated unit still leaves the old lease active (F-D12R3-01).",
+      "evidence_refs": [
+        "internal/engine/lease.go:88",
+        "internal/engine/lease.go:154",
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries",
+        "auditor-engine.log:TestAuditorD12DependencyGenerations",
+        "auditor-transition.log:TestAuditorD12WholeRunRewindWithUnitID"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "source": "v3 \u00a72.2-2.3",
+      "requirement": "Presented valid plan required; unit must exist; issuer plan digest and contract match current approval/core state; legacy/missing plan cannot issue; cached lease grants nothing.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Malformed/absent/changed plan, absent/changed/unbound contract, wrong run and unknown unit fail closed. Core-only pure API has no host lease authority input.",
+      "evidence_refs": [
+        "internal/engine/lease.go:102",
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "source": "v2 \u00a72.2; v3 \u00a72.2; v4 \u00a72",
+      "requirement": "Grant uses exact approved implementer route and permission, within contract ceilings; current effective policy digest equals plan policy_digest; conflicts refuse.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Out-of-ceiling implementer/escalation/validator route, permission broadening, attempts/wall/cost ceilings and wrong criteria/run refuse. Changed approved route identity changes accepted plan digest and rejects the preserved old plan. Effective policy drift/absence refuses.",
+      "evidence_refs": [
+        "internal/model/contract.go:544",
+        "internal/engine/lease.go:190",
+        "auditor-engine.log:TestAuditorD12RouteCeilings",
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries/policy_drift"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "source": "v3 \u00a72.2-2.3",
+      "requirement": "Later approved rewind of unit/run/transitive dependency voids old lease; unrelated rewind does not void; only a new legal issuance can resume; no revival of old generation.",
+      "status": "fail",
+      "assessment": "PARTIAL",
+      "observation": "Direct/transitive dependency correction/route/plan rewind and empty-unit whole-run rewind void leases; unrelated corrections do not. Legal fresh issuance replaces generation. However, unrelated-unit Grounding transition is accepted and does not void A (F-D12R3-01).",
+      "evidence_refs": [
+        "internal/engine/lease.go:153",
+        "auditor-engine.log:TestAuditorD12DependencyGenerations",
+        "auditor-race.log:TestAuditorD12WholeRunRewindWithUnitID/unit_D",
+        "rewind-reproduction/unit-D/records.json",
+        "rewind-reproduction/unit-D/result.json"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "source": "v3 \u00a72.2",
+      "requirement": "Wall-time interval is [human approval, approval+max_wall_minutes); unit counters nonnegative and strictly below effective ceilings; terminal runs refuse.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Human approval timestamp governs [issued, expiry); one nanosecond before expiry passes, exact expiry/preapproval refuse. Real Apply of two-minute-old approval yields expired one-minute lease. All terminal outcomes and negative/equal/above ceiling counters refuse.",
+      "evidence_refs": [
+        "internal/engine/lease.go:125",
+        "internal/engine/lease.go:178",
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries",
+        "auditor-transition.log:TestAuditorD12RealApplyLateApproval"
+      ]
+    },
+    {
+      "id": "D2-06",
+      "source": "v3 \u00a72.2",
+      "requirement": "Lease identity deterministically digests approval transition digest, unit and accepted plan digest; each identity field matters.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Reference JSON envelope using Approval.TransitionDigest/unit_id/plan_digest matches SHA-256 exactly. Each field changes identity; record anchor alone does not. Repeated derivation is deterministic and does not mutate input.",
+      "evidence_refs": [
+        "internal/engine/lease.go:134",
+        "auditor-engine.log:TestAuditorD12LeaseIdentity"
+      ]
+    },
+    {
+      "id": "REG-01",
+      "source": "original Gate D objective; architecture \u00a75-6",
+      "requirement": "Preserve human-only transitions, exact approval binding, existing Gate B/Gate C and legacy behavior; no claims that D3-D6 host enforcement/reservation/credit/findings work is delivered.",
+      "status": "pass",
+      "assessment": "MET",
+      "observation": "Full current repository go test, go vet and race suites pass, including existing Gate B/C tests. Legacy approval serialization matches the pre-field struct. Changed code expressly defers reservation-derived counters to D3; post-freeze handoff explicitly defers D3-D6 and does not claim full Gate D completion.",
+      "evidence_refs": [
+        "go-test.log",
+        "go-vet.log",
+        "go-race.log",
+        "auditor-legacy.log",
+        "internal/engine/lease.go:29",
+        "docs/handoffs/2026-10-17-gate-d-d1-d2.md:6",
+        "gatec-detail.log"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-D12R3-01",
+      "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Real transition.Apply accepts IMPLEMENTATION_AUTHORIZATION -> GROUNDING with UnitID D and exact fresh human approval. D exists in the approved plan and is unrelated to A. Store.Load verifies the persisted chain; ProjectStageState reports GROUNDING. DeriveLease for A returns ReasonNone and the old lease digest. Empty-unit and A-unit controls return LEASE_VOID_AFTER_REWIND. This violates the whole-run Grounding invalidation and active-stage conditions. The lease scan switches on unit scope before considering the target gate, so a non-dependent unit masks a global rewind. No forged record, host lease record, malicious model, counter reset or changed plan is needed.",
+      "requirement_ids": [
+        "D2-01",
+        "D2-04"
+      ],
+      "evidence": [
+        {
+          "source": "internal/engine/lease.go:154",
+          "observation": "Later transitions are examined only for the current unit, an empty unit, or a transitive dependency; unrelated-unit GROUNDING has no branch."
+        },
+        {
+          "source": "internal/transition/apply.go:136",
+          "observation": "A valid fresh human-approved edge to Grounding is accepted with an unrelated UnitID. Scope is not rejected before append."
+        },
+        {
+          "source": "auditor-race.log:TestAuditorD12WholeRunRewindWithUnitID/unit_D",
+          "observation": "Test fails because lease stays active with projected=GROUNDING and reason=\"\"; empty/A controls refuse correctly."
+        },
+        {
+          "source": "rewind-reproduction/unit-D/result.json",
+          "observation": "{\"active\":true,\"reason\":\"\",\"stage\":\"GROUNDING\",\"unit\":\"D\"}."
+        },
+        {
+          "source": "internal/engine/invalidation.go:70; docs/architecture.md:149; Gate A v3 \u00a72.2-2.3",
+          "observation": "Grounding changes invalidate downstream packets; existing deterministic invalidation table assigns Grounding to ScopeWholeRun and refuses narrowing a whole-run trigger to one unit."
+        }
+      ],
+      "fix": {
+        "action": "In DeriveLease, classify any later approved target GROUNDING or ACCEPTANCE_CRITERIA as a whole-run rewind before filtering by UnitID or dependency membership. Preserve invalidation through subsequent transitions until a new legal issuer. At the transition boundary, also reject a nonempty UnitID when the transition represents a whole-run grounding/criteria rewind, using the existing whole-run scope rule. Keep Planning and Route selection invalidation scoped according to the approved plan graph.",
+        "why": "A run-wide gate cannot be narrowed by a unit label. Checking target semantics first prevents a current or persisted scoped record from keeping stale authority.",
+        "verification": [
+          {
+            "method": "Run TestAuditorD12WholeRunRewindWithUnitID for empty, A and unrelated D, in normal and race modes.",
+            "expected": "Each case either refuses the invalid scope before append or returns a non-active A lease after an accepted Grounding rewind."
+          },
+          {
+            "method": "Add the equivalent legal Release-and-closure -> Acceptance-criteria case; progress after a global rewind without issuing a new A approval; then issue a fresh legal A approval.",
+            "expected": "All old A generations remain void; only the new issuer can resume."
+          },
+          {
+            "method": "Run existing and auditor dependency correction/route/plan rewind controls and unrelated correction control.",
+            "expected": "Direct/transitive dependents refuse; independent unit remains active for genuinely unit-scoped rewinds."
+          },
+          {
+            "method": "Run full go test ./..., go vet ./... and go test -race ./..., then obtain a fresh isolated audit.",
+            "expected": "All checks pass and the independent auditor finds no remaining rewind bypass."
+          }
+        ],
+        "tradeoffs": "Rejecting a scoped whole-run input may require host callers to submit a new exact human approval with empty UnitID. The lease-side guard should still refuse already persisted scoped global rewinds. Do not void independent units for every unit-scoped Planning/Route change.",
+        "alternative": "Reject scoped global rewinds at Apply and enforce a validated-chain invariant at every derivation boundary. This has more coupling and leaves old persisted records requiring explicit treatment. A global CurrentStage-only check is conservative but could incorrectly disable independent per-unit work, so it is not preferred.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": "P1; hold D1+D2 gate, apply minimal scope fix, rerun controls and obtain fresh isolated review."
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12RouteCeilings"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12DependencyGenerations"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-transition.log:TestAuditorD12RealApplyLateApproval",
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12UnicodeAndExactJSON"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12EveryFieldDeclared"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12Criteria"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-transition.log:TestAuditorD12ApplyContractMatrix"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12LeaseIdentity"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12LeaseBoundaries"
+      ]
+    },
+    {
+      "id": "D12R2-01",
+      "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+      "status": "FIXED",
+      "basis": "The supplied closure behavior passes the independently written checks. This status covers that prior finding only; F-D12R3-01 is a separate global-scope bypass.",
+      "evidence_refs": [
+        "auditor-engine.log:TestAuditorD12EveryFieldDeclared",
+        "negative-control-field-guard.log",
+        "go-test.log",
+        "go-vet.log",
+        "go-race.log",
+        "auditor-legacy.log"
+      ]
+    }
+  ],
+  "improvement_opportunities": [],
+  "limitations": [
+    "Accidental initial Gate A v3 lines 1-28 exposure compromises full blinding. No prior Gate D verdict or prohibited D handoff was read before this freeze. This is an independently executed audit with compromised initial-input isolation; it is not claimed as fully independent.",
+    "Trusted-host threat model. No resistance against same-UID tampering is claimed.",
+    "The dirty tree has no immutable Git revision; freeze-start.json and snapshot-manifest.json identify bytes. Ignored .serena and architecture-amendment files were hashed for stability only.",
+    "Tests ran from a source/testdata copy under this output directory. Test fixtures created ephemeral Git repositories under its TMPDIR; no Git writes targeted the audited repository. PATH resolves git to /usr/bin/git.",
+    "D3-D6 reservations, launch reconciliation, criterion credit, finding disposition and architecture amendment are excluded. Host live execution enforcement is not proved by pure D2 derivation.",
+    "The D1+D2 handoff remained unread until Phase 1 was frozen. It was then read under controlled unblinding. Detailed test logs are complete on disk; tool previews were truncated.",
+    "No callable approved Jev tool was found; auditor judgment is the fallback.",
+    "The proposed fix is unimplemented and unvalidated. Extra acceptance-criteria rewind coverage is a proposed regression check, not claimed as executed."
+  ],
+  "freeze": {
+    "time": "2026-10-17T23:14:49.114316+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status": " M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_sha256": "35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "e95ed5c4c60539fea5216fd10b21e602c49b2d291c82e3696ddb0b12c6bac47d",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "fe2844e06d8265fcb3b0f8933dd4d3ced4bffa62a645a12030b0288251c47d1c",
+      "internal/engine/lease_test.go": "8e84776672b9546b3b65fec3ef6d90f3240afe419eed89058acc0e24f20187c4",
+      "internal/model/contract.go": "ed79c814191630c482296295a0a43b6215ec6b655a0400166eeb273cd81e6282",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    }
+  },
+  "environment": {
+    "go_version": "go1.27.1 linux/amd64",
+    "declared_go": "1.21",
+    "git": "/usr/bin/git",
+    "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+    "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+    "source_copy": "/tmp/hma-gate-d-20261017-d12r3/snapshot"
+  },
+  "test_runs": {
+    "go-test": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 90.35454893112183,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "go-vet": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 1.9349119663238525,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "go-race": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 111.95938515663147,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "auditor-engine": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "-run",
+        "^TestAuditorD12"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 2.4772250652313232,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "auditor-transition": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 1,
+      "elapsed_seconds": 5.699763298034668,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "auditor-race": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "./internal/transition",
+        "-run",
+        "^TestAuditorD12"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 1,
+      "elapsed_seconds": 14.888224363327026,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "auditor-legacy": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "-run",
+        "^TestAuditorD12LegacyApprovalExactBytes$"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 0.9460804462432861,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "negative-control-field-guard": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay=/tmp/hma-gate-d-20261017-d12r3/negative-control-overlay.json",
+        "-count=1",
+        "-v",
+        "./internal/engine",
+        "-run",
+        "^TestAuditorD12EveryFieldDeclared$"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 1,
+      "elapsed_seconds": 1.691849708557129,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "gatec-detail": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/host",
+        "-run",
+        "^TestGateC"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r3/snapshot",
+      "exit_code": 0,
+      "elapsed_seconds": 1.5122742652893066,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r3/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r3/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    }
+  },
+  "jev": "unavailable; no host adapter exposed",
+  "next_action": {
+    "action": "Human reviews F-D12R3-01 and approves one bounded remediation dispatch.",
+    "outcome": "FAIL; accepted global rewind leaves an active lease.",
+    "rationale": "A high-severity authority invalidation defect blocks D1+D2 acceptance.",
+    "owner": "Human gate owner",
+    "proposed_agent_model_route": "Proposal for the human review: return the bounded task to the recorded author Ming / Anthropic / claude-opus-5-5 / effort not recorded / Claude Code CLI. This is not an eligibility or dispatch claim. Select effort and permissions, verify deterministic route eligibility, and run exact-route hi before any dispatch. A fresh isolated auditor must review the fix.",
+    "permission_envelope": "Current session: repository read-only; audit output writes under /tmp/hma-gate-d-20261017-d12r3 only. Proposed remediation scope: global rewind invalidation and regression tests; no commits, pushes, releases or automatic stage changes.",
+    "exact_approval_required": "Human approval of a bounded task limited to global rewind invalidation, transition scope refusal and regression tests; the eventual exact worker route, effort, frozen target and permission envelope must be bound before dispatch. No core stage transition or implementation permission is granted by this audit.",
+    "stop_escalation_conditions": "Hold D1+D2 and D3 progression until the defect is fixed and independently re-tested. Stop on a changed target digest, failed controls, disputed scope, or missing route approval."
+  },
+  "phase1_sha256": "382cd74718ac5caf49a456b163e1e6ad090259c6c23ef48ef9b3d056f73f80ef",
+  "phase1_path": "PHASE1.json",
+  "report_time": "2026-10-17T23:22:29.872018+00:00",
+  "repository_unchanged": {
+    "time": "2026-10-17T23:20:58.680343+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status": " M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_sha256": "35d1b1a658336f8774e392181095af456eb646b37f4d4c6228234147afd4de2f",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "e95ed5c4c60539fea5216fd10b21e602c49b2d291c82e3696ddb0b12c6bac47d",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "fe2844e06d8265fcb3b0f8933dd4d3ced4bffa62a645a12030b0288251c47d1c",
+      "internal/engine/lease_test.go": "8e84776672b9546b3b65fec3ef6d90f3240afe419eed89058acc0e24f20187c4",
+      "internal/model/contract.go": "ed79c814191630c482296295a0a43b6215ec6b655a0400166eeb273cd81e6282",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    },
+    "unchanged_checks": {
+      "head": true,
+      "branch": true,
+      "status": true,
+      "diff_sha256": true,
+      "untracked_sha256": true
+    },
+    "unchanged": true
+  },
+  "dispatch": {
+    "id": "hma-gate-d-audit-20261017-d12r3",
+    "requested_worker": "liz",
+    "requested_provider": "OpenAI",
+    "requested_model": "gpt-6.1-sol",
+    "requested_effort": "high",
+    "access_service": "Codex review session",
+    "task": "Gate D D1+D2 code and outcome audit",
+    "permission_envelope": "Read-only /home/yeli/repos; write audit files only under designated /tmp output; no nested agent CLIs/model APIs; no Git writes to audited repository.",
+    "provenance": "Coordinator-supplied route; runtime model/effort not independently attested. No worker was dispatched by this audit."
+  },
+  "controlled_unblinding": {
+    "time": "2026-10-17T23:22:29.872275+00:00",
+    "phase1_sha256": "382cd74718ac5caf49a456b163e1e6ad090259c6c23ef48ef9b3d056f73f80ef",
+    "read_after_freeze": [
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md"
+    ],
+    "handoff_sha256": "e95ed5c4c60539fea5216fd10b21e602c49b2d291c82e3696ddb0b12c6bac47d",
+    "claims_checked": [
+      {
+        "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md:6",
+        "claim": "D3-D6 are later parts; Gate D is not yet passed.",
+        "assessment": "Consistent with this audit scope."
+      },
+      {
+        "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md:36",
+        "claim": "Whole-run transitions out of implementation authorization void leases.",
+        "assessment": "Claim is not satisfied for an unrelated-unit-tagged Grounding rewind; F-D12R3-01 remains."
+      },
+      {
+        "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md:39",
+        "claim": "DeriveLease is not wired to a command; D3 consumes it.",
+        "assessment": "Code search confirms no production DeriveLease call site outside its declaration. No D3 host enforcement claim is credited."
+      }
+    ],
+    "changes_to_phase1": "No finding, requirement status, prior closure or verdict changed. REG-01 scope disclaimer is now checked against the handoff.",
+    "prior_gate_d_audits_read": false
+  },
+  "artifact_inventory": {
+    "PHASE1.json": "382cd74718ac5caf49a456b163e1e6ad090259c6c23ef48ef9b3d056f73f80ef",
+    "PHASE1.sha256": "678a7855d4b9c88f8e26342539a9d308487ed4aec2c6d75e724ab7576b743a05",
+    "auditor-engine.json": "5822dea9a5db4d9605d1db5ab61583bc4cfe45185efb9281dcc5dadf0dd26bd8",
+    "auditor-engine.log": "8722aa1b696ccd5598eba68e900b15dbcf175e36e234ea01716b6e9d1d2a5d3c",
+    "auditor-legacy.json": "ee070efcce88cb5acd8acff55d344ceafe76ee6d53aed2c57047233350dfb209",
+    "auditor-legacy.log": "b045be2c63d0ff37e231d40ddbf4228c4945d7d365cdf30933f78ab663576db4",
+    "auditor-race.json": "59bafae0edf5dbe4998155696f06123ab1ad02ed5d179e90c4a3128eb7fa1404",
+    "auditor-race.log": "6d7d5d3b84864e75ee35ccae0bef3b89b53b96b86bae43cbb76c8bc6ebab8ad7",
+    "auditor-transition.json": "774ded9fa3098fe753d7e7dd671b1ed2fc08ca0c9b911379ec00a5e25392ce7c",
+    "auditor-transition.log": "161277cb884f04f3b3a17a925e8de134c1dc9622d9f918ff45d5c24e98713cb1",
+    "build-final.py": "7581b0aae0b8539c9234dbd39c74303892210a83870673502d89a95c6aa8bb06",
+    "build-phase1.py": "53c0be4751513bacaa638960c22c09bf9e0aaef5ce8924b5edbd6623d592a31a",
+    "diff-start.sha256": "faaf95401f128aa47bb711737331c96632f2247c1030581c375f96ec6dc536e7",
+    "freeze-end.json": "30ee9d9e26d57bc04e397a38d8ad92d7314e84ef9e0d7b36ff86cf4a5541f0db",
+    "freeze-start.json": "43fa3d1d0a559322d0faf5df075fe73dd5a2415fb56d182631308672bcc797ce",
+    "gatec-detail.json": "02bc2eb9be29abd5f07e41226f02cddbf2dbb38937b909f2f9a8fc4bd59f80c5",
+    "gatec-detail.log": "0d60572ba72305c5c5dde382560e725ae6abd824e353a59f2d500947e0ea5773",
+    "go-race.json": "3d6e41937a48af7ff2abfeaf622442b774e320041dbb99c42dd3a54182223012",
+    "go-race.log": "3eec3052ba59655a9f89a02ef79c6752e2d0da17b066a05d40d91cc8d36fe53a",
+    "go-test.json": "281510038eb7bae8094d62c82f6a8680ac75d280ae3b49902fdd509697d7b809",
+    "go-test.log": "d189457545d67238cd76dc0b704ef50ec928b8f700745e03674d8b7b48f13ae7",
+    "go-vet.json": "b1ec77eb4a3f92a7d6a34e1af71bd682e46bfa60c5299c905309d5034d935386",
+    "go-vet.log": "1239a18e0802c74c24cd458b5171ed058c776348bdee83ccc325df6d99ba251b",
+    "negative-control-contract.go": "173af959cfb9266cdb7460951227af7193a6b5f749f04b0ae08b2400c1e34c71",
+    "negative-control-field-guard.json": "da0b2e88deea0e897da67a6bbf35feb4ab4cf4f75625314649e57191aef8e271",
+    "negative-control-field-guard.log": "895950378bf0929fcaed8949addfa7f4abec1f32ee255979cfca68dbfe4e4128",
+    "negative-control-overlay.json": "4f56c20d24384c7c275e0637529629f5e4a6a460ecb3e0b1c9f9fcd3e07622d2",
+    "requirements-derived.json": "e2abb6ef515bc85ddfc5bf120aa506d78638939858b3efa36884b5862b841aa9",
+    "rewind-reproduction/unit-/contract.json": "fb0f7b6ec03f8c3f485435c4b47ff567eac9fb968f11273fba68147cf86abc1b",
+    "rewind-reproduction/unit-/lease.json": "fb61e4745ae69fddcbe1e1e942ddb795570882eca3b998697b60edbbaff0f0e8",
+    "rewind-reproduction/unit-/plan.json": "c4a5c9a9d64cbfec8b688ea99a9bb2a592de75395fb55a3cea2ce6a03af036f9",
+    "rewind-reproduction/unit-/records.json": "7a0498fd64f4d2d9265602034caa59ad5fbf41f8f3eb0a3cdcf3bc019bc40d6d",
+    "rewind-reproduction/unit-/result.json": "99903fc09271a7424da9be3b01fbce27653499fc8fd16e7ccd09299591ff568c",
+    "rewind-reproduction/unit-A/contract.json": "fb0f7b6ec03f8c3f485435c4b47ff567eac9fb968f11273fba68147cf86abc1b",
+    "rewind-reproduction/unit-A/lease.json": "b24b4f37112f6e8d570b8a12c8eb8179959fcf947a9dd9d3ffdb04d8810b91ae",
+    "rewind-reproduction/unit-A/plan.json": "c4a5c9a9d64cbfec8b688ea99a9bb2a592de75395fb55a3cea2ce6a03af036f9",
+    "rewind-reproduction/unit-A/records.json": "3db0646c85d3963b8f8b5454dd53be8fa5b4fe80560cd0eff591adac61a548d3",
+    "rewind-reproduction/unit-A/result.json": "10b64119a75798632a22414ad1f6f6bfdb6e90a1cf062c219886accc0e400bca",
+    "rewind-reproduction/unit-D/contract.json": "fb0f7b6ec03f8c3f485435c4b47ff567eac9fb968f11273fba68147cf86abc1b",
+    "rewind-reproduction/unit-D/lease.json": "551b3267adca8525eb7ff8276f967895896a8e60516729c8015d2a87209e2537",
+    "rewind-reproduction/unit-D/plan.json": "c4a5c9a9d64cbfec8b688ea99a9bb2a592de75395fb55a3cea2ce6a03af036f9",
+    "rewind-reproduction/unit-D/records.json": "9b02b39f162db47d04bded62ed5cc65832b89f4737a8239a4395169a894e3a69",
+    "rewind-reproduction/unit-D/result.json": "2c4fa6101680385883afec638c03eebc4a19a6839d78f5587de3c8f6f3b7e0dd",
+    "run-check.py": "7f07d8a6f9f5c2e69881738b8d0fff498a6c9b0bec67a33d9f6a5077a2108882",
+    "snapshot/internal/engine/auditor_d12r3_test.go": "a22fa165df15b02fc9d3060fa4392290bea928245d8ce1771d5b15b2faff31ef",
+    "snapshot/internal/transition/auditor_d12r3_test.go": "53c70a730599825203ace92fa21373a2d5b9066bf8ae1d1a0560a1ff526db2f5",
+    "snapshot-manifest.json": "5fe5845c90e977b767e9ba3733eee367cb9e5a97c6301ec3999dedc8b3d3082b",
+    "status-end.txt": "f9ebf1c6858747ec738e99ce778da50103e9266f90608c884452cbbb73b26373",
+    "status-start.txt": "f9ebf1c6858747ec738e99ce778da50103e9266f90608c884452cbbb73b26373"
+  }
+}

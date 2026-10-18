@@ -1,0 +1,46 @@
+ok  	github.com/lennon-li/HMA/cmd/hma	64.791s
+ok  	github.com/lennon-li/HMA/internal/ci/github	0.007s
+ok  	github.com/lennon-li/HMA/internal/engine	0.108s
+ok  	github.com/lennon-li/HMA/internal/evidence	0.060s
+ok  	github.com/lennon-li/HMA/internal/host	4.100s
+ok  	github.com/lennon-li/HMA/internal/inventory	0.116s
+ok  	github.com/lennon-li/HMA/internal/model	0.020s
+ok  	github.com/lennon-li/HMA/internal/pilot	2.007s
+ok  	github.com/lennon-li/HMA/internal/repostate	2.272s
+ok  	github.com/lennon-li/HMA/internal/store	1.018s
+ok  	github.com/lennon-li/HMA/internal/transition	9.412s
+ok  	github.com/lennon-li/HMA/scripts/dogfood/hostinput	0.882s
+ok  	github.com/lennon-li/HMA/cmd/hma	79.907s
+ok  	github.com/lennon-li/HMA/internal/ci/github	1.017s
+ok  	github.com/lennon-li/HMA/internal/engine	2.050s
+ok  	github.com/lennon-li/HMA/internal/evidence	3.093s
+ok  	github.com/lennon-li/HMA/internal/host	6.127s
+ok  	github.com/lennon-li/HMA/internal/inventory	1.143s
+ok  	github.com/lennon-li/HMA/internal/model	1.162s
+ok  	github.com/lennon-li/HMA/internal/pilot	3.121s
+ok  	github.com/lennon-li/HMA/internal/repostate	3.463s
+ok  	github.com/lennon-li/HMA/internal/store	2.054s
+ok  	github.com/lennon-li/HMA/internal/transition	10.899s
+ok  	github.com/lennon-li/HMA/scripts/dogfood/hostinput	1.894s
+ok  	github.com/lennon-li/HMA/internal/engine	0.508s
+ok  	github.com/lennon-li/HMA/internal/model	0.056s
+== synthetic HMA host dogfood (scratch: /tmp/hma-host-dogfood.OTii6z)
+ok   core run seeded with no approvals
+ok   decision without core route approval refused: HOST_ROUTE_APPROVAL_MISSING
+ok   impl->review gate without host records refused: HOST_ORCHESTRATION_DECISION_MISSING
+ok   synthetic route-approval fixture seeded (approver labelled non-human)
+ok   forged decision refused: HOST_ROUTE_APPROVAL_MISMATCH
+ok   decision -> RUN_ROUTE_PREFLIGHT
+ok   forged implementation preflight refused: HOST_ROUTE_APPROVAL_MISMATCH
+ok   implementation preflight -> RECORD_DISPATCH
+ok   forged implementation dispatch refused: HOST_ROUTE_APPROVAL_MISMATCH
+ok   implementation dispatch -> START_WORKER
+ok   impl->review with host gate satisfied but no human approval refused: missing host input
+ok   review->verification gate before review refused: HOST_INDEPENDENT_REVIEW_MISSING
+ok   review preflight -> RECORD_DISPATCH
+ok   review dispatch -> START_WORKER
+ok   independent review APPROVE -> CONTINUE_HMA_TRANSITION
+ok   review->verification with host gate satisfied but no human approval refused: missing host input
+ok   core contains no approval other than the labelled synthetic fixture
+== PASS (17 checks)
+EXIT 0

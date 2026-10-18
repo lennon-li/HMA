@@ -1,0 +1,620 @@
+{
+  "audit_id": "hma-gate-d-audit-20261017-d12r9",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0;diff-sha256:c119b7f95c3cff42c5a2f13037bbef88fefbde6093a55c355a1ccbe64dca19fb",
+  "isolation": "isolated",
+  "isolation_compromised": false,
+  "verdict": "pass",
+  "overall_verdict": "PASS",
+  "created_utc": "2026-10-18T00:48:03.230511+00:00",
+  "phase1_frozen": true,
+  "requirements": [
+    {
+      "id": "D1-01",
+      "requirement": "Versioned canonical immutable acceptance contract with all v2 fields and v3 route/permission ceilings; exact core criterion IDs; no result dispositions",
+      "source": "v2 \u00a72.2; v3 \u00a72.1",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/model/contract.go:20-130",
+        "probes.log:TestAuditAllDeclaredFields",
+        "probes.log:TestAuditMaterialChangesAndGraphs"
+      ]
+    },
+    {
+      "id": "D1-02",
+      "requirement": "Strict document interpretation: reject ambiguous/malformed data; material changes alter digest",
+      "source": "v2 \u00a72.2 canonical JSON",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/model/contract.go:190-378",
+        "probes.log:TestAuditUnicodeAndAmbiguity",
+        "mutant-unicode.log",
+        "mutant-declarations.log"
+      ]
+    },
+    {
+      "id": "D1-03",
+      "requirement": "Optional omitted-empty approval field preserves legacy bytes; initial presented contract binds; later approvals carry exact contract; swaps and drops refuse",
+      "source": "v3 \u00a72.1; architecture \u00a76",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/model/types.go:197",
+        "internal/engine/contract_binding.go:60-109",
+        "internal/transition/apply.go:147-157",
+        "probes.log:TestAuditApplyContractBinding",
+        "legacy-comparison.json"
+      ]
+    },
+    {
+      "id": "D1-04",
+      "requirement": "hma.plan/v1 contains every architecture \u00a710 declaration, wall/cost ceilings and required effective policy digest; validate unit/dependency graph",
+      "source": "v3 \u00a72.2-2.3; v4 \u00a72; architecture \u00a710",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/model/contract.go:442-599",
+        "probes.log:TestAuditAllDeclaredFields",
+        "probes.log:TestAuditMaterialChangesAndGraphs",
+        "probes.log:TestAuditContractCeilings"
+      ]
+    },
+    {
+      "id": "D2-01",
+      "requirement": "Only latest applicable approved legal transition into implementation authorization issues lease; deterministic digest binds Approval.TransitionDigest, unit and plan",
+      "source": "v4 \u00a71; v3 \u00a72.2",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/engine/lease.go:90-151",
+        "probes.log:TestAuditLeaseIdentityReference",
+        "probes.log:TestAuditReworkRetainsValidRoute",
+        "addendum-probes.log:TestAuditIdentityFieldsIndependently"
+      ]
+    },
+    {
+      "id": "D2-02",
+      "requirement": "Presented valid plan and contract match issuer bindings, run and unit; exact current core criterion IDs; selected route identity and permission stay coherent",
+      "source": "v2 \u00a72.2; v3 \u00a72.1-2.2; architecture \u00a75-6",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/engine/lease.go:106-129",
+        "internal/engine/lease.go:157-163",
+        "internal/engine/lease.go:207-226",
+        "probes.log:TestAuditLeaseBoundaries",
+        "probes.log:TestAuditMissingCriterionAndFreshReapproval",
+        "probes.log:TestAuditContractCeilings",
+        "route-probe.log",
+        "addendum-probes.log:TestAuditFreshIssuerCriteriaDrift"
+      ]
+    },
+    {
+      "id": "D2-03",
+      "requirement": "Terminal state, wrong stage, same-unit/run/direct/transitive dependency rewinds void old generation; unrelated unit does not; new legal issuer may resume",
+      "source": "v3 \u00a72.2-2.3; architecture \u00a75.4",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/engine/lease.go:164-204",
+        "probes.log:TestAuditDependencyAndWholeRunRewinds",
+        "probes.log:TestAuditRealApplyRewindRoute",
+        "probes.log:TestAuditRealApplyChangedPlanRoute",
+        "mutant-rewind.log"
+      ]
+    },
+    {
+      "id": "D2-04",
+      "requirement": "Approval-based wall interval [approval,expiry), nonnegative counters strictly below per-unit and contract ceilings; current computed policy match",
+      "source": "v3 \u00a72.2; v4 \u00a72",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/engine/lease.go:130-153",
+        "internal/engine/lease.go:228-243",
+        "probes.log:TestAuditRealApplyWallTime",
+        "probes.log:TestAuditLeaseBoundaries"
+      ]
+    },
+    {
+      "id": "D2-05",
+      "requirement": "Bound waiver changes invalidate approval including reused route approval; no old generation revival or inactive grant issuance",
+      "source": "architecture \u00a75.4 and \u00a76",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "internal/engine/lease.go:246-328",
+        "probes.log:TestAuditWaiverGenerations",
+        "probes.log:TestAuditRealApplyWaivers"
+      ]
+    },
+    {
+      "id": "D12-REG",
+      "requirement": "Existing transitions, Gate B/C, legacy approval digests remain correct; no claims of D3-D6 implementation",
+      "source": "objective \u00a75; scoped user instruction",
+      "status": "pass",
+      "assessment": "MET",
+      "evidence_refs": [
+        "test.result.json",
+        "vet.result.json",
+        "race.result.json",
+        "probes-race.result.json",
+        "legacy-comparison.json",
+        "docs/handoffs/2026-10-17-gate-d-d1-d2.md:5-8,38-40 (read after Phase 1 freeze)"
+      ]
+    }
+  ],
+  "findings": [],
+  "prior_finding_closure": [
+    {
+      "id": "F01",
+      "title": "Contract route and permission ceilings do not constrain leases",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditContractCeilings",
+        "TestAuditLeaseBoundaries",
+        "TestAuditRouteProjectionCoherence"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "Dependency correction does not invalidate dependent leases",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditDependencyAndWholeRunRewinds",
+        "TestAuditReworkRetainsValidRoute"
+      ]
+    },
+    {
+      "id": "F03",
+      "title": "Lease wall time starts at record append instead of human approval",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditRealApplyWallTime",
+        "TestAuditLeaseBoundaries"
+      ]
+    },
+    {
+      "id": "F04",
+      "title": "Unicode decoding loses document content before hashing",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditUnicodeAndAmbiguity",
+        "mutant-unicode.log"
+      ]
+    },
+    {
+      "id": "F05",
+      "title": "Plan validation accepts units missing required bounded-work fields",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditAllDeclaredFields",
+        "TestAuditMaterialChangesAndGraphs"
+      ]
+    },
+    {
+      "id": "F07",
+      "title": "Lease derivation ignores current core criterion ID drift",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditFreshIssuerCriteriaDrift",
+        "TestAuditMissingCriterionAndFreshReapproval"
+      ]
+    },
+    {
+      "id": "F06",
+      "title": "Initial acceptance can silently drop a presented contract",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditApplyContractBinding"
+      ]
+    },
+    {
+      "id": "F08",
+      "title": "Lease digest uses record anchor instead of the specified transition field",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditLeaseIdentityReference",
+        "TestAuditIdentityFieldsIndependently"
+      ]
+    },
+    {
+      "id": "F09",
+      "title": "Negative counters pass the lease ceiling check",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditLeaseBoundaries"
+      ]
+    },
+    {
+      "id": "D12R2-01",
+      "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditAllDeclaredFields",
+        "mutant-declarations.log",
+        "legacy-comparison.json",
+        "test.log",
+        "vet.log",
+        "race.log"
+      ]
+    },
+    {
+      "id": "F-D12R3-01",
+      "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditDependencyAndWholeRunRewinds",
+        "TestAuditRealApplyRewindRoute"
+      ]
+    },
+    {
+      "id": "D12R4-01",
+      "title": "Selected-route coherence is absent from the pure lease interface",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditLeaseBoundaries",
+        "TestAuditRouteProjectionCoherence",
+        "TestAuditReworkRetainsValidRoute"
+      ]
+    },
+    {
+      "id": "D12R5-01",
+      "title": "A lease stays active after a bound waiver invalidates its issuing approval",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditWaiverGenerations",
+        "TestAuditRealApplyWaivers"
+      ]
+    },
+    {
+      "id": "D12R6-01",
+      "title": "A new issuer can bind an inactive or replaced waiver grant and obtain a lease",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditWaiverGenerations",
+        "TestAuditRealApplyWaivers"
+      ]
+    },
+    {
+      "id": "F-D12R7-01",
+      "title": "Correction lease reuses a route approval invalidated by a bound waiver",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditWaiverGenerations",
+        "TestAuditRealApplyWaivers"
+      ]
+    },
+    {
+      "id": "F-D12R8-01",
+      "title": "Correction issuer reuses a route approval invalidated by a plan or whole-run rewind",
+      "closure": "FIXED",
+      "basis": "Independent replacement reproductions and source inspection; no prior audit test artifacts read.",
+      "evidence_refs": [
+        "TestAuditReworkRetainsValidRoute",
+        "TestAuditRealApplyRewindRoute",
+        "TestAuditRealApplyChangedPlanRoute",
+        "mutant-rewind.log"
+      ]
+    }
+  ],
+  "checks": {
+    "mutant-declarations.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "-overlay",
+        "/tmp/hma-gate-d-20261017-d12r9/mutants/declarations.json",
+        "-run",
+        "TestAuditAllDeclaredFields",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 1,
+      "seconds": 1.380152702331543
+    },
+    "legacy-after.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "run",
+        "./cmd/auditlegacy"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 0.41646504402160645
+    },
+    "mutant-unicode.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "-overlay",
+        "/tmp/hma-gate-d-20261017-d12r9/mutants/unicode.json",
+        "-run",
+        "TestAuditUnicodeAndAmbiguity",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 1,
+      "seconds": 0.9709312915802002
+    },
+    "probes-vet.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 0.17891883850097656
+    },
+    "legacy-before.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "run",
+        "./cmd/auditlegacy"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/baseline",
+      "exit_code": 0,
+      "seconds": 0.5368406772613525
+    },
+    "mutant-rewind.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "-overlay",
+        "/tmp/hma-gate-d-20261017-d12r9/mutants/rewind.json",
+        "-run",
+        "TestAuditRealApplyRewindRoute",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 1,
+      "seconds": 15.75813913345337
+    },
+    "test.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 76.64820075035095,
+      "env": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r9/cache",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "probes-race.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 47.37861180305481
+    },
+    "vet.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 1.7978718280792236,
+      "env": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r9/cache",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "race.result": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "seconds": 104.55680394172668,
+      "env": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261017-d12r9/cache",
+        "TMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261017-d12r9/tmp",
+        "GOTOOLCHAIN": "local"
+      }
+    },
+    "probes": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "log": "probes.log",
+      "top_level_tests": 15,
+      "test_and_subtest_invocations": 478
+    },
+    "route-probe": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "TestAuditRouteProjectionCoherence",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "log": "route-probe.log",
+      "test_and_subtest_invocations": 14
+    },
+    "addendum-probes": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "TestAuditIdentityFieldsIndependently|TestAuditFreshIssuerCriteriaDrift",
+        "./internal/auditprobe"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261017-d12r9/snapshot",
+      "exit_code": 0,
+      "log": "addendum-probes.log",
+      "test_and_subtest_invocations": 6
+    }
+  },
+  "limitations": [
+    "Scope is D1 and D2 only. D3-D6, reservation accounting, dispatch enforcement, launch reconciliation, criterion credit, finding disposition, and architecture amendment are not validated.",
+    "Trusted host supplies an authenticated validated core chain, current computed policy digest, current route projection, wall clock, and counters. Pure derivation does not authenticate host assertions or enforce OS process confinement.",
+    "Same live filesystem as the target. No implementer conversation inherited. User-supplied prior closure criteria intentionally informed adversarial checks; prior verdicts and test artifacts were not read.",
+    "Only synthetic repositories and stores under the output directory were mutated. The audited repository received no writes. Tests necessarily perform git writes in synthetic repositories; no audited-repository git write was issued.",
+    "No complete malicious-host or exhaustive concurrency/state-space proof is claimed. Existing race tests and independent probes passed.",
+    "Heading-only rg indexed the specified design files to find section line ranges. Only the permitted Gate A section bodies were printed with sed and used as design requirements.",
+    "The full race run saw the auditor package before its tests were added and reports [no tests to run] for that package. All 478 auditor invocations ran separately under -race. The later route projection test is recorded separately.",
+    "No Jev tool was exposed in the tool catalog. No model API or nested agent CLI was used.",
+    "Go 1.27.1 linux/amd64 was used with module go directive 1.21; Go 1.21 runtime compatibility was not separately executed.",
+    "Repository read-only access was procedural. The host sandbox allowed source-file writes, while .git was separately read-protected. Start/end hashes and the 216-file snapshot comparison demonstrate no observed change; they are not a continuous filesystem lock.",
+    "Some interactive tool output was truncated. Full test logs, mutation logs, source snapshot bytes, and manifests are retained in the audit directory. No test-log file was truncated."
+  ],
+  "unblinding": {
+    "performed": true,
+    "after_phase1_sha256": "6fd060bb6a8a1a9aa654884926beb896b8dbafeeab3d4c35280843254abcef17",
+    "source": "docs/handoffs/2026-10-17-gate-d-d1-d2.md",
+    "source_sha256": "db6bceef74c7e7536f12c2cced55737c9e3e656b6cdd8802d52468103ec23dff",
+    "observation": "The handoff explicitly separates D1/D2 from D3-D6 and says pure lease derivation is not wired to a command. It does not claim full Gate D passage. Narrative remediation claims were not used as primary evidence.",
+    "verdict_changed": false,
+    "prior_audit_directories_read": false,
+    "addendum_checks": [
+      "TestAuditIdentityFieldsIndependently",
+      "TestAuditFreshIssuerCriteriaDrift"
+    ]
+  },
+  "provenance": {
+    "dispatch_label": "liz / gpt-6.1-sol / high; review mode",
+    "label_source": "user dispatch; actual provider/model identity was not independently queried",
+    "skill": "/home/yeli/obsidian/AgentSystem/agent-memory/skills/independent-audit/SKILL.md"
+  },
+  "next_action": {
+    "action": "Human reviews the D1/D2 evidence packet and decides whether to authorize Gate D part D3.",
+    "owner": "Human gate owner",
+    "route": "No execution requested by this audit. A D3 worker route must be separately selected and preflighted.",
+    "permission_envelope": "Current task remains read-only on /home/yeli/repos; audit artifacts only under /tmp/hma-gate-d-20261017-d12r9.",
+    "approval_required": "Explicit human authorization of the separate D3 task, acceptance criteria, route, and permission envelope. This PASS does not grant it.",
+    "stop_conditions": "Stop on target digest drift, a new blocking finding, or absent human authorization."
+  },
+  "updated_utc": "2026-10-18T00:49:35.400611+00:00",
+  "freeze_start": {
+    "timestamp": "2026-10-18T00:42:06.595646+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status": " M internal/host/host.go\n M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/host/route_identity_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_sha256": "c119b7f95c3cff42c5a2f13037bbef88fefbde6093a55c355a1ccbe64dca19fb",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "db6bceef74c7e7536f12c2cced55737c9e3e656b6cdd8802d52468103ec23dff",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "2bb86914199f33f024534650194f99b00269e7bd7837ab2210e1ad32d74f3ff0",
+      "internal/engine/lease_test.go": "1cab30c1b65d7913a3454e2595452dd53dab23d94d2715549440c199c581afda",
+      "internal/host/route_identity_test.go": "8564f207823549558bb908d29f4a1585f0aadd484d5c8080b0dddd713d1a738d",
+      "internal/model/contract.go": "41ea3ffef1cf6060541e6845167a37ac33e7a9bd4820bc4910916b1444e3552b",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    }
+  },
+  "freeze_end": {
+    "timestamp": "2026-10-18T00:50:52.605893+00:00",
+    "head": "bc5acb7c0bdc634f31a0644ee17d0f610d7f4be0",
+    "branch": "main",
+    "status": " M internal/host/host.go\n M internal/model/types.go\n M internal/transition/apply.go\n?? .serena/\n?? docs/handoffs/2026-10-16-arch-amendment-draft.md\n?? docs/handoffs/2026-10-16-arch-amendment-trace.md\n?? docs/handoffs/2026-10-17-gate-d-d1-d2.md\n?? internal/engine/contract_binding.go\n?? internal/engine/lease.go\n?? internal/engine/lease_test.go\n?? internal/host/route_identity_test.go\n?? internal/model/contract.go\n?? internal/model/contract_test.go\n?? internal/transition/contract_test.go\n",
+    "diff_sha256": "c119b7f95c3cff42c5a2f13037bbef88fefbde6093a55c355a1ccbe64dca19fb",
+    "untracked_sha256": {
+      ".serena/.gitignore": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758",
+      ".serena/project.yml": "aa2958bfb3975e4d65a36401717981c269ec9cef1070cb68038d7ed50a5c923d",
+      "docs/handoffs/2026-10-16-arch-amendment-draft.md": "d2b305e6b45f0f40465524b718ef3d91e8dd22c4f243c9abe486e62a251441fb",
+      "docs/handoffs/2026-10-16-arch-amendment-trace.md": "c21d01825f12a2305ac630c7280de8d9912a037e0ff659b9b583da58bacfa5d5",
+      "docs/handoffs/2026-10-17-gate-d-d1-d2.md": "db6bceef74c7e7536f12c2cced55737c9e3e656b6cdd8802d52468103ec23dff",
+      "internal/engine/contract_binding.go": "a5aff2ff3fcf938d04869981d1042bedafee498bef7e20b4f49ab8f06b7d8a2a",
+      "internal/engine/lease.go": "2bb86914199f33f024534650194f99b00269e7bd7837ab2210e1ad32d74f3ff0",
+      "internal/engine/lease_test.go": "1cab30c1b65d7913a3454e2595452dd53dab23d94d2715549440c199c581afda",
+      "internal/host/route_identity_test.go": "8564f207823549558bb908d29f4a1585f0aadd484d5c8080b0dddd713d1a738d",
+      "internal/model/contract.go": "41ea3ffef1cf6060541e6845167a37ac33e7a9bd4820bc4910916b1444e3552b",
+      "internal/model/contract_test.go": "7948bbca4e35304210bffdd6bca216641bad81ccf190c7bbfabd3b6af3d88660",
+      "internal/transition/contract_test.go": "800094f3c512247f44581be059495b94c6028466a4b292e9f8f7a6b615de587d"
+    },
+    "matches_start": {
+      "head": true,
+      "branch": true,
+      "status": true,
+      "diff_sha256": true,
+      "untracked_sha256": true
+    },
+    "snapshot_source_mismatches": [],
+    "snapshot_copy_mismatches": []
+  },
+  "phase1_sha256": "6fd060bb6a8a1a9aa654884926beb896b8dbafeeab3d4c35280843254abcef17",
+  "improvement_opportunities": [
+    {
+      "classification": "non-defect",
+      "observation": "The external auditor probes and three mutation overlays form reusable D3 regression fixtures. They remain outside the repository. No implementation change is proposed in this audit."
+    }
+  ],
+  "remediation_roadmap": [],
+  "human_review": {
+    "profile": "STE80",
+    "observed": "Original test/vet/race checks passed. Auditor probes passed. Three deliberately weakened code overlays failed behavior checks. Legacy serialized bytes match the baseline. Target freeze is unchanged.",
+    "assessment": "All 10 scoped requirement groups are MET. All 16 supplied prior-finding criteria are FIXED. No new actionable finding was reproduced.",
+    "scope_limit": "Pure trusted-host D1/D2 derivation only. No process launch enforcement or full Gate D completion is certified.",
+    "exact_approval_challenge": "None is created by this read-only audit. A future D3 dispatch needs its own human authorization and host challenge."
+  }
+}

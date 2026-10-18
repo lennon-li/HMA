@@ -1,0 +1,257 @@
+{
+ "note": "Closure criteria for prior D1+D2 findings; statuses and verdicts removed.",
+ "findings": [
+  {
+   "id": "F01",
+   "title": "Contract route and permission ceilings do not constrain leases",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD12RouteCeiling with the out-of-contract route.",
+     "expected": "Derivation refuses; an in-ceiling route still succeeds."
+    },
+    {
+     "method": "Present a route with bounded_write against a read_only contract and vary approved route identity while preserving the plan.",
+     "expected": "Both permission broadening and identity mismatch refuse before a lease becomes active."
+    }
+   ]
+  },
+  {
+   "id": "F02",
+   "title": "Dependency correction does not invalidate dependent leases",
+   "closure_check": [
+    {
+     "method": "Run dependency_correction, dependency_route_rewind and unrelated_correction controls.",
+     "expected": "Direct and transitive dependents refuse; unrelated unit stays active."
+    },
+    {
+     "method": "Approve a new legal issuing transition for an invalidated dependent.",
+     "expected": "Only that new generation can resume; old generation never revives."
+    }
+   ]
+  },
+  {
+   "id": "F03",
+   "title": "Lease wall time starts at record append instead of human approval",
+   "closure_check": [
+    {
+     "method": "Run the real Apply late-approval test with a one-minute plan and two-minute-old approval.",
+     "expected": "Transition may remain otherwise legal, but derivation refuses expired lease."
+    },
+    {
+     "method": "Test one nanosecond before expiry, exact expiry, and Now before approval.",
+     "expected": "Only the request inside [approval, expiry) succeeds."
+    }
+   ]
+  },
+  {
+   "id": "F04",
+   "title": "Unicode decoding loses document content before hashing",
+   "closure_check": [
+    {
+     "method": "Run invalid_utf8, invalid_utf8_second, lone_surrogate and other_lone_surrogate tests for contracts and plans.",
+     "expected": "Each malformed input is rejected before any digest is returned."
+    },
+    {
+     "method": "Round-trip valid non-ASCII text, valid paired surrogates and explicit U+FFFD.",
+     "expected": "Valid scalar Unicode survives and material statement/check changes change the digest."
+    }
+   ]
+  },
+  {
+   "id": "F05",
+   "title": "Plan validation accepts units missing required bounded-work fields",
+   "closure_check": [
+    {
+     "method": "Delete one required field at a time from an otherwise complete unit and run ParsePlan and DeriveLease.",
+     "expected": "Each missing declaration is rejected; explicit empty lists only pass where the documented schema permits them."
+    },
+    {
+     "method": "Present an explicit complete unit with all required declarations.",
+     "expected": "Parsing and derivation continue to succeed."
+    }
+   ]
+  },
+  {
+   "id": "F07",
+   "title": "Lease derivation ignores current core criterion ID drift",
+   "closure_check": [
+    {
+     "method": "Run the fresh-approval criterion mismatch reproduction; test renamed, missing, extra and duplicate IDs.",
+     "expected": "Each mismatch refuses a lease."
+    },
+    {
+     "method": "Change only a criterion disposition while preserving exact IDs.",
+     "expected": "The ID-set check remains satisfied; separate disposition policy still applies."
+    }
+   ]
+  },
+  {
+   "id": "F06",
+   "title": "Initial acceptance can silently drop a presented contract",
+   "closure_check": [
+    {
+     "method": "Run ApplyDropsPresentedContract and a both-absent legacy control.",
+     "expected": "Presented-unbound contract refuses; legacy transition still succeeds."
+    },
+    {
+     "method": "Run a document with its correct digest and one with a different digest.",
+     "expected": "Only the exact matching contract is accepted."
+    }
+   ]
+  },
+  {
+   "id": "F08",
+   "title": "Lease digest uses record anchor instead of the specified transition field",
+   "closure_check": [
+    {
+     "method": "Compute a reference digest from the documented envelope and Approval.TransitionDigest, unit and accepted plan digest.",
+     "expected": "Reference and implementation agree byte for byte."
+    },
+    {
+     "method": "Vary each documented identity field independently.",
+     "expected": "Every identity change alters the lease digest; identical input remains deterministic."
+    }
+   ]
+  },
+  {
+   "id": "F09",
+   "title": "Negative counters pass the lease ceiling check",
+   "closure_check": [
+    {
+     "method": "Run negative_counters separately for each signed counter and zero/below/equal ceiling controls.",
+     "expected": "Every negative input refuses; zero and valid below-ceiling inputs pass; equality refuses."
+    }
+   ]
+  },
+  {
+   "id": "D12R2-01",
+   "title": "Required document fields can be omitted or null, including a plan that obtains an active lease",
+   "closure_check": [
+    {
+     "method": "Run TestAuditAllUnitFieldsDeclared and TestAuditNullRetryBudget through the supplied overlay.",
+     "expected": "Missing/null retry budget refused; explicit zero accepted."
+    },
+    {
+     "method": "Run TestAuditExplicitCheckArgv and TestAuditContractFieldsDeclared; add explicit [] positive controls.",
+     "expected": "Missing/null required arrays refused; valid empty argv/non-goals arrays accepted."
+    },
+    {
+     "method": "Run TestAuditMissingRetryCanReachActiveLease.",
+     "expected": "The incomplete plan is refused before active lease derivation."
+    },
+    {
+     "method": "Run corrected full go test, go vet, and race commands.",
+     "expected": "Existing stage, Gate B and Gate C behavior remains passing; accepted legacy approval bytes remain unchanged."
+    }
+   ]
+  },
+  {
+   "id": "F-D12R3-01",
+   "title": "A unit tag can hide a whole-run Grounding rewind from lease invalidation",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD12WholeRunRewindWithUnitID for empty, A and unrelated D, in normal and race modes.",
+     "expected": "Each case either refuses the invalid scope before append or returns a non-active A lease after an accepted Grounding rewind."
+    },
+    {
+     "method": "Add the equivalent legal Release-and-closure -> Acceptance-criteria case; progress after a global rewind without issuing a new A approval; then issue a fresh legal A approval.",
+     "expected": "All old A generations remain void; only the new issuer can resume."
+    },
+    {
+     "method": "Run existing and auditor dependency correction/route/plan rewind controls and unrelated correction control.",
+     "expected": "Direct/transitive dependents refuse; independent unit remains active for genuinely unit-scoped rewinds."
+    },
+    {
+     "method": "Run full go test ./..., go vet ./... and go test -race ./..., then obtain a fresh isolated audit.",
+     "expected": "All checks pass and the independent auditor finds no remaining rewind bypass."
+    }
+   ]
+  },
+  {
+   "id": "D12R4-01",
+   "title": "Selected-route coherence is absent from the pure lease interface",
+   "closure_check": [
+    {
+     "method": "Keep contract, plan bytes and accepted_plan_digest fixed. Supply matching selected profile and approval as a positive control. Then vary profile identity, permission class, approval reference and unit independently.",
+     "expected": "Matching selection succeeds. Each mismatch and missing projection refuses before the lease is active."
+    },
+    {
+     "method": "Use a selected bounded_write route under a read_only unit/contract, then restore read_only; include legal Independent validation -> Implementation authorization rework.",
+     "expected": "Broadening refuses. Matching read_only and legal rework succeed with the proper route binding."
+    },
+    {
+     "method": "Rerun existing full test/vet/race and independent lease/rewind/legacy-byte controls.",
+     "expected": "All pass; no illegal issuer, scope widening or legacy serialization change."
+    }
+   ]
+  },
+  {
+   "id": "D12R5-01",
+   "title": "A lease stays active after a bound waiver invalidates its issuing approval",
+   "closure_check": [
+    {
+     "method": "Run the preserved waiver-overlay reproduction in normal and race modes.",
+     "expected": "All four subtests pass: bound withdrawal, expiration and withdrawal/regrant refuse; the unbound control remains active."
+    },
+    {
+     "method": "Add separate controls for unrelated scope, a new legal issuer bound to the current waiver generation, multiple grants, and missing/malformed references to actually bound grants.",
+     "expected": "Unrelated changes preserve the lease. Only the fresh valid issuer can resume. Ambiguous bound provenance fails closed; no older generation revives."
+    },
+    {
+     "method": "Rerun full test, vet, race, route/rewind/legacy-byte controls and obtain a fresh independent audit.",
+     "expected": "All regressions pass and the new invalidation test passes without relaxing the original contract."
+    }
+   ]
+  },
+  {
+   "id": "D12R6-01",
+   "title": "A new issuer can bind an inactive or replaced waiver grant and obtain a lease",
+   "closure_check": [
+    {
+     "method": "Run TestAuditRealApplyWaiverGeneration in normal and race modes.",
+     "expected": "withdrawn, expired, and old_after_regrant refuse at Apply or DeriveLease; current_after_regrant remains active."
+    },
+    {
+     "method": "Run TestAuditWaiverAfterIssuer and TestAuditWaiverInvalidAtIssuer in normal and race modes.",
+     "expected": "Bound withdrawal/expiry/replacement never revive old issuers. Unbound and unrelated controls remain active. Current valid issuers pass. Missing, malformed, and duplicate references refuse."
+    },
+    {
+     "method": "Run full go test ./..., go vet ./..., go test -race ./... with matched TMPDIR and GOTMPDIR.",
+     "expected": "All regressions pass; legacy approval bytes remain identical."
+    }
+   ]
+  },
+  {
+   "id": "F-D12R7-01",
+   "title": "Correction lease reuses a route approval invalidated by a bound waiver",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD12CurrentWaiversDoNotRestoreOldRoute with and without -race.",
+     "expected": "withdraw, expire and replace return a refusal before an active lease. fresh_route_control remains active."
+    },
+    {
+     "method": "Run TestAuditorD12ReworkMustRetainValidRouteApproval and the direct issuer waiver, route mismatch, rewind, legacy-byte, full test/vet/race controls.",
+     "expected": "Bound route changes refuse. Live, unrelated, unbound and freshly reapproved route controls pass. Existing Gate B/C behavior remains passing."
+    }
+   ]
+  },
+  {
+   "id": "F-D12R8-01",
+   "title": "Correction issuer reuses a route approval invalidated by a plan or whole-run rewind",
+   "closure_check": [
+    {
+     "method": "Run the preserved TestAuditorD12ReworkAfterInvalidatedRoute and TestAuditorD12RealApplyInvalidatedRoute in normal and race modes.",
+     "expected": "Affected-unit and whole-run Planning rewind cases refuse. Unrelated-unit and fresh-route cases remain active."
+    },
+    {
+     "method": "Run TestAuditorD12RealApplyChangedPlanRoute and add equivalent accepted criteria/route rewind cases with unit tags.",
+     "expected": "A changed plan route cannot use a pre-rewind approval; a new matching route approval restores eligibility."
+    },
+    {
+     "method": "Run all original tests/vet/race, waiver-generation, ordinary legal correction, route mismatch, dependency, wall-time and legacy-byte controls; obtain a clean isolated follow-up audit.",
+     "expected": "All controls pass without waiving binding, independence, human approval or route constraints."
+    }
+   ]
+  }
+ ]
+}

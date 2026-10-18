@@ -12,6 +12,7 @@ package transition
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -41,6 +42,11 @@ type Input struct {
 	Approval               model.ApprovalBinding `json:"approval"`
 	ApprovalNow            time.Time             `json:"approval_now"`
 	ApprovalMaxAgeSeconds  int64                 `json:"approval_max_age_seconds"`
+	// AcceptanceContract is the hma.acceptance-contract/v1 document the
+	// approval binds, required when it accepts a contract
+	// (ACCEPTANCE_CRITERIA -> PLANNING with a contract digest) and optional
+	// later; HMA recomputes its digest and never trusts a supplied one.
+	AcceptanceContract json.RawMessage `json:"acceptance_contract,omitempty"`
 }
 
 // Result reports what was recorded. MachineAdvanced is always false: the
@@ -137,6 +143,17 @@ func Apply(ctx context.Context, in Input, storeDir string) (Result, error) {
 	})
 	if res.Decision != engine.DecisionLegalPendingApproval {
 		return Result{}, fmt.Errorf("transition rejected: %s", res.Reason)
+	}
+	var doc *engine.PresentedContract
+	if len(in.AcceptanceContract) > 0 {
+		c, digest, err := model.ParseAcceptanceContract(in.AcceptanceContract)
+		if err != nil {
+			return Result{}, fmt.Errorf("transition rejected: %s: %v", engine.ReasonContractMismatch, err)
+		}
+		doc = &engine.PresentedContract{Contract: c, Digest: digest}
+	}
+	if r := engine.EvaluateContractBinding(records, in.Approval, doc); r != engine.ReasonNone {
+		return Result{}, fmt.Errorf("transition rejected: %s", r)
 	}
 
 	// The record is filed under the stage being approved, and carries the

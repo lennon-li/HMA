@@ -190,6 +190,11 @@ type ApprovalBinding struct {
 	ProducedHeadDigest       string                 `json:"produced_head_digest,omitempty"`
 	DiffDigest               string                 `json:"diff_digest,omitempty"`
 	WorktreeDigest           string                 `json:"worktree_digest,omitempty"`
+	// AcceptanceContractDigest binds the run's hma.acceptance-contract/v1
+	// (Gate D, D1). It is set on the ACCEPTANCE_CRITERIA -> PLANNING approval
+	// that accepts a contract and carried by every later approval of the run;
+	// omitted when empty, so existing approval digests are unchanged.
+	AcceptanceContractDigest string `json:"acceptance_contract_digest,omitempty"`
 }
 
 // EvidenceRef references freshly captured, revision-bound evidence. The
