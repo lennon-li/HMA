@@ -46,6 +46,9 @@ func requireHostTransitionGateIn(storePath string, in transition.Input, history 
 	if err := requireCoreRunOpen(storePath, in.RunID); err != nil {
 		return err
 	}
+	if err := requireReconciledLaunches(storePath, in.RunID, in.ExpectedApproval.UnitID, history); err != nil {
+		return err
+	}
 	if from == model.StageImplementationAuthorization {
 		implementationDigest, err := hoststate.RequireImplementation(history, in.ExpectedApproval.UnitID)
 		if err != nil {

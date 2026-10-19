@@ -42,6 +42,13 @@ const (
 	// lease before launch (Gate A v4 §3 step 3). It stays charged whether or
 	// not the launch happens.
 	KindReservation RecordKind = "reservation"
+	// KindLaunchReconciliation records one import-time reconciliation of
+	// every ledger run in the run's declared namespaces (Gate A v6 §4).
+	KindLaunchReconciliation RecordKind = "launch_reconciliation"
+	// KindPolicyRevocation records that HMA observed a current policy
+	// digest other than a lease's plan policy, at that time; launches of the
+	// lease from then on are unauthorized.
+	KindPolicyRevocation RecordKind = "policy_revocation"
 
 	DecisionDelegate            DecisionMode = "DELEGATE"
 	DecisionDirectCostException DecisionMode = "DIRECT_COST_EXCEPTION"
@@ -93,6 +100,8 @@ const (
 	ReasonReviewIsolationInsufficient = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
 	ReasonFindingsSnapshotMissing     = "HOST_FINDINGS_SNAPSHOT_MISSING"
 	ReasonReviewTargetChanged         = "HOST_REVIEW_TARGET_CHANGED"
+	ReasonReconciliationRequired      = "HOST_RECONCILIATION_REQUIRED"
+	ReasonUnauthorizedDispatch        = "HOST_UNAUTHORIZED_DISPATCH"
 	ReasonReservationConflict         = "HOST_RESERVATION_CONFLICT"
 	ReasonLeaseInactive               = "HOST_LEASE_INACTIVE"
 	ReasonAdmissionRefused            = "HOST_LOOP_ADMISSION_REFUSED"
@@ -200,6 +209,10 @@ type ReviewPacketBinding struct {
 	WorktreeDigest string `json:"worktree_digest,omitempty"`
 	// The reviewer must launch in [dispatch record time, ValidUntil).
 	ValidUntil string `json:"valid_until"`
+	// LedgerNamespace is the agent-dispatch ledger the reviewer launches in
+	// (Gate D, D4): review import reads the receipt only from it, and launch
+	// reconciliation scans it.
+	LedgerNamespace string `json:"ledger_namespace,omitempty"`
 }
 
 // ReviewDispatchTTL bounds how long after HMA generates a review packet the
@@ -224,23 +237,31 @@ type IndependentReview struct {
 }
 
 type Record struct {
-	Version         int                    `json:"version"`
-	Kind            RecordKind             `json:"kind"`
-	RunID           string                 `json:"run_id"`
-	Sequence        int64                  `json:"sequence"`
-	PredecessorHash string                 `json:"predecessor_hash"`
-	HeadAnchor      string                 `json:"head_anchor"`
-	CoreHeadAnchor  string                 `json:"core_head_anchor"`
-	Timestamp       string                 `json:"timestamp"`
-	Actor           string                 `json:"actor"`
-	Decision        *OrchestrationDecision `json:"decision,omitempty"`
-	Preflight       *RoutePreflight        `json:"preflight,omitempty"`
-	Dispatch        *Dispatch              `json:"dispatch,omitempty"`
-	Review          *IndependentReview     `json:"review,omitempty"`
-	LoopEvidence    *LoopEvidence          `json:"loop_evidence,omitempty"`
-	Repository      *RepositoryBinding     `json:"repository_binding,omitempty"`
-	Admission       *LoopAdmission         `json:"loop_admission,omitempty"`
-	Reservation     *Reservation           `json:"reservation,omitempty"`
+	Version          int                    `json:"version"`
+	Kind             RecordKind             `json:"kind"`
+	RunID            string                 `json:"run_id"`
+	Sequence         int64                  `json:"sequence"`
+	PredecessorHash  string                 `json:"predecessor_hash"`
+	HeadAnchor       string                 `json:"head_anchor"`
+	CoreHeadAnchor   string                 `json:"core_head_anchor"`
+	Timestamp        string                 `json:"timestamp"`
+	Actor            string                 `json:"actor"`
+	Decision         *OrchestrationDecision `json:"decision,omitempty"`
+	Preflight        *RoutePreflight        `json:"preflight,omitempty"`
+	Dispatch         *Dispatch              `json:"dispatch,omitempty"`
+	Review           *IndependentReview     `json:"review,omitempty"`
+	LoopEvidence     *LoopEvidence          `json:"loop_evidence,omitempty"`
+	Repository       *RepositoryBinding     `json:"repository_binding,omitempty"`
+	Admission        *LoopAdmission         `json:"loop_admission,omitempty"`
+	Reservation      *Reservation           `json:"reservation,omitempty"`
+	Reconciliation   *Reconciliation        `json:"launch_reconciliation,omitempty"`
+	PolicyRevocation *PolicyRevocation      `json:"policy_revocation,omitempty"`
+}
+
+// PolicyRevocation is one observed policy change for a plan policy.
+type PolicyRevocation struct {
+	PlanPolicyDigest     string `json:"plan_policy_digest"`
+	ObservedPolicyDigest string `json:"observed_policy_digest"`
 }
 
 // LeaseGeneration identifies one lease: its issuing core approval record.
@@ -315,6 +336,10 @@ type LoopEvidence struct {
 	RecaptureExitCode   int           `json:"recapture_exit_code"`
 	RecaptureArgvSHA256 string        `json:"recapture_argv_sha256"`
 	LedgerNamespace     string        `json:"ledger_namespace"`
+	// LiveRoot and CloneBaselineDigest are the journal's association, as
+	// verify-loop's authority_request computes it (Gate D, D4).
+	LiveRoot            string `json:"live_root,omitempty"`
+	CloneBaselineDigest string `json:"clone_baseline_digest,omitempty"`
 }
 
 // LoopAttempt is one verify-loop attempt as the loop reported it.
@@ -665,6 +690,12 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	if r.Reservation != nil {
 		set++
 	}
+	if r.Reconciliation != nil {
+		set++
+	}
+	if r.PolicyRevocation != nil {
+		set++
+	}
 	if set != 1 {
 		return errors.New(ReasonInvalidHostRecord)
 	}
@@ -705,6 +736,17 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 		v := r.Reservation
 		if v == nil || v.UnitID == "" || v.ControllerRunID == "" || v.AttemptIndex < 1 || v.DispatchRunID == "" || v.RequestSHA256 == "" ||
 			v.AdmissionRecord == "" || v.RouteIdentity == "" || v.Cost < 0 || v.ValidFrom == "" || v.ValidUntil == "" || v.Generation.IssuerHeadAnchor == "" {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindPolicyRevocation:
+		v := r.PolicyRevocation
+		if v == nil || v.PlanPolicyDigest == "" || v.ObservedPolicyDigest == "" || v.PlanPolicyDigest == v.ObservedPolicyDigest {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindLaunchReconciliation:
+		if r.Reconciliation == nil {
 			return errors.New(ReasonInvalidHostRecord)
 		}
 		return nil

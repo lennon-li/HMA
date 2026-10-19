@@ -1,0 +1,576 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d4r3",
+  "date": "2026-10-19T00:30:06.852231+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:a74c9f0901f89903ed0cb2425bc491ece4ea282d+tracked-diff-sha256:7dd3504a5027f8634706acbd3bba96aa515b15c4e56fdf78882bdca526ddaaed+untracked-manifest:FREEZE.json",
+  "branch": "main",
+  "isolation": "isolated",
+  "isolation_details": "Conversation isolation is isolated: no implementer narrative or prior auditor report was read before PHASE1 freeze. Code and tests contain unavoidable author comments. This is not process/VM or identity isolation.",
+  "verdict": "FAIL",
+  "executive_assessment": "Three high-severity defects authorize launches after an observed policy change or a generation dependency rewind. Nine prior criteria are FIXED; three are PARTIAL. Existing normal/race regression suites and vet pass. D4 remains closed.",
+  "requested_dispatch_route": {
+    "worker": "liz",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "mode": "read-only audit",
+    "provenance": "User dispatch metadata, not independently authenticated"
+  },
+  "requirements": [
+    {
+      "id": "D4-R01",
+      "requirement": "Exactly one HMA launch record; no match or two matches is unauthorized.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v5 \u00a71; v6 \u00a74.1",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3LaunchMatrix",
+        "r2-closure.log: TestAuditorD4IndependentAuthorizationMatrix"
+      ],
+      "observation": "Implementation and review mutations refuse zero/two matches. Valid controls pass."
+    },
+    {
+      "id": "D4-R02",
+      "requirement": "One record cannot authorize two ledger runs.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v6 \u00a74.2",
+      "evidence_refs": [
+        "regressions.log: TestOneReservationPerLaunchNoReuse",
+        "source/internal/host/reconcile.go:186-223"
+      ],
+      "observation": "A receipt/directory mismatch or wrong namespace is refused; a used record cannot authorize again. The implementation sorts scans before consumption."
+    },
+    {
+      "id": "D4-R03",
+      "requirement": "Use exact half-open [valid_from,valid_until) and conservative ties.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v6 \u00a72; v7 \u00a71",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3ExactBoundsAndMonotoneEvents",
+        "own-tests-phase1.log: TestR3LaunchMatrix",
+        "regressions.log"
+      ],
+      "observation": "One nanosecond before issuance fails. The exact lower bound passes. The upper and revocation ties fail. The hook waits until its next whole-second issuance bound."
+    },
+    {
+      "id": "D4-R04",
+      "requirement": "Effective validity is the monotone minimum of expiry and every applicable rewind, terminal, policy, contract and wall-time event.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "source": "Gate A v7 \u00a71",
+      "evidence_refs": [
+        "own-tests-phase1.log",
+        "addendum-policy.log",
+        "r2-closure.log",
+        "source/internal/engine/contract_binding.go:25"
+      ],
+      "observation": "Recorded event minima, expiry, terminal, review wall-time, and post-dispatch rewinds pass. Policy observations can be lost. A review created after a dependency rewind misses the rewind. Contract rebinding requires the acceptance-criteria path; its rewind is globally revoking."
+    },
+    {
+      "id": "D4-R05",
+      "requirement": "Renewal creates a new generation and never revives old authority.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "source": "Gate A v7 \u00a71",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3RepeatedPolicyChangeNewGeneration",
+        "addendum-generation.log",
+        "addendum-policy.log"
+      ],
+      "observation": "Ordinary renewal and correction controls pass. Repeated policy changes under a new generation are suppressed, so restoration revives that revoked generation."
+    },
+    {
+      "id": "D4-R06",
+      "requirement": "Use each generation\u2019s approved dependency plan and refuse missing generation/plan evidence.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v7 \u00a71; closure D4-F02",
+      "evidence_refs": [
+        "own-addendum.log",
+        "addendum-generation.log",
+        "r2-closure.log",
+        "source/cmd/hma/loop.go:399"
+      ],
+      "observation": "A two-plan, two-generation fixture preserves the earlier launch and refuses the new launch at its dependency rewind. Missing stored plans and missing generation evidence refuse authorization."
+    },
+    {
+      "id": "D4-R07",
+      "requirement": "Bind namespace, mode and actual review route, packet and target; maintain review independence.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v5 \u00a71",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3LaunchMatrix",
+        "own-addendum.log: TestR3AddendumReviewReceiptMatrixCLI",
+        "r2-closure.log: TestAuditorD4ReceiptRouteMustMatchReviewAuthority"
+      ],
+      "observation": "Wrong namespace/mode fails. Worker, model, provider, effort, packet, root, head and worktree mutations fail individually. Bound running and completed reviews pass. A receipt alone creates no independent-review record."
+    },
+    {
+      "id": "D4-R08",
+      "requirement": "Scan all declared implementation and review namespaces since the first core record.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v5 \u00a71\u2013\u00a72; v6 \u00a74.1",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3ReviewSnapshotCannotClearBlockCLI",
+        "own-tests-phase1.log: TestR3ScanAndHostOrder",
+        "source/cmd/hma/reconcile.go:135"
+      ],
+      "observation": "All admission and review packet namespaces are scanned. A rogue in the separate review ledger becomes BLOCK. Pre-core-start receipts are excluded. Legacy packets lacking a namespace remain outside scan coverage; see limitations."
+    },
+    {
+      "id": "D4-R09",
+      "requirement": "Journal envelope, controller, live root, baseline, unit and namespace match exactly one admission.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v6 \u00a74.4",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3JournalMatrix",
+        "r2-closure.log: TestAuditorD4IndependentJournalBinding",
+        "own-tests-phase1.log: TestR3JournalBaselineCanonical"
+      ],
+      "observation": "Each independent journal association mutation fails. The matching control passes. Absent baseline inventory and {} hash equally; a changed inventory differs."
+    },
+    {
+      "id": "D4-R10",
+      "requirement": "Every journal dispatch has a reservation; unlaunched reservations remain charged and listed.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v6 \u00a74.3 and \u00a74.5",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3JournalMatrix",
+        "regressions.log",
+        "r2-closure.log"
+      ],
+      "observation": "Unknown controllers and unreserved attempts produce unauthorized entries. Matching journals pass. Mixed implementation/review scans preserve implementation reservation counts. Unlaunched reservations remain in the result and counters."
+    },
+    {
+      "id": "D4-R11",
+      "requirement": "UNAUTHORIZED_DISPATCH is persistent unwaivable BLOCK across review snapshots and later scans.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v5 \u00a71; architecture \u00a77",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3ReviewSnapshotCannotClearBlockCLI",
+        "r2-closure.log: TestAuditorD4CleanScanRetainsHistoricalGateBlock",
+        "regressions.log"
+      ],
+      "observation": "An approving imported review and findings snapshot preserve the unowned BLOCK. Removing the rogue and rescanning does not reopen the gate. A historical BLOCK still recommends escalation."
+    },
+    {
+      "id": "D4-R12",
+      "requirement": "Progression requires a clean current reconciliation bound to core, relevant host records and ledger inventory.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "source": "D4 task scope; architecture \u00a77 and \u00a714",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3NewReviewAuthorityInvalidatesScan",
+        "own-tests-phase1.log: TestR3NewJournalInvalidatesScan",
+        "addendum-policy.log",
+        "source/cmd/hma/reconcile.go:188"
+      ],
+      "observation": "New receipt, reservation, review authority, journal or core-head changes invalidate old scans. However, the two lost-policy cases produce false clean scans and requireReconciledLaunches returns nil. The separate unobserved policy-file drift question is excluded from closure."
+    },
+    {
+      "id": "D4-R13",
+      "requirement": "Hook and reconciliation agree on irreversible generation revocation.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "source": "Gate A v5 \u00a72; v7 \u00a71",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3HookRevocationTie",
+        "r2-closure.log: TestAuditorD4PolicyRestoreDoesNotReviveHook",
+        "addendum-policy.log"
+      ],
+      "observation": "The single recorded-policy control and revocation tie pass. Reconciliation-only observation and repeated-policy observation fail to preserve revocation for replay/import."
+    },
+    {
+      "id": "D4-R14",
+      "requirement": "Record ingestion and scan order do not change classification or increase valid_until.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate A v7 \u00a71\u2013\u00a72",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3ScanAndHostOrder",
+        "r2-closure.log: TestAuditorD4MonotoneEndAllEventOrders",
+        "addendum-policy.log: TestR3AddendumPolicyOrder"
+      ],
+      "observation": "Reversing host ingestion, scan order and dated revocation event order preserves classifications and the earliest applicable end in tested cases. Ordered core-chain generation lookup assumes a valid persisted chain."
+    },
+    {
+      "id": "D4-R15",
+      "requirement": "Preserve D1\u2013D3, Gate B and Gate C behavior.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Original objective \u00a75 Gate D; user scope",
+      "evidence_refs": [
+        "regressions.json",
+        "regressions-race.json",
+        "final-vet.json",
+        "start-diff.patch"
+      ],
+      "observation": "All 12 packages pass normal and race repository suites. Vet passes. Changed Gate C fixtures add namespace/plan inputs and current reconciliation while retaining refusal assertions. New D4 defects remain separate from regression-suite results."
+    },
+    {
+      "id": "D4-R16",
+      "requirement": "Make no D5 criterion-credit/full-packet or D6 amendment completion claim.",
+      "assessment": "MET",
+      "status": "pass",
+      "source": "Gate C scope \u00a70.1; user scope",
+      "evidence_refs": [
+        "unblinded/2026-10-18-gate-d-d4.md",
+        "own-addendum.log: TestR3AddendumReviewReceiptMatrixCLI"
+      ],
+      "observation": "The handoff requests D4 verification/audit and does not claim D5/D6 completion. Reconciliation alone gives no criterion credit. Amendment files were excluded. This audit grants no Gate D overall passage or closure."
+    }
+  ],
+  "findings": [
+    {
+      "id": "D4R3-F01",
+      "title": "Reconciliation observes policy drift without persisting revocation",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "After issuance, reconcile changed policy with no launch. Restore policy. Hook returns LaunchEligible:true; a later post-change receipt is Authorized with no Unauthorized entry. Root cause: Only hook recordPolicyChange persists dated revocations. Reconciliation stores PolicyDigest but PolicyRevokedAt ignores reconciliation records.",
+      "evidence": [
+        {
+          "source": "cmd/hma/reconcile.go:72; internal/host/reconcile.go:365",
+          "observation": "After issuance, reconcile changed policy with no launch. Restore policy. Hook returns LaunchEligible:true; a later post-change receipt is Authorized with no Unauthorized entry."
+        },
+        {
+          "source": "own-tests-phase1.log: TestR3ReconcilePolicyObservationPersists",
+          "observation": "Independent negative control fails with unauthorized launch classified Authorized."
+        },
+        {
+          "source": "addendum-policy.log: TestR3AddendumPolicyObservedRestoreMatrix",
+          "observation": "Launch timestamp was captured after observed revocation and before import. Import authorizes it. Reconciliation gate returns nil. This confirms the Phase-1 counterexample without a future receipt timestamp."
+        }
+      ],
+      "requirements": [
+        "D4-R04",
+        "D4-R05",
+        "D4-R12",
+        "D4-R13"
+      ],
+      "fix": {
+        "action": "Persist each applicable policy observation under the host/core locks before reconciliation, with generation-scoped identity. Derive hook and import validity from the same observations.",
+        "why": "Only hook recordPolicyChange persists dated revocations. Reconciliation stores PolicyDigest but PolicyRevokedAt ignores reconciliation records.",
+        "verification": [
+          {
+            "method": "TestR3ReconcilePolicyObservationPersists; repeat with addendum-policy.log controls where applicable",
+            "expected": "Changed-policy reconcile, restore, replay and fresh issuance must refuse old generation. Post-change receipt must become BLOCK. Before-change control and separately approved new generation must remain eligible."
+          }
+        ],
+        "tradeoffs": "Avoid retroactively revoking launches before the first observed change; unseen filesystem changes remain outside trusted-host evidence.",
+        "alternative": "Treat historical launch_reconciliation policy digests as revocation observations with their timestamps and core heads.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "containment": "Keep D4 closed. Do not use the affected generation after an observed policy change or dependency rewind.",
+      "fix_status": "unfixed"
+    },
+    {
+      "id": "D4R3-F02",
+      "title": "Global policy-pair deduplication loses revocation in later generations",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Observe P\u2192Q under G1; restore P; approve G2 and reserve; observe P\u2192Q again; restore P. G2 replay is LaunchEligible:true and post-change G2 receipt is Authorized. Root cause: recordPolicyChange deduplicates solely by policy digest pair; PolicyRevokedAt correctly ignores G1 observations before G2, leaving G2 without its own event.",
+      "evidence": [
+        {
+          "source": "cmd/hma/attempt.go:443; internal/host/reconcile.go:387",
+          "observation": "Observe P\u2192Q under G1; restore P; approve G2 and reserve; observe P\u2192Q again; restore P. G2 replay is LaunchEligible:true and post-change G2 receipt is Authorized."
+        },
+        {
+          "source": "own-tests-phase1.log: TestR3RepeatedPolicyChangeNewGeneration",
+          "observation": "Independent negative control fails with unauthorized launch classified Authorized."
+        },
+        {
+          "source": "addendum-policy.log: TestR3AddendumPolicyObservedRestoreMatrix",
+          "observation": "Launch timestamp was captured after observed revocation and before import. Import authorizes it. Reconciliation gate returns nil. This confirms the Phase-1 counterexample without a future receipt timestamp."
+        }
+      ],
+      "requirements": [
+        "D4-R04",
+        "D4-R05",
+        "D4-R12",
+        "D4-R13"
+      ],
+      "fix": {
+        "action": "Deduplicate only when an existing dated observation applies to each active generation. Record repeated policy changes at a current core head when a new generation is not covered.",
+        "why": "recordPolicyChange deduplicates solely by policy digest pair; PolicyRevokedAt correctly ignores G1 observations before G2, leaving G2 without its own event.",
+        "verification": [
+          {
+            "method": "TestR3RepeatedPolicyChangeNewGeneration; repeat with addendum-policy.log controls where applicable",
+            "expected": "Repeat identical policy pair across two approved generations. Both old generations remain revoked after restoration; a third independently approved generation remains eligible. Reverse event ingestion must preserve the earliest applicable end."
+          }
+        ],
+        "tradeoffs": "Append more observations; migrations must retain earlier event times and old-generation applicability.",
+        "alternative": "Store explicit affected issuer sequence and head per revocation; permits precise per-generation deduplication.",
+        "effort": "small",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "containment": "Keep D4 closed. Do not use the affected generation after an observed policy change or dependency rewind.",
+      "fix_status": "unfixed"
+    },
+    {
+      "id": "D4R3-F03",
+      "title": "Review issued after a dependency rewind bypasses generation revocation",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Generation plan has U1 depending on U2. U2 returns from Implementation authorization to Route selection. The CLI issues a fresh U1 review packet and reconciliation authorizes its later receipt. Root cause: Review revocation scan starts at dispatch CoreHeadAnchor rather than generation issuer; the cross-unit route check does not reject another unit returning to Route selection.",
+      "evidence": [
+        {
+          "source": "internal/host/reconcile.go:357; cmd/hma/transition.go:222",
+          "observation": "Generation plan has U1 depending on U2. U2 returns from Implementation authorization to Route selection. The CLI issues a fresh U1 review packet and reconciliation authorizes its later receipt."
+        },
+        {
+          "source": "own-tests-phase1.log: TestR3ReviewIssuedAfterDependencyRewind; TestR3ReviewAfterDependencyRewindCLI",
+          "observation": "Independent negative control fails with unauthorized launch classified Authorized."
+        }
+      ],
+      "requirements": [
+        "D4-R04",
+        "D4-R12"
+      ],
+      "fix": {
+        "action": "Compute review generation validity from the lease issuer for all applicable dependency and global revocations. Preserve permitted own-unit forward progress. Refuse packet issuance when its generation is already revoked.",
+        "why": "Review revocation scan starts at dispatch CoreHeadAnchor rather than generation issuer; the cross-unit route check does not reject another unit returning to Route selection.",
+        "verification": [
+          {
+            "method": "TestR3ReviewIssuedAfterDependencyRewind; TestR3ReviewAfterDependencyRewindCLI; repeat with addendum-policy.log controls where applicable",
+            "expected": "Dependency rewind before packet issuance refuses the packet or produces BLOCK for its launch. Test dependency planning, route selection, and correction; before-event control and independent-unit control remain authorized; fresh approved generation works."
+          }
+        ],
+        "tradeoffs": "Do not use implementation RevokedAt unchanged: own forward move into review must remain legal.",
+        "alternative": "Require an explicit stored review generation binding and validate it at both issuance and reconciliation.",
+        "effort": "medium",
+        "status": "proposed"
+      },
+      "priority": 1,
+      "containment": "Keep D4 closed. Do not use the affected generation after an observed policy change or dependency rewind.",
+      "fix_status": "unfixed"
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "D4-F01",
+      "status": "FIXED",
+      "observation": "New ledger receipts, review authority and journals invalidate the scan. A clean unchanged control passes.",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3NewReviewAuthorityInvalidatesScan",
+        "own-tests-phase1.log: TestR3NewJournalInvalidatesScan",
+        "regressions.log: TestGateBindsReconciledLedger"
+      ]
+    },
+    {
+      "id": "D4-F02",
+      "status": "FIXED",
+      "observation": "Generation-bound retained plans are used; both old and new plan fixtures behave correctly around dependency rewinds.",
+      "evidence_refs": [
+        "own-addendum.log: TestR3AddendumTwoGenerationPlans",
+        "addendum-generation.log",
+        "regressions.log: TestReconcileUsesGenerationPlan"
+      ]
+    },
+    {
+      "id": "D4-F03",
+      "status": "PARTIAL",
+      "observation": "Old review IDs are revoked at rewinds/corrections and fresh renewed reviews pass. A new dispatch issued after a generation dependency rewind is still authorized (D4R3-F03).",
+      "evidence_refs": [
+        "r2-closure.log",
+        "addendum-generation.log",
+        "own-tests-phase1.log: TestR3ReviewAfterDependencyRewindCLI"
+      ]
+    },
+    {
+      "id": "D4-F04",
+      "status": "FIXED",
+      "observation": "Packet namespace binds import; separate review ledger is scanned; reversed mixed-mode scans keep both valid launches and reservation accounting.",
+      "evidence_refs": [
+        "regressions.log: TestReviewImportUsesPacketLedger",
+        "own-tests-phase1.log: TestR3ScanAndHostOrder",
+        "own-tests-phase1.log: TestR3ReviewSnapshotCannotClearBlockCLI"
+      ]
+    },
+    {
+      "id": "D4-F05",
+      "status": "FIXED",
+      "observation": "Exact sub-second lower bounds and exclusive upper/revocation ties pass; no truncation widening remains.",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3ExactBoundsAndMonotoneEvents",
+        "own-tests-phase1.log: TestR3LaunchMatrix"
+      ]
+    },
+    {
+      "id": "D4-F06",
+      "status": "FIXED",
+      "observation": "Unknown controller/unreserved attempt cases become unauthorized. Correct controller/reservation control passes.",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3JournalMatrix",
+        "r2-closure.log: TestAuditorD4IndependentJournalBinding"
+      ]
+    },
+    {
+      "id": "D4-F07",
+      "status": "FIXED",
+      "observation": "Baseline and root mismatches become unauthorized. Empty/absent baseline controls agree.",
+      "evidence_refs": [
+        "own-tests-phase1.log: TestR3JournalMatrix",
+        "own-tests-phase1.log: TestR3JournalBaselineCanonical",
+        "r2-closure.log"
+      ]
+    },
+    {
+      "id": "D4-F08",
+      "status": "PARTIAL",
+      "observation": "First hook policy observation, before-change control and tie work. Reconciliation observations and repeated digest pairs are lost (D4R3-F01/F02).",
+      "evidence_refs": [
+        "regressions.log: TestReconcilePolicyRevocation",
+        "own-tests-phase1.log: TestR3HookRevocationTie",
+        "addendum-policy.log"
+      ]
+    },
+    {
+      "id": "D4-F09",
+      "status": "FIXED",
+      "observation": "Later clean scans retain BLOCK, close the gate and recommend escalation; no-history clean control can continue.",
+      "evidence_refs": [
+        "regressions.log: TestReconcileNextActionKeepsHistoricalBlock",
+        "own-tests-phase1.log: TestR3ReviewSnapshotCannotClearBlockCLI",
+        "r2-closure.log"
+      ]
+    },
+    {
+      "id": "D4R2-F01",
+      "status": "FIXED",
+      "observation": "The specified policy, correction-generation, wall-end and missing-policy cases now refuse. Before-event and forward-progress controls pass. Missing generation/plan refuses; fresh renewed review is independently eligible. The older dependency-rewind issue remains under D4-F03.",
+      "evidence_refs": [
+        "r2-closure.log",
+        "own-addendum.log",
+        "addendum-generation.log",
+        "addendum-policy.log: TestR3AddendumPolicyOrder"
+      ]
+    },
+    {
+      "id": "D4R2-F02",
+      "status": "PARTIAL",
+      "observation": "Single observed-change restoration refuses replay and new issuance. Restoring policy revives authority after reconciliation-only observation or repeated changes in a later generation.",
+      "evidence_refs": [
+        "r2-closure.log: TestAuditorD4PolicyRestoreDoesNotReviveHook",
+        "regressions.log: TestPolicyRestoreDoesNotReviveGeneration",
+        "addendum-policy.log"
+      ]
+    },
+    {
+      "id": "D4R2-F03",
+      "status": "FIXED",
+      "observation": "Actual implementation worker is rejected at reconciliation before report import. Every receipt route/packet/target field is independently varied. Bound running/completed launches pass without granting review credit.",
+      "evidence_refs": [
+        "r2-closure.log: TestAuditorD4ReceiptRouteMustMatchReviewAuthority",
+        "own-addendum.log: TestR3AddendumReviewReceiptMatrixCLI"
+      ]
+    }
+  ],
+  "phase1_frozen": true,
+  "phase1_sha256": "7fc810b3180a396613def4b26dbc4d87c92f3a4b69c2e65c2b3dd44a32bbb01a",
+  "phase1_ref": "PHASE1.json",
+  "freeze": {
+    "start_ref": "FREEZE.json",
+    "end_ref": "END-FREEZE.json",
+    "unchanged": true,
+    "source_manifest_ref": "SOURCE-MANIFEST.json"
+  },
+  "evidence_ref": "EVIDENCE.json",
+  "verification_summary": {
+    "repository_packages_passed": 12,
+    "normal_regression_exit": 0,
+    "race_regression_exit": 0,
+    "vet_exit": 0,
+    "r2_closure_tests_passed": 12,
+    "r2_closure_tests_failed": 0,
+    "phase1_independent_tests_passed": 10,
+    "phase1_independent_tests_failed": 4,
+    "phase1_failures_unique_defects": 3,
+    "open_contract_probe": "Failed; excluded from closure per user instruction",
+    "own_race": "Reproduces same four failing functions; no race report"
+  },
+  "controlled_unblinding": {
+    "after_phase1_hash": true,
+    "read_paths": [
+      "/tmp/hma-gate-d-20261018-d4r2/source/internal/host/auditor_d4_test.go",
+      "/tmp/hma-gate-d-20261018-d4r2/source/cmd/hma/auditor_d4_test.go",
+      "docs/handoffs/2026-10-18-gate-d-d4.md"
+    ],
+    "change_to_findings": "None. Supplied r2 tests pass but do not cover the three independent counterexamples. Post-freeze exact-time and gate checks strengthen F01/F02.",
+    "post_freeze_tests": [
+      "source/internal/host/auditor_r3_addendum_test.go",
+      "source/cmd/hma/auditor_r3_addendum_test.go"
+    ],
+    "requirements_update": "The eight blind requirement groups are expanded into sixteen explicit checks. Pending repository regression runs completed successfully. No Phase-1 finding was removed or downgraded."
+  },
+  "improvement_opportunities": [],
+  "remediation_roadmap": [
+    {
+      "priority": 1,
+      "action": "Retain D4 closed; implement shared generation-aware policy observation persistence for F01/F02.",
+      "exit": "Neither restoration counterexample authorizes replay or a post-observation launch."
+    },
+    {
+      "priority": 1,
+      "action": "Compute review revocation from the lease issuer and refuse a packet from an already revoked generation for F03.",
+      "exit": "Pre-packet dependency rewinds fail; legitimate own forward progress and fresh generations pass."
+    },
+    {
+      "priority": 2,
+      "action": "Independent re-audit of the corrected frozen target.",
+      "exit": "All three counterexamples must refuse the revoked launch. All positive controls, closure tests, full regression suite, vet and race must pass in a new independent audit."
+    }
+  ],
+  "limitations": [
+    "Conversation isolation is isolated: no implementer narrative or prior auditor report was read before PHASE1 freeze. Code and tests contain unavoidable author comments. This is not process/VM or identity isolation.",
+    "Tests used a copied dirty worktree on the same trusted host. All approvals, receipts and dispatches in the negative fixtures are synthetic. No external worker was launched. No full live human-approved end-to-end outcome is claimed.",
+    "Initial full and race suites failed in the copy: two nested go-build VCS stamping errors and one scratch-directory assumption. GOFLAGS=-buildvcs=false and TMPDIR under the output directory resolved these test-environment issues. The raw failures remain available.",
+    "No executable failed to start. Searches for Permission denied, fork/exec and DATA RACE in retained test logs found none. Missing-file reads are not test results.",
+    "The supplied r1 test names are criteria only. Only the two explicitly allowed r2 auditor source files were imported. Equivalent independent checks support the r1 closure judgments; the original r1 test bodies were not read or run.",
+    "Partial source/log displays in tool output were truncated. Retained test logs and copied primary source bytes are complete. Early mistaken reads of absent filenames and a Go ELF header did not provide evidence and were not relied on.",
+    "Legacy pre-D4 review packets without ledger_namespace are not scanned. This audit applies authorization/namespace exit tests to D4-generated records; it does not certify a legacy migration. No evidence here establishes a legacy packet can legitimately open a D4 gate.",
+    "User designated TestAuditorD4GateMustDetectPolicyDrift an open contract question. It fails, but it is excluded from closure and the blocking findings. The three defects independently demonstrate failures after an observed event or retained core event.",
+    "D5 criterion credit, findings disposition, full acceptance packets and D6 amendments remain outside this audit. Excluded paths: .serena/ and docs/handoffs/2026-10-16-arch-amendment-*.md. Excluded untracked bytes were hashed for freeze integrity only.",
+    "Jev was unavailable through host tool discovery. Auditor/human fallback was used. No model API, nested agent CLI, subagent dispatch, audited-repository edit or Git write, publication or live approval occurred. Tests initialized and committed temporary synthetic Git fixtures only under /tmp.",
+    "Read-only audit was procedural; the host technically exposed worktree write capability. The repository .git was read-restricted. Start/end status, HEAD, tracked diff and all standard Git-untracked hashes match. The copied input has 259 files and no byte mismatch.",
+    "The skill validator accepts lowercase fix-required, while the dispatch requires FAIL. AUDIT.json uses the dispatch value. AUDIT.contract.json is a deterministic compatibility projection that changes only verdict to fix-required; validation of that projection is structural only."
+  ],
+  "next_action": {
+    "action": "RETURN_D4_FOR_REMEDIATION",
+    "rationale": "Three observed high-severity defects can authorize a launch after revocation. D4 must remain closed.",
+    "owner": "Human coordinator, assigning remediation to the implementer",
+    "proposed_route": {
+      "worker": "Ming",
+      "provider": "Anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "high (proposed)",
+      "access_service": "Claude Code CLI",
+      "status": "Proposal from post-freeze implementer provenance; eligibility and exact-route hi preflight remain required before any dispatch"
+    },
+    "permission_envelope": "Proposed bounded writes for D4 revocation fixes and tests; no stage change, approval fabrication, commit, push, publication or external effect. This read-only audit grants no write authority.",
+    "exact_approval_required": "No approval is required to read or receive this audit. Before a new implementation dispatch, the coordinator must bind the eligible route and exact bounded task/envelope under HMA policy; any stage transition requires its own human challenge-bound approval.",
+    "stop_and_escalation_conditions": [
+      "Keep Gate D closed while any D4R3-F01\u2013F03 remains open.",
+      "Stop if the permission envelope, route preflight or independent re-audit cannot be satisfied.",
+      "An executable-start failure during retest requires BLOCKED, not an inferred pass."
+    ],
+    "independent_exit_criteria": "All three counterexamples must refuse the revoked launch. All positive controls, closure tests, full regression suite, vet and race must pass in a new independent audit."
+  }
+}

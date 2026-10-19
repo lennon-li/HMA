@@ -110,6 +110,14 @@ func runHostLoopEvidence(args []string) error {
 	if err != nil {
 		return err
 	}
+	absState, err := filepath.Abs(in.StatePath)
+	if err != nil {
+		return err
+	}
+	baseline, err := journalBaselineDigest(raw)
+	if err != nil {
+		return err
+	}
 	argv := st.Envelope.Verify.Argv
 	// Run the canonical file the filter judged, not the alias.
 	if exe, err := canonicalExecutable(argv[0]); err != nil {
@@ -203,7 +211,9 @@ func runHostLoopEvidence(args []string) error {
 					StateSHA256: hex.EncodeToString(stateSum[:]), LoopStatus: st.Status, Attempts: attempts,
 					RecaptureRecord: ev.Metadata.HeadAnchor, RecaptureExitCode: captured.Evidence.ExitCode,
 					RecaptureArgvSHA256: hex.EncodeToString(argvSum[:]),
-					LedgerNamespace:     filepath.Join(filepath.Dir(in.StatePath), "dispatch-ledger"),
+					LedgerNamespace:     filepath.Join(filepath.Dir(absState), "dispatch-ledger"),
+					LiveRoot:            repo.Root,
+					CloneBaselineDigest: baseline,
 				}}
 			if err := commit(&rec); err != nil {
 				return err
@@ -222,6 +232,22 @@ func runHostLoopEvidence(args []string) error {
 		out.NextAction = "REMEDIATE_OR_ESCALATE"
 	}
 	return json.NewEncoder(os.Stdout).Encode(out)
+}
+
+// journalBaselineDigest is verify-loop's clone baseline digest of a state
+// file: the canonical digest of repo.workspace_baseline_inventory, {} when
+// absent.
+func journalBaselineDigest(raw []byte) (string, error) {
+	var top map[string]json.RawMessage
+	var repo map[string]json.RawMessage
+	if json.Unmarshal(raw, &top) != nil || json.Unmarshal(top["repo"], &repo) != nil {
+		return "", errors.New(hoststate.ReasonLoopEvidenceInvalid)
+	}
+	inv := repo["workspace_baseline_inventory"]
+	if len(inv) == 0 {
+		inv = json.RawMessage(`{}`)
+	}
+	return hoststate.PythonCanonicalSHA256(inv)
 }
 
 // parseLoopState checks a verify-loop state file is an HMA-bound loop for
@@ -314,17 +340,25 @@ func retainOutput(storePath string, stdout, stderr []byte) (string, error) {
 	}
 	sum := sha256.Sum256(b)
 	name := "sha256-" + hex.EncodeToString(sum[:]) + ".json"
+	return "artifacts/" + name, retainArtifact(storePath, name, b)
+}
+
+// retainArtifact writes b as <store>/artifacts/name, once: the bytes are
+// written and synced to a temporary file first and then linked to the final
+// name, which never replaces a file. An existing artifact is used only if it
+// is a regular file with exactly these bytes.
+func retainArtifact(storePath, name string, b []byte) error {
 	dir := filepath.Join(storePath, "artifacts")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", err
+		return err
 	}
 	path := filepath.Join(dir, name)
 	if _, err := os.Lstat(path); err == nil {
-		return "artifacts/" + name, checkArtifact(path, b)
+		return checkArtifact(path, b)
 	}
 	tmp, err := os.CreateTemp(dir, ".tmp-"+name+"-*")
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer os.Remove(tmp.Name())
 	_, err = tmp.Write(b)
@@ -335,20 +369,61 @@ func retainOutput(storePath string, stdout, stderr []byte) (string, error) {
 		err = cerr
 	}
 	if err != nil {
-		return "", err
+		return err
 	}
 	if err := os.Link(tmp.Name(), path); errors.Is(err, os.ErrExist) {
-		return "artifacts/" + name, checkArtifact(path, b)
+		return checkArtifact(path, b)
 	} else if err != nil {
-		return "", err
+		return err
 	}
 	if err := syncParent(path); err != nil {
-		return "", err
+		return err
 	}
-	if err := syncParent(dir); err != nil {
-		return "", err
+	return syncParent(dir)
+}
+
+// planArtifactName names a stored hma.plan/v1 document by its digest.
+func planArtifactName(digest string) string { return "plan-" + digest + ".json" }
+
+// retainPlan stores the canonical form of an accepted plan (whose SHA-256 is
+// its digest) so reconciliation can use each lease generation's exact plan.
+func retainPlan(storePath string, plan model.Plan, digest string) error {
+	b, err := json.Marshal(plan)
+	if err != nil {
+		return err
 	}
-	return "artifacts/" + name, nil
+	if sum := sha256.Sum256(b); hex.EncodeToString(sum[:]) != digest {
+		return errors.New(hoststate.ReasonEvidenceArtifactCorrupt)
+	}
+	return retainArtifact(storePath, planArtifactName(digest), b)
+}
+
+// loadPlans returns every stored plan an approval in core binds, by digest.
+// A missing plan is absent from the map; a corrupt one is an error.
+func loadPlans(storePath string, core []model.Record) (map[string]model.Plan, error) {
+	out := map[string]model.Plan{}
+	for _, r := range core {
+		if r.Approval == nil || r.Approval.AcceptedPlanDigest == "" {
+			continue
+		}
+		d := r.Approval.AcceptedPlanDigest
+		if _, ok := out[d]; ok || filepath.Base(d) != d {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(storePath, "artifacts", planArtifactName(d)))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		p, got, err := model.ParsePlan(b)
+		if err != nil || got != d {
+			return nil, errors.New(hoststate.ReasonEvidenceArtifactCorrupt)
+		}
+		out[d] = p
+	}
+	return out, nil
 }
 
 // checkArtifact refuses an existing artifact that is not a regular file

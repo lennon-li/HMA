@@ -1,0 +1,1477 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d4r5",
+  "date": "2026-10-19T12:40:12.432713+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:a74c9f0901f89903ed0cb2425bc491ece4ea282d; tracked-diff-sha256:12369f7343f88293f681bf9bf9aabcf0bb5c628b94fa7c92eddd4e7669ac6623; source-manifest-sha256:b6c71346bf689992a7cf884fcd80d9c9a0dd17e3712e99d6a9ad20d71de1ab8b",
+  "branch": "main",
+  "isolation": "isolated",
+  "isolation_description": "Fresh user-dispatched review context. No implementer narrative, prior auditor test or prior audit verdict read. Same host and filesystem; repository read-only by instruction. Existing source comments/test claims are part of audited artifacts, not accepted as proof. No nested agent CLI, model API or subagent used. Controlled unblinding occurred only after the frozen Phase 1 hash was recorded.",
+  "verdict": "pass",
+  "overall_verdict": "PASS",
+  "verdict_mapping": "pass is the independent-audit report-contract spelling of the single human verdict PASS.",
+  "executive_assessment": "D4 meets the scoped requirements. All 17 prior finding criteria are FIXED. No new blocking implementation defect was reproduced. The repository freeze is unchanged. This is not acceptance of full Gate D, D5, D6 or closure.",
+  "dispatch": {
+    "id": "hma-gate-d-audit-20261018-d4r5",
+    "assigned_worker": "liz",
+    "assigned_provider": "OpenAI",
+    "assigned_model": "gpt-6.1-sol",
+    "assigned_effort": "high",
+    "assigned_access_service": "Codex CLI review mode",
+    "runtime_identity_independently_verified": false,
+    "task": "Independent D4 code and outcome audit",
+    "permission_envelope": "Read /home/yeli/repos/HMA; write audit and test artifacts under the output directory; execute local tests using temporary fixtures. No target repository writes, target git writes, nested agent CLIs or model APIs.",
+    "jev": "Unavailable through exposed tools; orchestrator fallback."
+  },
+  "phase1_frozen": true,
+  "phase1": {
+    "path": "PHASE1.json",
+    "sha256": "fd5cf31fdc4fa89eabc5b5eb788cd02da3aeb20ba1ff80f73f1e46a12a68aacc",
+    "frozen_at": "2026-10-19T12:34:37.459607+00:00",
+    "unchanged": true
+  },
+  "freeze": {
+    "start": "freeze-start.json",
+    "end": "freeze-end.json",
+    "unchanged_checks": {
+      "head": true,
+      "branch": true,
+      "status": true,
+      "diff_sha256": true,
+      "untracked_sha256": true
+    },
+    "tracked_diff_sha256": "12369f7343f88293f681bf9bf9aabcf0bb5c628b94fa7c92eddd4e7669ac6623",
+    "source_manifest_sha256": "b6c71346bf689992a7cf884fcd80d9c9a0dd17e3712e99d6a9ad20d71de1ab8b",
+    "untracked_file_count": 11,
+    "ignored_from_evaluation": [
+      ".serena/",
+      "docs/handoffs/2026-10-16-arch-amendment-*.md"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "D4-R1",
+      "source": "v7 \u00a71; v6 \u00a72",
+      "requirement": "Compute each lease/reservation/review dispatch end as a whole-chain monotone minimum over original expiry and all applicable revocations. Use half-open validity and conservative ties.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "Exact lower and upper boundaries passed for implementation and review launches. Every permutation of dated revocations returned the earliest end. Expiry was never extended. Dependency, own-unit, whole-run, terminal, recorded policy and wall-time revocations are enforced. Contract changes require core criteria rewind, which revokes generations.",
+      "evidence_refs": [
+        "own-host-generations.log",
+        "exit-tests.log",
+        "historical-final-race.log",
+        "internal/engine/revocation.go:33",
+        "internal/engine/contract_binding.go:49"
+      ]
+    },
+    {
+      "id": "D4-R2",
+      "source": "v7 \u00a71-\u00a72",
+      "requirement": "Bind each record to a fixed generation. Renewal must not revive old records; new launches need new reservations.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "Renewal does not revive old reservations or old reviews. New approvals create new generation identities. Missing generation plans refuse authorization. Mixed-generation tests use each approval-bound plan and preserve legitimate earlier launches.",
+      "evidence_refs": [
+        "own-host-generations.log",
+        "exit-tests.log",
+        "historical-final-race.log",
+        "internal/host/reconcile.go:303",
+        "cmd/hma/attempt.go:457"
+      ]
+    },
+    {
+      "id": "D4-R3",
+      "source": "v5 \u00a71; v6 \u00a74.1-3",
+      "requirement": "Scan all namespace ledger runs since first core record. Exactly one HMA record per launch; at most one launch per record; no-match, ambiguity, reuse, wrong namespace/mode and out-of-validity launches must not authorize. Unlaunched reservations stay charged.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "No match, multiple matches, mismatched IDs, wrong namespace, wrong class mode, bad route or unreadable receipt refuse authorization. Duplicate use is refused. Implementation and review namespaces are scanned. Unlaunched reservations remain charged. Review route, packet and target fields each have negative controls.",
+      "evidence_refs": [
+        "own-host-generations.log",
+        "historical-final-race.log",
+        "exit-tests.log",
+        "internal/host/reconcile.go:127",
+        "cmd/hma/reconcile.go:173"
+      ]
+    },
+    {
+      "id": "D4-R4",
+      "source": "v6 \u00a74.4-5",
+      "requirement": "For HMA-bound loop runs, reconcile journal envelope digest, controller ID, live root, baseline digest and namespace with admission; require a reservation for each journal attempt dispatch ID.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "Every journal, including an empty journal, binds exactly one admission. Envelope digest, controller, unit, live root, clone baseline and namespace mismatches are refused or become BLOCK. Every attempt dispatch ID requires a reservation. Changed-baseline CLI controls become BLOCK; wrong-root CLI control is refused.",
+      "evidence_refs": [
+        "own-cli.log",
+        "own-host-generations.log",
+        "closure-addendum.log",
+        "historical-final-race.log",
+        "internal/host/reconcile.go:238",
+        "cmd/hma/loop.go:87"
+      ]
+    },
+    {
+      "id": "D4-R5",
+      "source": "v5 \u00a71; architecture \u00a77, \u00a79",
+      "requirement": "Persist UNAUTHORIZED_DISPATCH as an unwaivable BLOCK. Review snapshots and later reconciliation cannot erase or bypass it.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "The CLI writes an unowned UNAUTHORIZED_DISPATCH BLOCK. A fresh approving imported review and an empty findings snapshot preserve it. A later clean scan preserves escalation and the closed gate. No waiver route was added; existing resolution kernel refuses waiver or override of BLOCK.",
+      "evidence_refs": [
+        "own-review-cli.log",
+        "own-cli.log",
+        "historical-final-race.log",
+        "internal/host/findings_import.go:71",
+        "cmd/hma/reconcile.go:79"
+      ]
+    },
+    {
+      "id": "D4-R6",
+      "source": "task scope; architecture \u00a77, \u00a714",
+      "requirement": "Expose hma host reconcile and gate stage transitions on clean current reconciliation. Missing, stale, tampered or mismatched reconciliation must not open gate.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "hma host reconcile is wired into the CLI. Both coding progression edges require reconciliation when a namespace exists. New launch authority, journal, policy record, core head or receipt inventory invalidates a clean scan. Rejected CLI transitions append no record. Legacy no-namespace/no-journal control and clean current controls pass.",
+      "evidence_refs": [
+        "own-cli.log",
+        "own-review-cli.log",
+        "historical-final-race.log",
+        "cmd/hma/reconcile.go:209",
+        "cmd/hma/transition.go:46"
+      ]
+    },
+    {
+      "id": "D4-R7",
+      "source": "v7 \u00a71-\u00a72; task scope",
+      "requirement": "Classification and minimum validity must not depend on revocation ingestion order or ledger scan order.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "Reversing host history and ledger scan order preserves results. Permuting dated revocation events preserves the minimum end. Same-namespace implementation and review launches preserve attempt accounting.",
+      "evidence_refs": [
+        "own-host-generations.log",
+        "historical-final-race.log",
+        "internal/engine/revocation.go:33"
+      ]
+    },
+    {
+      "id": "D4-R8",
+      "source": "Gate C scope \u00a70.1 rows 3-4; task scope",
+      "requirement": "Supply exit tests; preserve D1-D3 and Gate B/C behavior; make no D5/D6/full Gate D/closure claim.",
+      "status": "pass",
+      "assessment": "MET",
+      "mandatory": true,
+      "observation": "All 12 exit tests in Gate C scope rows 3-4 exist and pass. Full tests, vet and race checks pass. Changed Gate B/C fixtures provide the newly required ledger and stored-plan inputs; assertions remain. The handoff was read only after Phase 1 and makes no D5, D6, full Gate D or closure-completion claim.",
+      "evidence_refs": [
+        "exit-tests.log",
+        "full-test.log",
+        "vet.log",
+        "race.log",
+        "tracked.diff",
+        "handoff-after-phase1.md"
+      ]
+    }
+  ],
+  "prior_finding_closure": [
+    {
+      "id": "D4-F01",
+      "title": "The host gate accepts a reconciliation made before a new launch",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4GateStaleLedger",
+          "expected": "The new unreserved launch closes the host gate before any transition append."
+        },
+        {
+          "method": "Add a review dispatch or loop evidence after a clean scan, then request progression",
+          "expected": "The prior scan is stale. A current clean scan remains a positive control."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentGateFreshness",
+        "TestR5IndependentNewReviewDispatchStalesScan",
+        "TestR3NewJournalInvalidatesScan"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F02",
+      "title": "Any historical approved plan can hide a new generation dependency rewind",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4HistoricalPlanHidesDependencyRevocation",
+          "expected": "The old plan is refused for the new generation, or the generation-bound plan still detects the U2 rewind."
+        },
+        {
+          "method": "Reconcile a run containing reservations from two plans, before and after each dependency rewind",
+          "expected": "Both generations use their own dependency graph. Legitimate earlier launches remain authorized."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentTwoGenerationPlans",
+        "TestR3AddendumTwoGenerationPlans"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F03",
+      "title": "Review dispatch validity ignores rewinds and lease generations",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run both listed tests",
+          "expected": "Every review at or after the applicable rewind is unauthorized; a launch just before the rewind is authorized."
+        },
+        {
+          "method": "Renew a lease and launch the old review ID, then issue a fresh review in the new generation",
+          "expected": "Old dispatch remains revoked. The new dispatch is independently eligible when stage and route rules pass."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentTwoGenerationPlans",
+        "TestAuditorD4RejectOldReviewAfterCorrectionGeneration",
+        "TestR4IndependentRenewedReviewControl"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F04",
+      "title": "Review ledgers are neither bound nor included in scan coverage",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run both listed tests",
+          "expected": "A wrong-namespace review is unauthorized or refused. The separate review ledger is scanned, the rogue becomes BLOCK, and the review gate closes."
+        },
+        {
+          "method": "Put implementation and review receipts in one namespace in reversed scan order",
+          "expected": "Both valid launches remain authorized and implementation attempt accounting is unchanged."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentScanOrderAndReviewBinding",
+        "TestR3ScanAndHostOrder",
+        "TestR5IndependentReviewSnapshotCannotClearDispatchBlock",
+        "TestReviewImportUsesPacketLedger"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F05",
+      "title": "Rounding valid_from down authorizes pre-issuance launches",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4ExactLowerBound",
+          "expected": "Both earlier timestamps are unauthorized; the exact bound is authorized."
+        },
+        {
+          "method": "Launch at valid_until and one timestamp just before it",
+          "expected": "The upper tie is unauthorized. The strictly earlier in-window control is authorized."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentClassificationMatrix",
+        "TestR3ExactBoundsAndMonotoneEvents",
+        "TestR4IndependentValidityAndScanOrder"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F06",
+      "title": "An unknown journal controller bypasses all journal invariants",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run both listed tests",
+          "expected": "The unknown controller and unreserved attempt are refused or become BLOCK."
+        },
+        {
+          "method": "Import the original admitted controller with its real reservation",
+          "expected": "The matching journal is accepted and introduces no BLOCK."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentJournalMatrix",
+        "TestR5IndependentUnknownJournalGate",
+        "TestR5IndependentMatchedJournalCLI"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F07",
+      "title": "Journal clone baseline is discarded before reconciliation",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4JournalBaselineMutation",
+          "expected": "A changed baseline is refused or yields an unauthorized finding."
+        },
+        {
+          "method": "Test unchanged baseline, absent inventory {}, and a different live root",
+          "expected": "Matching empty baseline passes. Any changed baseline or live root fails."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentJournalMatrix",
+        "TestR5AddendumEmptyJournalAndBaselineCLI",
+        "TestR3JournalBaselineCanonical"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F08",
+      "title": "Policy revocation is enforced by the hook but omitted by reconciliation",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4PolicyRevocation",
+          "expected": "The post-change launch is unauthorized, matching the hook's refusal."
+        },
+        {
+          "method": "Launch just before, at and after a recorded policy change, then restore the old policy",
+          "expected": "Before-change launch passes; tie and later launches fail. Restoring the policy does not revive the old generation."
+        }
+      ],
+      "verification_tests": [
+        "TestR3HookRevocationTie",
+        "TestR3AddendumPolicyOrder",
+        "TestReconcilePolicyRevocation"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4-F09",
+      "title": "A later clean scan recommends continuation while a historical BLOCK persists",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditD4LaterCleanScanRecommendation",
+          "expected": "The later clean scan preserves the BLOCK and recommends escalation."
+        },
+        {
+          "method": "Run a clean reconciliation with no historic violation",
+          "expected": "The clean control can still recommend continuation."
+        }
+      ],
+      "verification_tests": [
+        "TestR5IndependentBlockSurvivesLaterCleanCLI",
+        "TestAuditorD4CleanScanRetainsHistoricalGateBlock"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R2-F01",
+      "title": "Review validity omits policy revocation and generation bounds",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditorD4RejectReviewAfterPolicyRevocation, ...RejectOldReviewAfterCorrectionGeneration, ...ReviewWallEnd, ...ReviewPolicyNotPresented",
+          "expected": "Pre-event and forward-progression controls stay authorized; policy, correction-generation and wall-end ties become unauthorized; no presented policy is refused."
+        },
+        {
+          "method": "Repeat through the CLI with retained generation plans and reversed event ingestion",
+          "expected": "Same classifications; missing generation or plan evidence refuses authorization."
+        }
+      ],
+      "verification_tests": [
+        "TestAuditorD4RejectReviewAfterPolicyRevocation",
+        "TestAuditorD4ReviewPolicyNotPresented",
+        "TestAuditorD4ReviewWallEnd",
+        "TestR3AddendumReviewMissingGenerationOrPlan",
+        "TestR3AddendumRenewedReviewIndependent"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R2-F02",
+      "title": "Policy restoration revives a revoked reservation",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditorD4PolicyRestoreDoesNotReviveHook",
+          "expected": "Replay after restoring the policy is not launch eligible."
+        },
+        {
+          "method": "Fresh issuance after policy restoration; separately approved new generation",
+          "expected": "Fresh issuance under the revoked generation is refused; a new approved generation can reserve; hook and reconciliation agree at the revocation tie."
+        }
+      ],
+      "verification_tests": [
+        "TestAuditorD4PolicyRestoreDoesNotReviveHook",
+        "TestPolicyRestoreDoesNotReviveGeneration",
+        "TestR3HookRevocationTie"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R2-F03",
+      "title": "Reconciliation accepts the actual implementation worker as reviewer",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestAuditorD4ReceiptRouteMustMatchReviewAuthority",
+          "expected": "The receipt produces UNAUTHORIZED_DISPATCH as BLOCK without a report import."
+        },
+        {
+          "method": "Vary worker, model, provider, effort, packet digest and target separately; check running and completed bound launches",
+          "expected": "Each variation is unauthorized; correctly bound launches stay authorized; an unfinished report grants no credit and does not by itself invalidate a legitimate launch."
+        }
+      ],
+      "verification_tests": [
+        "TestAuditorD4ReceiptRouteMustMatchReviewAuthority",
+        "TestR3AddendumReviewReceiptMatrixCLI",
+        "TestR5IndependentScanOrderAndReviewBinding"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R3-F01",
+      "title": "Reconciliation observes policy drift without persisting revocation",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestR3ReconcilePolicyObservationPersists and TestR3AddendumPolicyObservedRestoreMatrix",
+          "expected": "After a changed-policy reconcile and restore, replay and fresh issuance under the old generation are refused; a post-observation receipt is a BLOCK; before-change and new-generation controls stay eligible."
+        }
+      ],
+      "verification_tests": [
+        "TestR3ReconcilePolicyObservationPersists",
+        "TestR3AddendumPolicyObservedRestoreMatrix"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R3-F02",
+      "title": "Global policy-pair deduplication loses revocation in later generations",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestR3RepeatedPolicyChangeNewGeneration",
+          "expected": "A repeated change under a later generation is recorded; restoring the policy does not revive that generation; its post-change receipt is a BLOCK."
+        }
+      ],
+      "verification_tests": [
+        "TestR3RepeatedPolicyChangeNewGeneration",
+        "TestR3AddendumPolicyObservedRestoreMatrix",
+        "TestR4IndependentPolicyRestoreAcrossGenerations"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R3-F03",
+      "title": "Review issued after a dependency rewind bypasses generation revocation",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestR3ReviewIssuedAfterDependencyRewind and TestR3ReviewAfterDependencyRewindCLI; vary planning, route selection, correction",
+          "expected": "A dependency rewind before packet issuance refuses the packet or makes its launch a BLOCK; before-event, independent-unit, own-forward and fresh-generation controls remain authorized."
+        }
+      ],
+      "verification_tests": [
+        "TestR3ReviewIssuedAfterDependencyRewind",
+        "TestR3ReviewAfterDependencyRewindCLI",
+        "TestReviewIssuedAfterDependencyRewind",
+        "TestR5IndependentTwoGenerationPlans"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R4-F01",
+      "title": "An unadmitted journal bypasses reconciliation at the transition gate",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestR4IndependentUnadmittedJournalCannotBypassGate with no prior scan and after an earlier clean no-namespace scan (its own namespace-count precondition may no longer hold)",
+          "expected": "Import refuses the journal or the full gate requires reconciliation; no progression append. Explicit scan, admitted matching journal and legacy no-journal controls behave as before."
+        }
+      ],
+      "verification_tests": [
+        "TestR4IndependentUnadmittedJournalCannotBypassGate (updated namespace-count precondition only)",
+        "TestR5IndependentUnknownJournalGate",
+        "TestR5IndependentGateFreshness"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    },
+    {
+      "id": "D4R4-F02",
+      "title": "A journal without dispatch attempts skips controller admission binding",
+      "closure_status": "FIXED",
+      "criteria": [
+        {
+          "method": "Run TestR4IndependentEmptyJournalMustBindAdmission with zero-attempt matching and mismatched controls",
+          "expected": "Unknown or ambiguous controller is refused or BLOCK; an exactly matching empty journal stays clean."
+        }
+      ],
+      "verification_tests": [
+        "TestR4IndependentEmptyJournalMustBindAdmission",
+        "TestR5IndependentJournalMatrix",
+        "TestR5AddendumEmptyJournalAndBaselineCLI",
+        "TestEveryJournalBindsAdmission"
+      ],
+      "evidence_refs": [
+        "own-final-race.log",
+        "historical-final-race.log",
+        "closure-addendum.log",
+        "exit-tests.log",
+        "full-test.log"
+      ],
+      "fix_status": "independently_retested_in_scope"
+    }
+  ],
+  "findings": [],
+  "improvement_opportunities": [],
+  "remediation_roadmap": "No D4 corrective work is identified by this audit. Human review of this evidence is the remaining next action.",
+  "checks": [
+    {
+      "id": "baseline-test",
+      "metadata": "baseline-test.json",
+      "log": "baseline-test.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:27:38.674752+00:00",
+      "end": "2026-10-19T12:29:31.637390+00:00",
+      "elapsed_seconds": 112.96263923984952,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "--- FAIL: TestD5HMABoundLaunchRequiresEligibleTrue (0.05s)",
+        "--- FAIL: TestD5ResumeReplayUsesSameDispatchID (0.04s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t103.161s",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "closure-addendum",
+      "metadata": "closure-addendum.json",
+      "log": "closure-addendum.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./cmd/hma",
+        "-run",
+        "^TestR5Addendum",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:37:15.359741+00:00",
+      "end": "2026-10-19T12:37:24.094671+00:00",
+      "elapsed_seconds": 8.73493326897733,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "control-gate",
+      "metadata": "control-gate.json",
+      "log": "control-gate.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d4r5/negative-controls/gate-inventory.json",
+        "./cmd/hma",
+        "-run",
+        "^TestR5IndependentGateFreshness/new-launch",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:31:53.059920+00:00",
+      "end": "2026-10-19T12:31:56.157949+00:00",
+      "elapsed_seconds": 3.0980267580598593,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "--- FAIL: TestR5IndependentGateFreshness (1.58s)",
+        "    --- FAIL: TestR5IndependentGateFreshness/new-launch (1.58s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t1.587s",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "control-half-open-valid",
+      "metadata": "control-half-open-valid.json",
+      "log": "control-half-open-valid.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d4r5/negative-controls/half-open.json",
+        "./internal/host",
+        "-run",
+        "^TestR5IndependentClassificationMatrix",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:31:51.818345+00:00",
+      "end": "2026-10-19T12:31:52.810056+00:00",
+      "elapsed_seconds": 0.9917061370797455,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "--- FAIL: TestR5IndependentClassificationMatrix (0.00s)",
+        "    --- FAIL: TestR5IndependentClassificationMatrix/implementation/before (0.00s)",
+        "    --- FAIL: TestR5IndependentClassificationMatrix/implementation/upper-tie (0.00s)",
+        "    --- FAIL: TestR5IndependentClassificationMatrix/review/before (0.00s)",
+        "    --- FAIL: TestR5IndependentClassificationMatrix/review/upper-tie (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.005s",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "control-half-open",
+      "metadata": "control-half-open.json",
+      "log": "control-half-open.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d4r5/negative-controls/half-open.json",
+        "./internal/host",
+        "-run",
+        "^TestR5IndependentClassificationMatrix",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:31:17.906593+00:00",
+      "end": "2026-10-19T12:31:18.109059+00:00",
+      "elapsed_seconds": 0.2024654489941895,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host [build failed]",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "control-revocation",
+      "metadata": "control-revocation.json",
+      "log": "control-revocation.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d4r5/negative-controls/revocation.json",
+        "./internal/host",
+        "-run",
+        "^TestR5IndependentRevocationPermutations",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:31:18.350521+00:00",
+      "end": "2026-10-19T12:31:19.487947+00:00",
+      "elapsed_seconds": 1.1374315908178687,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "--- FAIL: TestR5IndependentRevocationPermutations (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.005s",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "exit-tests",
+      "metadata": "exit-tests.json",
+      "log": "exit-tests.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./internal/engine",
+        "./internal/host",
+        "./cmd/hma",
+        "-run",
+        "^(TestOneReservationPerLaunchNoReuse|TestUnlaunchedReservationCharged|TestUnreservedDispatchBlocks|TestEnvelopeAndAssociationMustMatchAdmission|TestLaunchAtValidUntilUnauthorized|TestLaunchAtRevocationTimeUnauthorized|TestValidUntilMinOfTwoRevocations|TestExpiryThenLaterRevocation|TestRenewalDoesNotReviveOldGeneration|TestNewGenerationNeedsNewReservation|TestLaunchAtEarliestEndUnauthorized|TestLaunchBeforeEarliestEndAuthorized)$",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:36:45.214035+00:00",
+      "end": "2026-10-19T12:36:47.141505+00:00",
+      "elapsed_seconds": 1.9274774780496955,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "full-test",
+      "metadata": "full-test.json",
+      "log": "full-test.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./...",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:30:13.382178+00:00",
+      "end": "2026-10-19T12:32:20.631737+00:00",
+      "elapsed_seconds": 127.24955694191158,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "go-version",
+      "metadata": "go-version.json",
+      "log": "go-version.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "version"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:28:41.137075+00:00",
+      "end": "2026-10-19T12:28:41.143780+00:00",
+      "elapsed_seconds": 0.006698192097246647,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "historical-final-race",
+      "metadata": "historical-final-race.json",
+      "log": "historical-final-race.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-overlay",
+        "/tmp/hma-gate-d-20261018-d4r5/historical-r4-overlay.json",
+        "./cmd/hma",
+        "./internal/host",
+        "-run",
+        "^(TestAuditorD4|TestR3|TestR4)",
+        "-skip",
+        "^TestAuditorD4GateMustDetectPolicyDrift$",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:36:05.545880+00:00",
+      "end": "2026-10-19T12:36:34.347619+00:00",
+      "elapsed_seconds": 28.801736891968176,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "historical-original",
+      "metadata": "historical-original.json",
+      "log": "historical-original.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./cmd/hma",
+        "./internal/host",
+        "-run",
+        "^(TestAuditorD4|TestR3|TestR4)",
+        "-skip",
+        "^TestAuditorD4GateMustDetectPolicyDrift$",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:35:18.021298+00:00",
+      "end": "2026-10-19T12:35:38.241596+00:00",
+      "elapsed_seconds": 20.22030022297986,
+      "exit_code": 1,
+      "failed_start": false,
+      "failure_lines": [
+        "--- FAIL: TestR4IndependentUnadmittedJournalCannotBypassGate (0.45s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t18.608s",
+        "FAIL"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "own-cli",
+      "metadata": "own-cli.json",
+      "log": "own-cli.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./cmd/hma",
+        "-run",
+        "^TestR5",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:30:48.747031+00:00",
+      "end": "2026-10-19T12:31:04.357607+00:00",
+      "elapsed_seconds": 15.610581476939842,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "own-final-race",
+      "metadata": "own-final-race.json",
+      "log": "own-final-race.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./cmd/hma",
+        "./internal/host",
+        "-run",
+        "^TestR5",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:33:46.573212+00:00",
+      "end": "2026-10-19T12:34:06.471292+00:00",
+      "elapsed_seconds": 19.898077755002305,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "own-host-generations",
+      "metadata": "own-host-generations.json",
+      "log": "own-host-generations.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./internal/host",
+        "-run",
+        "^TestR5",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:32:08.524469+00:00",
+      "end": "2026-10-19T12:32:09.521063+00:00",
+      "elapsed_seconds": 0.9965961670968682,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "own-host",
+      "metadata": "own-host.json",
+      "log": "own-host.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./internal/host",
+        "-run",
+        "^TestR5",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:29:41.523344+00:00",
+      "end": "2026-10-19T12:29:42.467377+00:00",
+      "elapsed_seconds": 0.9440363519825041,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "own-review-cli",
+      "metadata": "own-review-cli.json",
+      "log": "own-review-cli.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "./cmd/hma",
+        "-run",
+        "^TestR5Independent(ReviewSnapshot|NewReview)",
+        "-v",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:33:23.072958+00:00",
+      "end": "2026-10-19T12:33:26.112430+00:00",
+      "elapsed_seconds": 3.0394789399579167,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "race",
+      "metadata": "race.json",
+      "log": "race.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "./...",
+        "-count=1"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:30:14.537762+00:00",
+      "end": "2026-10-19T12:33:05.397575+00:00",
+      "elapsed_seconds": 170.8598118550144,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    },
+    {
+      "id": "vet",
+      "metadata": "vet.json",
+      "log": "vet.log",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4r5/source",
+      "env_overrides": {
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4r5/gocache",
+        "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+        "GOTOOLCHAIN": "local",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4r5/tmp"
+      },
+      "start": "2026-10-19T12:29:42.740403+00:00",
+      "end": "2026-10-19T12:29:44.495018+00:00",
+      "elapsed_seconds": 1.754614382982254,
+      "exit_code": 0,
+      "failed_start": false,
+      "failure_lines": [],
+      "truncated": false
+    }
+  ],
+  "controlled_unblinding_addendum": {
+    "manifest": "unblind-manifest.json",
+    "original_tests": "historical-tests/",
+    "phase1_preserved": true,
+    "historical_results": {
+      "original_run": "historical-original.log",
+      "original_top_level_pass": 40,
+      "original_top_level_fail": 1,
+      "failure_reason": "Obsolete zero-namespace fixture assertion; the fixed implementation declares the imported journal namespace.",
+      "adapted_run": "historical-final-race.log",
+      "adapted_top_level_pass": 41,
+      "adapted_subtest_pass": 62,
+      "adapted_fail": 0,
+      "overlay": "historical-r4-overlay.json",
+      "test_change": "Only the r4 namespace-count precondition is updated from zero to one. No production file or behavioral assertion is changed.",
+      "excluded_test": "TestAuditorD4GateMustDetectPolicyDrift"
+    },
+    "own_final_results": {
+      "top_level_pass": 12,
+      "subtest_pass": 45,
+      "log": "own-final-race.log",
+      "closure_addendum": "closure-addendum.log",
+      "closure_addendum_subtest_pass": 4
+    },
+    "phase1_changes": [
+      {
+        "requirement": "D4-R8",
+        "from": "PARTIAL (withheld narrative scope not yet inspected)",
+        "to": "MET",
+        "reason": "The handoff read after Phase 1 does not claim D5, D6, full Gate D or closure completion. Code regression evidence remains as frozen."
+      }
+    ],
+    "later_claim_handling": "Implementation and historical-test narratives were treated as claims. Test results and primary code, not prior verdicts, determine this report."
+  },
+  "evidence_inventory": {
+    "PHASE1.json": {
+      "sha256": "fd5cf31fdc4fa89eabc5b5eb788cd02da3aeb20ba1ff80f73f1e46a12a68aacc",
+      "bytes": 15222
+    },
+    "PHASE1.sha256": {
+      "sha256": "0fd3477953471a9c1d7eb9ff00ed60e0ec4b98a275ba7792311b176460589db6",
+      "bytes": 78
+    },
+    "baseline-test.json": {
+      "sha256": "d2187eddeccc674748e5812c0153901370bbcfedc836b625ecf74cd089ba1856",
+      "bytes": 1449
+    },
+    "baseline-test.log": {
+      "sha256": "ea2a15a7caf67385d2fe67d5c297b52191e59a6e0114464c4f524aa323faad3a",
+      "bytes": 317081
+    },
+    "closure-addendum.json": {
+      "sha256": "6db34d536199dfea5fee24563382393f6c101a138a3df4d7d55e4b33bbbf9ec6",
+      "bytes": 1349
+    },
+    "closure-addendum.log": {
+      "sha256": "d45056e191ed8f5153df535e36c3bebeb1672cb364732a577e454db87a7e2748",
+      "bytes": 5602
+    },
+    "control-gate.json": {
+      "sha256": "77ff634cb5e9b4d2607a1e1e550a86466b30940cd9c26967a40cadbca0617541",
+      "bytes": 1663
+    },
+    "control-gate.log": {
+      "sha256": "89d8a286ac035ff91dc6b87dd133370670fbef59a05acf04be5abdeaabc4206f",
+      "bytes": 1268
+    },
+    "control-half-open-valid.json": {
+      "sha256": "2bc89399be18bef0ffa1556bd820d25bc41bdf0601cb528ab484285a120ebf94",
+      "bytes": 1948
+    },
+    "control-half-open-valid.log": {
+      "sha256": "52686ff56a75be895ec1ad4b261127f5105ec9e8bfa633bcd0f17c89c7704ff0",
+      "bytes": 3797
+    },
+    "control-half-open.json": {
+      "sha256": "b586b4c1cbb0dd1993f3a550a769f18edccfdf8dee1c582ec5ada0b979507b0d",
+      "bytes": 1534
+    },
+    "control-half-open.log": {
+      "sha256": "7bfb0dc8f8c8339e4f3c300cd5b652bb7cfd6543691b6ec03ce8edbbc2d14e76",
+      "bytes": 290
+    },
+    "control-revocation.json": {
+      "sha256": "ac9305bec1f7421d35dfb9e4447b62eec9db08fa9808bda8eade25ace7ec0097",
+      "bytes": 1607
+    },
+    "control-revocation.log": {
+      "sha256": "d098e41906c0e28e709d20e0188698f76f0548a03d2dbf752e17cbe070613adf",
+      "bytes": 292
+    },
+    "exit-tests.json": {
+      "sha256": "7a91be91b4e7ac324dfc2bddbf084f079251fcc6f9c8726c5bce464ca785a988",
+      "bytes": 1803
+    },
+    "exit-tests.log": {
+      "sha256": "446f170e6b22dc76ddfa5340164e4713ab62795ab6ef402f8706b41afa8aa061",
+      "bytes": 2547
+    },
+    "freeze-end.json": {
+      "sha256": "5f202b74a0a047da0e55e5904f1bda69f1966a31c619c88413a2edcf574bb00f",
+      "bytes": 2285
+    },
+    "freeze-start.json": {
+      "sha256": "fd6437844dd3fa069699faffdb1784062d9d7700ca7e8cee4ebe23c41d7a0731",
+      "bytes": 2143
+    },
+    "full-test.json": {
+      "sha256": "12ad1b12937b2d6fe38ffdeda7960c834e28b6e455c01067f67de43abb781f2c",
+      "bytes": 1289
+    },
+    "full-test.log": {
+      "sha256": "e8f7f223c2f8d33bb6ac6192cbcfb463a9234528a71761c4f61e860806888c08",
+      "bytes": 650
+    },
+    "go-version.json": {
+      "sha256": "85fe4704ff976908e4cf9b7475336439f02bab51c920828937e625d872d1908f",
+      "bytes": 1231
+    },
+    "go-version.log": {
+      "sha256": "f554cfdb85411c2bb1d503df3f53dfbad1f753eb8271938833166a5d26a7547c",
+      "bytes": 32
+    },
+    "handoff-after-phase1.md": {
+      "sha256": "88780d62f62585e1fd1a53be7e6492cc3cf74178195383b3275a20545aff4463",
+      "bytes": 10467
+    },
+    "historical-final-race.json": {
+      "sha256": "89ff60f86f1769bee402deff3061fe747360419ea31097253e3bde861e1f46bf",
+      "bytes": 1530
+    },
+    "historical-final-race.log": {
+      "sha256": "a4628e561d58f0f3ba45b6f7616f0ff9eeae7c272b92c0212d03a7135f88e650",
+      "bytes": 69704
+    },
+    "historical-original.json": {
+      "sha256": "8c5e0aa44d2bf65be42dbd11ad6f50be9c68c72629b1e1c900a0f34f92696c2d",
+      "bytes": 1593
+    },
+    "historical-original.log": {
+      "sha256": "e826b03bc694d9673a703321de200d16a9a80dfdf24ac623fadd12576559f251",
+      "bytes": 69166
+    },
+    "historical-r4-overlay.json": {
+      "sha256": "0434e94b16943af91aa87e189396eb28657e23114f36985371e3e7c4d2fccd93",
+      "bytes": 178
+    },
+    "normative-excerpts.txt": {
+      "sha256": "7b6e2a23f23586fb99e7130415521dd3865c6c55619879e279e1a45f5cc7838a",
+      "bytes": 18640
+    },
+    "own-cli.json": {
+      "sha256": "63f63c374b3ea37a578a2ffdc8fc3691faa0a2f6cf8d7e773e4f36a2950064ba",
+      "bytes": 1330
+    },
+    "own-cli.log": {
+      "sha256": "1ece02ad9d5ba25a0ded4aa41641270018efb56f0f261806d939e2079d9cfa09",
+      "bytes": 16050
+    },
+    "own-final-race.json": {
+      "sha256": "b874b961b65e77fa67e53b089e4330a880650ec19094a61e111ef5cd67ee05e5",
+      "bytes": 1366
+    },
+    "own-final-race.log": {
+      "sha256": "aeae6eb2aec3944a5d1e5014e313ab2687c75a7e476befb407fa149b899bb9a0",
+      "bytes": 29165
+    },
+    "own-host-generations.json": {
+      "sha256": "dccae3b4dd31f00de8f4b7f2be9b218bca1a40e2b0c94b5324d7a3233cf6d964",
+      "bytes": 1336
+    },
+    "own-host-generations.log": {
+      "sha256": "6f369e94a6b9033166e315246ca4b5670dc347e1c6f0802ba5e92e155144ff2d",
+      "bytes": 5460
+    },
+    "own-host.json": {
+      "sha256": "59daca10b0a0720e8efb5c4177ddc887d4aad3ecac9810870cd8487167e8145d",
+      "bytes": 1302
+    },
+    "own-host.log": {
+      "sha256": "8fd0bc58e5e63b6fa7b52d9a83272ba1abbe0b91d45c5c9094423ea2ebfd30b6",
+      "bytes": 5360
+    },
+    "own-review-cli.json": {
+      "sha256": "bc40eb320a19faac63a72935e205a113aff0bd5d76070f167437da92b07eb788",
+      "bytes": 1367
+    },
+    "own-review-cli.log": {
+      "sha256": "121ba167a68206e9342308e961582909248e504f6c45835d61cc685a699fb6e3",
+      "bytes": 7707
+    },
+    "race.json": {
+      "sha256": "e99d9c565359fa240d4226e18f08c68740cb9bd971f3af9c93a5b5ba7d477ff0",
+      "bytes": 1301
+    },
+    "race.log": {
+      "sha256": "4959d2c68e759135a87a24556067a6df73fda2a24cb05051dbc50cf37932c4e6",
+      "bytes": 651
+    },
+    "requirements-before-diff.json": {
+      "sha256": "cafe8fea986753a73e1cdbeb6a94ee42bae071b7da0b925d509a38889b6b348f",
+      "bytes": 3272
+    },
+    "run_check.py": {
+      "sha256": "5281d08334b1bd0497adf490f7a9610ed27f4e554acef12496754d9d36323fa6",
+      "bytes": 1337
+    },
+    "source-manifest.json": {
+      "sha256": "b6c71346bf689992a7cf884fcd80d9c9a0dd17e3712e99d6a9ad20d71de1ab8b",
+      "bytes": 28240
+    },
+    "status-end.txt": {
+      "sha256": "e6dc7fb44ae2bb13d750f71eb1249bdc8d7bfc964ca6246e53988012ee7e800f",
+      "bytes": 692
+    },
+    "status-start.txt": {
+      "sha256": "e6dc7fb44ae2bb13d750f71eb1249bdc8d7bfc964ca6246e53988012ee7e800f",
+      "bytes": 692
+    },
+    "tool-versions.json": {
+      "sha256": "08a28307f434b7a4c6fb2e9e40318af9139001fecde00b74ec21e27e2af902d0",
+      "bytes": 604
+    },
+    "tracked.diff": {
+      "sha256": "12369f7343f88293f681bf9bf9aabcf0bb5c628b94fa7c92eddd4e7669ac6623",
+      "bytes": 40968
+    },
+    "unblind-manifest.json": {
+      "sha256": "fc3907e186885dfc73d29d212f9227c406acee345f8862eff66efb4cb74cdad6",
+      "bytes": 2407
+    },
+    "vet.json": {
+      "sha256": "8dbc523d78eaffd58843b41a31eb54ccfa1f5f56a905f9a5b37fa4ebd1f9b2ea",
+      "bytes": 1237
+    },
+    "vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "limitations": [
+    "Isolation describes fresh audit context and blinded Phase 1. Execution used a separate source copy on the same trusted host, not a separate VM or container. Read-only repository access was enforced by instruction; the environment allowed worktree writes but none were made.",
+    "The assigned worker/model/effort were supplied by the user. Runtime model identity and upstream exact-route preflight were not independently introspected. No auditor-originated worker dispatch, nested agent CLI or model API occurred.",
+    "All conclusions assume the approved trusted-host and host-clock threat model. No hostile administrator or filesystem-authenticity guarantee is asserted. Go race tests detect Go data races; they do not prove atomic external-ledger snapshots against arbitrary concurrent filesystem writers.",
+    "Tests run against copied dirty bytes. They are bound to HEAD, tracked binary-diff digest and per-untracked-file digests. They are not a clean-revision CI attestation.",
+    "The initial full suite failed in two nested builds with error obtaining VCS status, exit status 128. GOFLAGS=-buildvcs=false resolved this in the source copy. The original failure is retained. No executable failed to start and no Permission denied execution failure occurred.",
+    "Original r4 test execution failed its obsolete zero-namespace precondition. The overlay changes only that precondition to require one declared journal namespace. All original behavior assertions remain. The original test and failure log are retained.",
+    "The first half-open mutation control did not compile due to unused variables. A corrected mutation compiled and failed the intended assertions. Mutation failures are expected controls, not findings against the audited target.",
+    "Auditor-authored tests reuse repository fixture builders. Their cases and expected results were independently derived. Full tests and full race runs compiled before the last auditor-only additions; final own tests and addendum tests were separately run with -race.",
+    "TestAuditorD4GateMustDetectPolicyDrift is deliberately excluded. A policy edit after a clean scan is an open contract question, not a closure check. This audit does not resolve that question.",
+    "No approved Jev decision tool was exposed. The auditor used the documented orchestrator fallback.",
+    "D1-D3 and Gates B/C received regression coverage, not a fresh full re-audit. D5 criterion credit, findings disposition, full packet, D6 amendment, full Gate D acceptance and final closure are outside this verdict.",
+    "The implementation handoff contains older descriptions alongside later remediation sections. Its claims were not proof. Primary code and executable results govern this assessment. The excluded architecture-amendment files and .serena content were hashed for freeze verification but not evaluated.",
+    "Raw output logs are complete combined stdout/stderr streams. Tool display excerpts were sometimes truncated; the saved logs were not truncated."
+  ],
+  "validation": {
+    "method": "python3 /home/yeli/obsidian/AgentSystem/agent-memory/skills/independent-audit/scripts/validate_report.py AUDIT.json",
+    "evidence": "report-validation.log",
+    "scope": "Form and verdict consistency only; not proof of audit truth."
+  },
+  "next_action": {
+    "action": "HUMAN_REVIEW_D4_AUDIT",
+    "owner": "Lennon (human gate owner)",
+    "rationale": "All scoped D4 requirements and 17 prior closure criteria passed independent checks. D4 audit evidence is ready for a human decision.",
+    "proposed_agent_model_route": "Not applicable: the next action is human review, not execution. A later implementation dispatch requires its own approved route and exact-route hi preflight.",
+    "permission_envelope": "Inspect this audit packet and its evidence. No repository mutation, stage transition, commit, push, publication or release is authorized by this report.",
+    "exact_approval_required": "Explicit human acceptance of this D4-only audit before scheduling D5. No HMA approval challenge was generated; this report is not a core approval.",
+    "stop_and_escalation_conditions": [
+      "Stop if any target digest differs from freeze-start.json.",
+      "Stop if a new blocking finding or executable-start failure appears.",
+      "Escalate any disputed validity rule or the separate policy-drift contract question to the human."
+    ]
+  }
+}

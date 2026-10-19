@@ -111,7 +111,7 @@ func TestGateCR3PacketCarriesCoreState(t *testing.T) {
 	f.packet("2026-09-16T12:05:10Z", "2026-09-16T12:05:20Z", "2026-09-16T12:10:00Z", "run-state")
 	b, _ := os.ReadFile(f.packetPath)
 	core, _ := store.New(f.store).Load("run")
-	for _, want := range []string{"SENTINEL-BLOCKER", `"accepted_plan_digest": "plan"`, core[len(core)-1].Metadata.HeadAnchor} {
+	for _, want := range []string{"SENTINEL-BLOCKER", `"accepted_plan_digest": "` + f.planDigest + `"`, core[len(core)-1].Metadata.HeadAnchor} {
 		if !strings.Contains(string(b), want) {
 			t.Fatalf("packet lacks %q", want)
 		}

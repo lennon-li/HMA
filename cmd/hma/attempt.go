@@ -20,6 +20,9 @@ import (
 // attemptNow is the hook's clock; tests replace it.
 var attemptNow = func() time.Time { return time.Now().UTC() }
 
+// attemptSleep waits; tests replace it.
+var attemptSleep = time.Sleep
+
 // attemptRoute is the verify-loop route in a hook request or envelope.
 type attemptRoute struct {
 	Worker string  `json:"worker"`
@@ -261,6 +264,7 @@ func pendingFor(attemptsRaw json.RawMessage, reqRaw []byte) pendingAttempt {
 func attemptOnce(storePath string, req attemptRequest, reqDigest string, env attemptEnvelope, pending pendingAttempt, docs attemptDocs) (attemptResult, bool, error) {
 	var res attemptResult
 	admitted := false
+	var policyRefusal error
 	unit, runID := req.HMA.UnitID, req.HMA.RunID
 	err := hoststate.NewStore(storePath).Transact(runID, func(history []hoststate.Record, commit func(*hoststate.Record) error) error {
 		return store.New(storePath).WithRunLock(runID, func(core []model.Record) error {
@@ -289,7 +293,7 @@ func attemptOnce(storePath string, req attemptRequest, reqDigest string, env att
 				}
 				if sameKey {
 					res = replayResult(r, core, history, req, docs, now)
-					return nil
+					return recordPolicyChange(history, commit, runID, core, docs, now)
 				}
 				if v.DispatchRunID == req.DispatchRunID || v.ControllerRunID == req.ControllerRunID && v.AttemptIndex == req.AttemptIndex {
 					return errors.New(hoststate.ReasonReservationConflict)
@@ -315,8 +319,29 @@ func attemptOnce(storePath string, req attemptRequest, reqDigest string, env att
 			counters := unitCounters(history, unit)
 			lease, reason := engine.DeriveLease(engine.LeaseRequest{Records: core, UnitID: unit, Plan: docs.plan, Contract: docs.contract,
 				PolicyDigest: docs.policyDigest, Counters: counters, Now: now, Route: grant})
+			if reason == engine.ReasonLeasePolicyChanged {
+				if err := recordPolicyChange(history, commit, runID, core, docs, now); err != nil {
+					return err
+				}
+				admitted = false
+				policyRefusal = fmt.Errorf("%s: %s", hoststate.ReasonLeaseInactive, reason)
+				return nil
+			}
 			if reason != engine.ReasonNone {
 				return fmt.Errorf("%s: %s", hoststate.ReasonLeaseInactive, reason)
+			}
+			// A recorded revocation of the plan policy ends the generation
+			// for good: restoring the policy bytes does not revive it.
+			if _, revoked := hoststate.PolicyRevokedAt(core, history, lease.PolicyDigest, lease.IssuerSequence); revoked {
+				return fmt.Errorf("%s: %s", hoststate.ReasonLeaseInactive, engine.ReasonLeasePolicyChanged)
+			}
+			// Keep this generation's exact plan for launch reconciliation.
+			planDoc, _, err := model.ParsePlan(docs.plan)
+			if err != nil {
+				return err
+			}
+			if err := retainPlan(storePath, planDoc, lease.PlanDigest); err != nil {
+				return err
 			}
 			gen := hoststate.LeaseGeneration{IssuerSequence: lease.IssuerSequence, IssuerHeadAnchor: lease.IssuerHeadAnchor, LeaseDigest: lease.LeaseDigest}
 			until, _ := time.Parse(time.RFC3339Nano, lease.ValidUntil)
@@ -371,11 +396,23 @@ func attemptOnce(storePath string, req attemptRequest, reqDigest string, env att
 			if cost < 0 || counters.CostSpent+cost > lease.Budgets.CostCeiling {
 				return fmt.Errorf("%s: %s", hoststate.ReasonLeaseInactive, engine.ReasonLeaseCeiling)
 			}
+			// Ledger receipts record whole seconds. valid_from is the next
+			// whole second, and HMA waits for it before granting, so any
+			// launch after the grant has a receipt time >= valid_from and an
+			// earlier launch does not (exact comparison, no widening).
+			from := now
+			if from.Nanosecond() != 0 {
+				from = from.Truncate(time.Second).Add(time.Second)
+				attemptSleep(from.Sub(now))
+			}
+			if !from.Before(until) || !from.Before(preflightUntil) {
+				return fmt.Errorf("%s: %s", hoststate.ReasonLeaseInactive, engine.ReasonLeaseWallTime)
+			}
 			rec := hoststate.Record{Version: 1, Kind: hoststate.KindReservation, RunID: runID, CoreHeadAnchor: core[len(core)-1].Metadata.HeadAnchor,
-				Timestamp: now.Format(time.RFC3339Nano), Actor: "hma-hook",
+				Timestamp: from.Format(time.RFC3339Nano), Actor: "hma-hook",
 				Reservation: &hoststate.Reservation{UnitID: unit, ControllerRunID: req.ControllerRunID, AttemptIndex: req.AttemptIndex,
 					DispatchRunID: req.DispatchRunID, RequestSHA256: reqDigest, AdmissionRecord: adm.HeadAnchor, RouteIdentity: routeID,
-					FailureSignature: sig, Cost: cost, ValidFrom: now.Format(time.RFC3339Nano), ValidUntil: lease.ValidUntil, Generation: gen}}
+					FailureSignature: sig, Cost: cost, ValidFrom: from.Format(time.RFC3339Nano), ValidUntil: lease.ValidUntil, Generation: gen}}
 			if err := commit(&rec); err != nil {
 				return err
 			}
@@ -389,12 +426,33 @@ func attemptOnce(storePath string, req attemptRequest, reqDigest string, env att
 			return nil
 		})
 	})
+	if err == nil && policyRefusal != nil {
+		err = policyRefusal
+	}
 	return res, admitted, err
+}
+
+// recordPolicyChange appends a policy_revocation host record when HMA
+// observes a current policy digest other than the plan's and no recorded
+// revocation applies to the latest lease generation yet, dated now.
+// Launches of leases on that plan policy are unauthorized from then on.
+func recordPolicyChange(history []hoststate.Record, commit func(*hoststate.Record) error, runID string, core []model.Record, docs attemptDocs, now time.Time) error {
+	plan, _, err := model.ParsePlan(docs.plan)
+	if err != nil || plan.PolicyDigest == docs.policyDigest {
+		return nil
+	}
+	if !hoststate.PolicyRevocationNeeded(core, history, plan.PolicyDigest) {
+		return nil
+	}
+	rec := hoststate.Record{Version: 1, Kind: hoststate.KindPolicyRevocation, RunID: runID, CoreHeadAnchor: core[len(core)-1].Metadata.HeadAnchor,
+		Timestamp: now.Format(time.RFC3339Nano), Actor: "hma-hook",
+		PolicyRevocation: &hoststate.PolicyRevocation{PlanPolicyDigest: plan.PolicyDigest, ObservedPolicyDigest: docs.policyDigest}}
+	return commit(&rec)
 }
 
 // replayResult returns an existing reservation unchanged. launch_eligible is
 // true only while its generation's lease is still active by time, stage,
-// policy, and contract (capacity is not rechecked: the slot is already
+// policy (including every recorded revocation), and contract (capacity is not rechecked: the slot is already
 // charged) and no ledger run with its dispatch id exists.
 func replayResult(r hoststate.Record, core []model.Record, history []hoststate.Record, req attemptRequest, docs attemptDocs, now time.Time) attemptResult {
 	v := r.Reservation
@@ -408,6 +466,9 @@ func replayResult(r hoststate.Record, core []model.Record, history []hoststate.R
 		PolicyDigest: docs.policyDigest, Now: now, Route: grant})
 	until, perr := time.Parse(time.RFC3339Nano, v.ValidUntil)
 	if reason != engine.ReasonNone || perr != nil || !now.Before(until) || lease.IssuerHeadAnchor != v.Generation.IssuerHeadAnchor {
+		return res
+	}
+	if _, revoked := hoststate.PolicyRevokedAt(core, history, lease.PolicyDigest, v.Generation.IssuerSequence); revoked {
 		return res
 	}
 	if dispatchUsed(req.LedgerNamespace, v.DispatchRunID) {

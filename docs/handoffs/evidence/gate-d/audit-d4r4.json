@@ -1,0 +1,663 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d4r4",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:a74c9f0901f89903ed0cb2425bc491ece4ea282d+diff:12369f7343f88293f681bf9bf9aabcf0bb5c628b94fa7c92eddd4e7669ac6623; untracked inventory freeze-start.json",
+  "isolation": "isolated",
+  "isolation_detail": "Context isolation: isolated fresh session under the user-supplied dispatch. No implementer discussion or prior verdict was initial context. Requirements were derived before the diff. Author comments and tests were inspected as artifacts. Neutral prior closure criteria were permitted initial input. Forbidden files were content-blinded until the recorded Phase 1 freeze; initial untracked-file hashing did not expose prose. Execution isolation: an external source copy and per-test temporary repositories; no separate OS identity or container. Read-only repository conduct was voluntary, not an OS-enforced permission boundary.",
+  "verdict": "fix-required",
+  "requirements": [
+    {
+      "id": "R01",
+      "title": "Unique launch authority",
+      "source": "v5 \u00a71; v6 \u00a74",
+      "criterion": "All namespace receipts since first core record match exactly one reservation or review dispatch; authority cannot be reused.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "prior-auditor-tests.log: TestR3LaunchMatrix, TestAuditorD4IndependentAuthorizationMatrix",
+        "baseline-final.log: full repository suite"
+      ]
+    },
+    {
+      "id": "R02",
+      "title": "Exact validity",
+      "source": "v6 \u00a72; v7 \u00a71",
+      "criterion": "Half-open interval; full timestamp precision; earliest applicable event wins independent of ingestion order.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentValidityAndScanOrder",
+        "prior-auditor-tests.log: TestR3ExactBoundsAndMonotoneEvents, TestAuditorD4MonotoneEndAllEventOrders"
+      ]
+    },
+    {
+      "id": "R03",
+      "title": "Generation permanence",
+      "source": "v7 \u00a71",
+      "criterion": "Every record belongs to one approval generation and its generation-bound plan; renewal never revives it.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentRenewedReviewControl",
+        "prior-auditor-tests.log: TestR3AddendumTwoGenerationPlans, TestR3AddendumRenewedReviewIndependent, TestR3AddendumReviewMissingGenerationOrPlan"
+      ]
+    },
+    {
+      "id": "R04",
+      "title": "Revocation completeness",
+      "source": "v7 \u00a71",
+      "criterion": "Rewind of unit/dependency, terminal, policy/contract drift and generation wall end monotonically revoke both launch classes.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentPolicyRestoreAcrossGenerations",
+        "prior-auditor-tests.log: TestR3ReconcilePolicyObservationPersists, TestR3RepeatedPolicyChangeNewGeneration, TestR3AddendumPolicyObservedRestoreMatrix, TestR3HookRevocationTie",
+        "targeted-addendum-corrected.log: planning/correction dependency CLI controls"
+      ]
+    },
+    {
+      "id": "R05",
+      "title": "Journal binding",
+      "source": "v6 \u00a74",
+      "criterion": "Envelope, controller ID, live root, clone baseline and namespace equal admission; every journal dispatch has reservation.",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentEmptyJournalMustBindAdmission",
+        "independent-addendum-race.log: TestR4IndependentEmptyJournalCLIMustBindAdmission, TestR4IndependentEmptyMatchingJournalControl",
+        "prior-auditor-tests.log: TestR3JournalMatrix, TestR3JournalBaselineCanonical"
+      ],
+      "observation": "Journal fields and nonempty attempts are checked by explicit reconciliation. Unknown-controller zero-attempt journals evade admission binding. An unadmitted journal can also evade the mandatory gate."
+    },
+    {
+      "id": "R06",
+      "title": "BLOCK persistence",
+      "source": "v5 \u00a71; architecture \u00a77",
+      "criterion": "Unauthorized launches produce BLOCK; review snapshots and subsequent scans cannot clear or bypass it.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentBlockSurvivesSnapshot",
+        "prior-auditor-tests.log: TestR3ReviewSnapshotCannotClearBlockCLI, TestAuditorD4CleanScanRetainsHistoricalGateBlock"
+      ]
+    },
+    {
+      "id": "R07",
+      "title": "Current clean gate",
+      "source": "user scope; architecture \u00a77, \u00a714",
+      "criterion": "Gate requires clean reconciliation covering current core/host/ledger state; reject missing or stale coverage.",
+      "assessment": "NOT MET",
+      "status": "fail",
+      "evidence_refs": [
+        "independent-final.log: TestR4IndependentUnadmittedJournalCannotBypassGate, TestR4IndependentExplicitScanBlocksUnadmittedJournal, TestR4IndependentJournalInvalidatesPriorScan",
+        "targeted-addendum-corrected.log: TestR4IndependentUnadmittedJournalAfterEmptyCleanScan",
+        "prior-auditor-tests.log: TestR3NewReviewAuthorityInvalidatesScan, TestR3NewJournalInvalidatesScan"
+      ],
+      "observation": "Current scans bind core head, host launch authority/journal updates and ledger inventory when Namespaces is nonempty. No-namespace journals bypass all of those requirements."
+    },
+    {
+      "id": "R08",
+      "title": "Accounting and review binding",
+      "source": "v5 \u00a71; v6 \u00a74",
+      "criterion": "Unlaunched reservations remain charged; valid review receipts must match namespace, review mode, route, packet and target; no implementation credit.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "prior-auditor-tests.log: TestR3ScanAndHostOrder, TestR3AddendumReviewReceiptMatrixCLI, TestAuditorD4ReceiptRouteMustMatchReviewAuthority",
+        "baseline-final.log: accounting and review-import regression suite"
+      ]
+    },
+    {
+      "id": "R09",
+      "title": "Regression and scope",
+      "source": "Gate C \u00a70.1; user scope",
+      "criterion": "D1-D3, Gate B, Gate C preserved; D5 and D6 not claimed.",
+      "assessment": "MET",
+      "status": "pass",
+      "evidence_refs": [
+        "baseline-final.log",
+        "race-final.log",
+        "vet-final.log",
+        "docs/handoffs/2026-10-18-gate-d-d4.md (read only after Phase 1)"
+      ],
+      "observation": "Full repository baseline, race and vet passed with copy-environment settings. D1-D3 and Gate B/C tests remain green. The D4 handoff claims no D5 or D6 completion; their substantive work is excluded."
+    }
+  ],
+  "findings": [
+    {
+      "id": "D4R4-F01",
+      "title": "An unadmitted journal bypasses reconciliation at the transition gate",
+      "kind": "defect",
+      "mode": "outcome",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The loop-evidence CLI accepts an HMA-bound journal containing an unreserved dispatch attempt. Namespaces considers only loop admissions and review packets. With neither present, requireReconciledLaunches returns nil before examining the journal or requiring reconciliation. After a current-core-bound implementation dispatch, requireHostTransitionGate also returns nil. An explicit reconciliation does detect the unknown admission and attempt, but the transition gate does not require it.",
+      "evidence": [
+        {
+          "source": "phase1-tests/cmd/hma/auditor_r4_test.go:13",
+          "observation": "TestR4IndependentUnadmittedJournalCannotBypassGate fails: full host transition gate opened with an unreserved journal attempt, no reconciliation and no BLOCK."
+        },
+        {
+          "source": "independent-final.log",
+          "observation": "TestR4IndependentExplicitScanBlocksUnadmittedJournal passes; explicit scan introduces BLOCK and closes the gate."
+        },
+        {
+          "source": "cmd/hma/reconcile.go:218; internal/host/reconcile.go:73; cmd/hma/loop.go:208",
+          "observation": "Empty namespace shortcut ignores imported journal evidence; import records the journal without enforcing admission."
+        },
+        {
+          "source": "targeted-addendum-corrected.log: TestR4IndependentUnadmittedJournalAfterEmptyCleanScan",
+          "observation": "A prior clean scan with zero namespaces remains accepted after an unadmitted journal is imported."
+        }
+      ],
+      "fix": {
+        "action": "Include HMA-bound loop-evidence namespaces in mandatory reconciliation coverage, or refuse journal import unless its controller and attempts bind an admission and reservations. Require a current clean reconciliation whenever an HMA-bound journal exists, including when no admission or review packet exists. Preserve the legacy no-launch path only when there is no HMA-bound launch or journal evidence.",
+        "why": "The presence of an unadmitted journal must close the gate rather than opt the run out of reconciliation.",
+        "verification": [
+          {
+            "method": "Run TestR4IndependentUnadmittedJournalCannotBypassGate with no prior scan, then after an earlier clean no-namespace scan.",
+            "expected": "Import refuses the journal or the full gate requires reconciliation; no progression append."
+          },
+          {
+            "method": "Run explicit scan, admitted matching journal, and legacy no-journal controls.",
+            "expected": "Unknown journal produces BLOCK; matching admitted journal reconciles clean; allowed legacy behavior remains available."
+          }
+        ],
+        "tradeoffs": "Existing pre-admission loop journals may require an explicit migration or refusal. Namespace coverage can grow; scanning more journals may reveal historical violations.",
+        "alternative": "Perform and persist full journal reconciliation atomically during loop-evidence import, and have the gate require that proof. This requires wider import changes.",
+        "effort": "small",
+        "status": "proposed",
+        "priority": "P1; contain D4 progression first, then repair gate/coverage, then independent re-test."
+      }
+    },
+    {
+      "id": "D4R4-F02",
+      "title": "A journal without dispatch attempts skips controller admission binding",
+      "kind": "gap",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "reconcileJournals checks len(matched) != 1 only when at least one attempt has a nonempty dispatch_run_id. An unknown-controller HMA-bound journal with no attempts therefore yields zero unauthorized entries. Gate A v6 \u00a74 item 4 applies journal association equality to HMA-bound verify-loop runs without an attempt-count exception. No false launch authorization was demonstrated by this case alone.",
+      "evidence": [
+        {
+          "source": "phase1-tests/internal/host/auditor_r4_test.go:31",
+          "observation": "TestR4IndependentEmptyJournalMustBindAdmission fails: unknown HMA-bound journal without attempts accepted with Unauthorized: []."
+        },
+        {
+          "source": "internal/host/reconcile.go:250",
+          "observation": "withAttempts guards missing-admission finding; field equality runs only with exactly one admission."
+        },
+        {
+          "source": "independent-addendum-race.log: TestR4IndependentEmptyJournalCLIMustBindAdmission",
+          "observation": "The real loop-evidence CLI imports an unknown-controller zero-attempt journal; reconcile returns clean. Matching empty-journal positive control passes."
+        }
+      ],
+      "fix": {
+        "action": "Require exactly one matching controller admission for every imported HMA-bound journal, including zero-attempt journals. Compare unit, envelope, namespace, live root and baseline only after that mandatory match.",
+        "why": "Journal association is independent of the number of launched attempts.",
+        "verification": [
+          {
+            "method": "Run TestR4IndependentEmptyJournalMustBindAdmission; add zero-attempt matching-admission and mismatched-association controls.",
+            "expected": "Unknown or ambiguous controller is refused or BLOCK; exact matching empty journal remains clean."
+          }
+        ],
+        "tradeoffs": "Historical journals imported before admission will be rejected or block progression; define their explicit migration treatment.",
+        "alternative": "Reject all zero-attempt journals at import. This narrows useful evidence import and is less compatible.",
+        "effort": "small",
+        "status": "proposed",
+        "priority": "P2; repair admission binding with F01, then independent re-test."
+      }
+    }
+  ],
+  "limitations": [
+    "Trusted-host scope. Tests seed authority chains in temporary stores; they do not prove malicious-host resistance. No human-approved production transition or live worker dispatch was performed.",
+    "The audit uses a dirty worktree snapshot, not a clean committed revision. freeze-start.json records the tracked diff digest and every untracked-file digest. audited-file-manifest.json identifies the 259 evaluated copied files. The end freeze is unchanged.",
+    "Read-only behavior on the original repository was voluntary. The sandbox allowed writes, but none were issued against it. Test fixtures used Git only in ephemeral repositories under the output directory. No Git write command targeted the audited repository.",
+    "The source copy excludes .serena/, the specified architecture amendment files, and the blinded D4 handoff until post-freeze inspection. Initial hashing of excluded untracked files exposed no contents.",
+    "Initial full test/race runs contain environment failures and are preserved. A first adjustment still had GOTMPDIR and TMPDIR mismatch. Final runs align both, set GOFLAGS=-buildvcs=false for the non-Git source copy, and pass. They exclude intentionally failing auditor checks and the user-designated open contract probe, each run separately.",
+    "Command logs preserve argv, working directory, exits and complete output without intentional truncation. Precise per-process start/end wall timestamps were not instrumented; log file times and tool-call sequence remain available. Some interactive source output was truncated; source-evidence.txt preserves complete numbered source for the main audited paths.",
+    "Context isolation is a session-level claim, not externally attested process provenance. No prior reports or implementer rationale were initial inputs. Authorized closure criteria and naturally occurring source/test comments can influence attention.",
+    "D5 criterion credit, findings disposition/full packet, and D6 amendment are excluded. Their completion is not claimed. No discretionary implementation improvement was added.",
+    "No approved Jev tool was exposed. Advisory checkpoint decisions used the auditor path. No worker route was dispatched or independently preflighted.",
+    "The known policy-drift probe remains an explicitly excluded open contract question. Green baseline and race results do not settle it or override the four failing assertions that reproduce the two findings."
+  ],
+  "phase1_frozen": true,
+  "phase1_time": "2026-10-19T00:55:48.750754+00:00",
+  "independent_tests": {
+    "passed": 6,
+    "failed": 2,
+    "log": "independent-final.log",
+    "sha256": "8a6d60045f4d543f69af2b402586a8a1b0094982c7c8d153d48e130ad2075cbb"
+  },
+  "next_action": {
+    "action": "REMEDIATE_D4_FINDINGS",
+    "owner": "Human coordinator, with a designated bounded implementation worker",
+    "route": "Human must select and preflight the exact approved implementation route. No new worker route is authorized by this audit.",
+    "permission_envelope": "No repository writes by auditor; proposed future changes limited to reconciliation/import/gate logic and regression tests; no commit, push, publish or stage approval.",
+    "approval_required": "Human assigns the repair route and grants its existing bounded implementation envelope; all stage decisions remain challenge-bound.",
+    "stop_conditions": [
+      "Any executable cannot start: report BLOCKED.",
+      "Do not claim D4 passed until findings are fixed and independently re-audited.",
+      "Escalate contract changes rather than weakening acceptance criteria."
+    ],
+    "rationale": "D4 progression can bypass reconciliation for an unadmitted journal. Mandatory journal admission binding also fails for zero-attempt journals."
+  },
+  "verdict_label": "FAIL",
+  "date": "2026-10-19T01:02:33.706321+00:00",
+  "dispatch": {
+    "id": "hma-gate-d-audit-20261018-d4r4",
+    "declared_route": "liz / gpt-6.1-sol / high / review",
+    "route_verification": "User-supplied designation; actual model identity was not independently attested. No new worker dispatch, nested agent CLI, or model API call occurred. Exact-route dispatch preflight was therefore not performed.",
+    "jev": "No approved Jev tool exposed in host tool inventory; auditor judgment used for advisory next-step selection."
+  },
+  "freeze_verification": {
+    "repository_unchanged": true,
+    "checks": {
+      "head": true,
+      "status": true,
+      "diff_sha256": true,
+      "untracked_sha256": true
+    },
+    "branch_observed_at_end": "main",
+    "source_copy_matches_original": true,
+    "copied_files": 259,
+    "source_copy_mismatches": [],
+    "phase1_sha256": "7164be7593abf95f44618168a799f7a8ee5692905b1c92db6ab0f39d9a925ba8"
+  },
+  "environment": {
+    "go": "go1.27.1 linux/amd64",
+    "git": "2.43.0",
+    "git_executable": "/usr/bin/git",
+    "go_executable": "/home/yeli/.local/go/bin/go",
+    "cwd": "/tmp/hma-gate-d-20261018-d4r4/source",
+    "variables": {
+      "PATH": "/home/yeli/.local/go/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.local/bin:/home/yeli/.npm-global/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.local/bin:/home/yeli/bin:/home/yeli/.codex/packages/standalone/releases/0.163.0-x86_64-unknown-linux-musl/codex-path:/home/yeli/.local/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.local/bin:/home/yeli/.local/bin:/usr/lib/rstudio-server/bin/quarto/bin:/home/yeli/.nvm/versions/node/v24.15.0/bin:/home/yeli/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/yeli/.fzf/bin",
+      "GOCACHE": "/tmp/hma-gate-d-20261018-d4r4/gocache",
+      "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4r4/runtime",
+      "TMPDIR": "/tmp/hma-gate-d-20261018-d4r4/runtime",
+      "GOFLAGS": "-buildvcs=false"
+    },
+    "network": "No dependency install or model/network API call issued by auditor. Repository module has no external module dependencies."
+  },
+  "prior_finding_closure": [
+    {
+      "id": "D4-F01",
+      "status": "PARTIAL",
+      "assessment": "Ledger changes, new review authority and journals close the gate for admitted namespaces. A journal after a clean empty-namespace scan still bypasses it.",
+      "evidence": "prior-auditor-tests.log: TestR3NewReviewAuthorityInvalidatesScan, TestR3NewJournalInvalidatesScan; baseline-final.log: TestGateBindsReconciledLedger; targeted-addendum-corrected.log: TestR4IndependentUnadmittedJournalAfterEmptyCleanScan"
+    },
+    {
+      "id": "D4-F02",
+      "status": "FIXED",
+      "assessment": "Each generation uses its retained approved plan. Missing evidence fails closed; earlier valid launches remain authorized.",
+      "evidence": "prior-auditor-tests.log: TestR3AddendumTwoGenerationPlans; baseline-final.log: TestReconcileUsesGenerationPlan"
+    },
+    {
+      "id": "D4-F03",
+      "status": "FIXED",
+      "assessment": "Review bounds include applicable rewind and lease generation. Fresh reviews under new generations remain valid.",
+      "evidence": "independent-final.log: TestR4IndependentRenewedReviewControl; prior-auditor-tests.log: TestR3AddendumRenewedReviewIndependent"
+    },
+    {
+      "id": "D4-F04",
+      "status": "FIXED",
+      "assessment": "Review namespaces are bound and scanned. Shared-namespace scan order preserves both launch classes and attempt accounting.",
+      "evidence": "prior-auditor-tests.log: TestR3ScanAndHostOrder, TestR3ReviewSnapshotCannotClearBlockCLI; baseline-final.log: TestReviewImportUsesPacketLedger"
+    },
+    {
+      "id": "D4-F05",
+      "status": "FIXED",
+      "assessment": "Exact lower bound and upper tie are enforced; just-inside controls pass.",
+      "evidence": "independent-final.log: TestR4IndependentValidityAndScanOrder; prior-auditor-tests.log: TestR3ExactBoundsAndMonotoneEvents"
+    },
+    {
+      "id": "D4-F06",
+      "status": "PARTIAL",
+      "assessment": "Explicit reconciliation blocks unknown controllers with attempts and unreserved dispatch IDs. The gate can avoid that scan, and empty unknown-controller journals still reconcile clean.",
+      "evidence": "independent-final.log: TestR4IndependentExplicitScanBlocksUnadmittedJournal, TestR4IndependentUnadmittedJournalCannotBypassGate, TestR4IndependentEmptyJournalMustBindAdmission; prior-auditor-tests.log: TestR3JournalMatrix"
+    },
+    {
+      "id": "D4-F07",
+      "status": "FIXED",
+      "assessment": "Baseline and live-root association survive import and are checked; absent baseline and {} canonicalize equally.",
+      "evidence": "prior-auditor-tests.log: TestR3JournalMatrix, TestR3JournalBaselineCanonical; baseline-final.log: TestJournalBaselineMustMatchAdmission"
+    },
+    {
+      "id": "D4-F08",
+      "status": "FIXED",
+      "assessment": "Observed policy change cuts launch validity. Ties fail. Restoring bytes does not revive generation authority.",
+      "evidence": "independent-final.log: TestR4IndependentPolicyRestoreAcrossGenerations; prior-auditor-tests.log: TestR3HookRevocationTie"
+    },
+    {
+      "id": "D4-F09",
+      "status": "FIXED",
+      "assessment": "Later clean scans preserve historic BLOCK and escalation. Clean controls still allow continuation.",
+      "evidence": "prior-auditor-tests.log: TestAuditorD4CleanScanRetainsHistoricalGateBlock; baseline-final.log: TestReconcileNextActionKeepsHistoricalBlock"
+    },
+    {
+      "id": "D4R2-F01",
+      "status": "FIXED",
+      "assessment": "Reviews enforce policy, correction generation, wall end and required policy/plan evidence. Forward controls remain valid.",
+      "evidence": "prior-auditor-tests.log: TestAuditorD4RejectReviewAfterPolicyRevocation, TestAuditorD4RejectOldReviewAfterCorrectionGeneration, TestAuditorD4ReviewWallEnd, TestAuditorD4ReviewPolicyNotPresented, TestR3AddendumReviewMissingGenerationOrPlan"
+    },
+    {
+      "id": "D4R2-F02",
+      "status": "FIXED",
+      "assessment": "Restored policy cannot revive replay or fresh issuance under an observed revoked generation. New approved generations have a valid control.",
+      "evidence": "prior-auditor-tests.log: TestAuditorD4PolicyRestoreDoesNotReviveHook, TestR3RepeatedPolicyChangeNewGeneration, TestR3AddendumPolicyObservedRestoreMatrix; baseline-final.log: TestPolicyRestoreDoesNotReviveGeneration"
+    },
+    {
+      "id": "D4R2-F03",
+      "status": "FIXED",
+      "assessment": "Receipt route, packet and target must match review authority. Running and completed valid launches pass and grant no review credit alone.",
+      "evidence": "prior-auditor-tests.log: TestR3AddendumReviewReceiptMatrixCLI, TestAuditorD4ReceiptRouteMustMatchReviewAuthority"
+    },
+    {
+      "id": "D4R3-F01",
+      "status": "FIXED",
+      "assessment": "Reconciliation policy observations persist and revoke restored-policy replay, fresh issuance and subsequent launches.",
+      "evidence": "prior-auditor-tests.log: TestR3ReconcilePolicyObservationPersists, TestR3AddendumPolicyObservedRestoreMatrix; baseline-final.log: TestReconcilePolicyObservationPersists"
+    },
+    {
+      "id": "D4R3-F02",
+      "status": "FIXED",
+      "assessment": "Repeated policy pairs under later generations are recorded and remain revoked on restore.",
+      "evidence": "prior-auditor-tests.log: TestR3RepeatedPolicyChangeNewGeneration, TestR3AddendumPolicyObservedRestoreMatrix; independent-final.log: TestR4IndependentPolicyRestoreAcrossGenerations"
+    },
+    {
+      "id": "D4R3-F03",
+      "status": "FIXED",
+      "assessment": "Dependency revocation applies from generation issuance. Route and correction CLI cases block the launch; planning CLI refuses preflight. Before-event, independent-unit and fresh-generation controls pass.",
+      "evidence": "prior-auditor-tests.log: TestR3ReviewAfterDependencyRewindCLI, TestR3ReviewIssuedAfterDependencyRewind, TestR3AddendumRenewedReviewIndependent; targeted-addendum-corrected.log: TestR4AddendumDependency_planning_CLI, TestR4AddendumDependency_correction_CLI; independent-final.log: TestR4IndependentValidityAndScanOrder"
+    }
+  ],
+  "controlled_unblinding": {
+    "phase1_file": "PHASE1.json",
+    "phase1_sha256": "7164be7593abf95f44618168a799f7a8ee5692905b1c92db6ab0f39d9a925ba8",
+    "provenance_file": "unblinding-provenance.json",
+    "result": "No blind finding was withdrawn. CLI and race reproductions strengthen both findings. Prior auditor tests passed. Closure decisions were independently derived; no prior report verdict was read. The D4 implementer handoff was read after the freeze solely as an audited artifact and for excluded-scope claims. Its mutant counts were not accepted as proof.",
+    "phase1_test_sources": "phase1-tests/ retains exact pre-addendum source versions with verified recorded digests.",
+    "fixture_correction": "targeted-addendum.log had two auditor-fixture failures: planning preflight safely refused but the adapted helper called Fatal; correction approval lacked required head/diff bindings. Corrected only auditor-owned test code. targeted-addendum-corrected.log passes both controls and still reproduces the stale empty-namespace gate failure."
+  },
+  "open_contract_questions": [
+    {
+      "id": "Q-POLICY-GATE",
+      "blocking_for_this_audit": false,
+      "observation": "TestAuditorD4GateMustDetectPolicyDrift fails: editing effective policy after a clean scan does not close the gate until a hook or reconciliation observes it.",
+      "source": "open-policy-probe.log",
+      "classification": "User explicitly designated this as an open contract question, not a closure check. It is excluded from final baseline/race success and prior closure count.",
+      "decision_needed": "Human must define how the transition gate obtains and binds the current effective policy before this can become an acceptance check."
+    }
+  ],
+  "checks": [
+    {
+      "id": "go-test",
+      "description": "Initial unadjusted full suite",
+      "log": "go-test.log",
+      "exit": "1",
+      "sha256": "400c0d50fd01e65ef3cbf32e35ab1c7d8025c7003b1a4b0d0e8549ce2d891bbb",
+      "argv_record": "argv=[\"go\", \"test\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 3,
+      "fail_lines": [
+        "--- FAIL: TestD5HMABoundLaunchRequiresEligibleTrue (0.04s)",
+        "--- FAIL: TestD5ResumeReplayUsesSameDispatchID (0.04s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t104.298s",
+        "--- FAIL: TestSyntheticStoreRefusesNonScratchDir (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.802s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "go-vet",
+      "description": "Initial vet",
+      "log": "go-vet.log",
+      "exit": "0",
+      "sha256": "c50da033e25d60bcebd2b64f2462d180140826331e59e4df655defc09d2185c2",
+      "argv_record": "argv=[\"go\", \"vet\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 0,
+      "fail_lines": [],
+      "race_warning": false
+    },
+    {
+      "id": "go-race",
+      "description": "Initial unadjusted race; included then-present independent tests",
+      "log": "go-race.log",
+      "exit": "1",
+      "sha256": "e5656246f6736bd48f2442cd55fc4e058f40535012fe9c29976a5d73bc76f696",
+      "argv_record": "argv=[\"go\", \"test\", \"-race\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 5,
+      "fail_lines": [
+        "--- FAIL: TestR4IndependentUnadmittedJournalCannotBypassGate (1.17s)",
+        "--- FAIL: TestD5HMABoundLaunchRequiresEligibleTrue (0.04s)",
+        "--- FAIL: TestD5ResumeReplayUsesSameDispatchID (0.04s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t152.141s",
+        "--- FAIL: TestR4IndependentEmptyJournalMustBindAdmission (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t5.161s",
+        "--- FAIL: TestSyntheticStoreRefusesNonScratchDir (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.803s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "independent-final",
+      "description": "Blind independent checks",
+      "log": "independent-final.log",
+      "exit": "1",
+      "sha256": "8a6d60045f4d543f69af2b402586a8a1b0094982c7c8d153d48e130ad2075cbb",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-v\", \"-run\", \"^TestR4Independent\", \"./internal/host\", \"./cmd/hma\"]",
+      "top_level_passes": 6,
+      "top_level_failures": 2,
+      "fail_lines": [
+        "--- FAIL: TestR4IndependentEmptyJournalMustBindAdmission (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.005s",
+        "--- FAIL: TestR4IndependentUnadmittedJournalCannotBypassGate (0.80s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t3.223s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "baseline-adjusted",
+      "description": "First copy-environment adjustment",
+      "log": "baseline-adjusted.log",
+      "exit": "1",
+      "sha256": "655bcd0862987a5fb3387bb353bddf818b7ca9f7f825125b0015c6717e173a4c",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-skip\", \"^TestR4Independent\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 9,
+      "fail_lines": [
+        "--- FAIL: TestGateBR2SyntheticMarkerDirectory (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticSecondSeed (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticForeignSeed (0.00s)",
+        "--- FAIL: TestSyntheticStoreAcceptsSeededRun (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesCopiedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesSymlinkedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesOtherRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesNonSeedRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesAlteredSeed (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.008s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "race-adjusted",
+      "description": "First copy-environment race adjustment",
+      "log": "race-adjusted.log",
+      "exit": "1",
+      "sha256": "be72393dc28e6c3ea83d49a3c9a791df79313e15d507db6d191d79c51b06916c",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-race\", \"-skip\", \"^TestR4Independent\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 9,
+      "fail_lines": [
+        "--- FAIL: TestGateBR2SyntheticMarkerDirectory (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticSecondSeed (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticForeignSeed (0.00s)",
+        "--- FAIL: TestSyntheticStoreAcceptsSeededRun (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesCopiedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesSymlinkedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesOtherRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesNonSeedRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesAlteredSeed (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.028s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "prior-auditor-tests",
+      "description": "Permitted r2/r3 closure checks",
+      "log": "prior-auditor-tests.log",
+      "exit": "0",
+      "sha256": "85e270932b22805adee16402813a4a5f0f8da087d7e2c5d17472db5bbf99862e",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-v\", \"-run\", \"^(TestAuditorD4|TestR3)\", \"-skip\", \"^TestAuditorD4GateMustDetectPolicyDrift$\", \"./internal/host\", \"./cmd/hma\"]",
+      "top_level_passes": 33,
+      "top_level_failures": 0,
+      "fail_lines": [],
+      "race_warning": false
+    },
+    {
+      "id": "open-policy-probe",
+      "description": "Excluded open contract probe",
+      "log": "open-policy-probe.log",
+      "exit": "1",
+      "sha256": "dd05524d1a98c4266efbebc910385d0849782a6463a15712a65f3bc0e690aeb7",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-v\", \"-run\", \"^TestAuditorD4GateMustDetectPolicyDrift$\", \"./cmd/hma\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditorD4GateMustDetectPolicyDrift (1.17s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t1.179s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "baseline-final",
+      "description": "Final full repository baseline; excludes independent probes and open contract probe",
+      "log": "baseline-final.log",
+      "exit": "0",
+      "sha256": "dc57da43b0d35afe46f09c321d335f4496b02deb1dd4f636cfd86677d2e67cfa",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-skip\", \"^(TestR4Independent|TestAuditorD4GateMustDetectPolicyDrift$)\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 0,
+      "fail_lines": [],
+      "race_warning": false
+    },
+    {
+      "id": "race-final",
+      "description": "Final full repository race; same exclusions",
+      "log": "race-final.log",
+      "exit": "0",
+      "sha256": "ca752e973a6a47fc917f061987e9428dac58e2fe1ae2740818bc648218190ffa",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-race\", \"-skip\", \"^(TestR4Independent|TestAuditorD4GateMustDetectPolicyDrift$)\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 0,
+      "fail_lines": [],
+      "race_warning": false
+    },
+    {
+      "id": "vet-final",
+      "description": "Final vet",
+      "log": "vet-final.log",
+      "exit": "0",
+      "sha256": "ec22ee4efaf2d05def62c8aacc11adc580452627d9821c6293b45204a93b291e",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"vet\", \"./...\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 0,
+      "fail_lines": [],
+      "race_warning": false
+    },
+    {
+      "id": "independent-addendum-race",
+      "description": "Independent checks with CLI empty-journal addendum under race",
+      "log": "independent-addendum-race.log",
+      "exit": "1",
+      "sha256": "6bc8053cae5c02187578ccc0fa96d33d4e3d721fce78f68d2b5b8603fbf67b0a",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-race\", \"-count=1\", \"-v\", \"-run\", \"^TestR4Independent\", \"./internal/host\", \"./cmd/hma\"]",
+      "top_level_passes": 7,
+      "top_level_failures": 3,
+      "fail_lines": [
+        "--- FAIL: TestR4IndependentEmptyJournalMustBindAdmission (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.033s",
+        "--- FAIL: TestR4IndependentUnadmittedJournalCannotBypassGate (1.16s)",
+        "--- FAIL: TestR4IndependentEmptyJournalCLIMustBindAdmission (0.89s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t4.478s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "targeted-addendum",
+      "description": "Initial adapted auditor fixture, superseded by corrected run",
+      "log": "targeted-addendum.log",
+      "exit": "1",
+      "sha256": "c768d0814bdde3e7146ec32fea8ea06104d177b088e99fdeb84c6966a00bbf0a",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-v\", \"-run\", \"^(TestR4AddendumDependency|TestR4IndependentUnadmittedJournalAfterEmptyCleanScan)\", \"./cmd/hma\"]",
+      "top_level_passes": 0,
+      "top_level_failures": 3,
+      "fail_lines": [
+        "--- FAIL: TestR4AddendumDependency_planning_CLI (1.18s)",
+        "--- FAIL: TestR4AddendumDependency_correction_CLI (1.16s)",
+        "--- FAIL: TestR4IndependentUnadmittedJournalAfterEmptyCleanScan (0.87s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t3.216s",
+        "FAIL"
+      ],
+      "race_warning": false
+    },
+    {
+      "id": "targeted-addendum-corrected",
+      "description": "Corrected planning/correction CLI controls and stale empty-scan negative check",
+      "log": "targeted-addendum-corrected.log",
+      "exit": "1",
+      "sha256": "0e7779efcf311cafd29a24271d2f2aef703782ddd7eba4b1b04150c95378d764",
+      "argv_record": "argv=[\"/home/yeli/.local/go/bin/go\", \"test\", \"-count=1\", \"-v\", \"-run\", \"^(TestR4AddendumDependency|TestR4IndependentUnadmittedJournalAfterEmptyCleanScan)\", \"./cmd/hma\"]",
+      "top_level_passes": 2,
+      "top_level_failures": 1,
+      "fail_lines": [
+        "--- FAIL: TestR4IndependentUnadmittedJournalAfterEmptyCleanScan (0.50s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t2.937s",
+        "FAIL"
+      ],
+      "race_warning": false
+    }
+  ],
+  "improvement_opportunities": [],
+  "remediation_roadmap": [
+    {
+      "priority": 1,
+      "finding": "D4R4-F01",
+      "containment": "Do not advance D4. Require an explicit reconciliation for every imported HMA-bound journal until the gate enforces coverage.",
+      "durable_action": "Include HMA-bound loop-evidence namespaces in mandatory reconciliation coverage, or refuse journal import unless its controller and attempts bind an admission and reservations. Require a current clean reconciliation whenever an HMA-bound journal exists, including when no admission or review packet exists. Preserve the legacy no-launch path only when there is no HMA-bound launch or journal evidence.",
+      "exit_criterion": "Both no-prior-scan and prior-empty-clean-scan negative tests refuse import or close the full gate; admitted clean controls remain valid."
+    },
+    {
+      "priority": 2,
+      "finding": "D4R4-F02",
+      "durable_action": "Require exactly one matching controller admission for every imported HMA-bound journal, including zero-attempt journals. Compare unit, envelope, namespace, live root and baseline only after that mandatory match.",
+      "exit_criterion": "Unknown empty journal refuses or produces BLOCK; matching empty journal reconciles clean."
+    }
+  ]
+}

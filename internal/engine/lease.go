@@ -72,6 +72,15 @@ type Lease struct {
 	LeaseDigest string `json:"lease_digest"`
 }
 
+// IssuesLease reports whether r is an approval that issues a lease
+// generation for unit: its approved move into Implementation authorization
+// from Route selection or, as a correction, from Independent validation.
+func IssuesLease(r model.Record, unit string) bool {
+	return unit != "" && r.UnitID == unit && r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
+		r.Approval.UnitID == unit && r.Approval.ProposedTargetStage == model.StageImplementationAuthorization &&
+		(r.Approval.CurrentStage == model.StageRouteSelection || r.Approval.CurrentStage == model.StageIndependentValidation)
+}
+
 // DeriveLease derives the unit's lease from the core chain and the presented
 // plan and contract, and reports ReasonNone only while it is active (Gate A
 // v3 §2.2, v4 §1-§2). It is pure.
@@ -91,9 +100,7 @@ func DeriveLease(req LeaseRequest) (Lease, Reason) {
 	var lease Lease
 	issuer := -1
 	for i, r := range req.Records {
-		if r.UnitID == req.UnitID && r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
-			r.Approval.UnitID == req.UnitID && r.Approval.ProposedTargetStage == model.StageImplementationAuthorization &&
-			(r.Approval.CurrentStage == model.StageRouteSelection || r.Approval.CurrentStage == model.StageIndependentValidation) {
+		if IssuesLease(r, req.UnitID) {
 			issuer = i
 		}
 	}

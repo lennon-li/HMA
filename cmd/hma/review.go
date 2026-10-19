@@ -34,6 +34,10 @@ type hostReviewPacketInput struct {
 	// bytes are then part of the artifact.
 	DirtyWorktreeApproved bool   `json:"dirty_worktree_approved"`
 	Task                  string `json:"task"`
+	// LedgerDir is the agent-dispatch ledger the reviewer will launch in;
+	// review import reads the receipt only from it, and reconciliation
+	// scans it.
+	LedgerDir string `json:"ledger_dir"`
 }
 
 type hostReviewImportInput struct {
@@ -168,7 +172,7 @@ func runHostReviewPacket(args []string) error {
 	if err != nil {
 		return err
 	}
-	if in.Dispatch.Role != hoststate.RoleReview || in.Dispatch.Packet != nil || in.Dispatch.ReviewPacketDigest != "" || in.Task == "" || in.RepositoryRoot == "" || in.BaseRevision == "" {
+	if in.Dispatch.Role != hoststate.RoleReview || in.Dispatch.Packet != nil || in.Dispatch.ReviewPacketDigest != "" || in.Task == "" || in.RepositoryRoot == "" || in.BaseRevision == "" || in.LedgerDir == "" || !filepath.IsAbs(in.LedgerDir) {
 		return errors.New(hoststate.ReasonInvalidHostRecord)
 	}
 	root, err := filepath.Abs(in.RepositoryRoot)
@@ -223,7 +227,8 @@ func runHostReviewPacket(args []string) error {
 		ReviewDispatchID: "hma-rd-" + id, ReviewNonce: nonce, DispatchRunID: in.DispatchRunID,
 		IssuingReason: in.IssuingReason, ExpectedLaunchHead: head, ExpectedLaunchWorktree: worktree,
 		ProjectRoot: root, BaseRevision: in.BaseRevision, ProducedHead: snap.Head, DiffDigest: snap.Diff, WorktreeDigest: snap.Worktree,
-		ValidUntil: at.Add(hoststate.ReviewDispatchTTL).UTC().Format(time.RFC3339),
+		ValidUntil:      at.Add(hoststate.ReviewDispatchTTL).UTC().Format(time.RFC3339),
+		LedgerNamespace: filepath.Clean(in.LedgerDir),
 	}
 	core, err := store.New(*storePath).Load(in.RunID)
 	if err != nil {
@@ -326,6 +331,10 @@ func runHostReviewImport(args []string) error {
 		}
 		// HMA reads the receipt from the ledger by run id, not from a path
 		// the host names.
+		// The receipt must come from the ledger the packet named.
+		if p := packetFor(history, findDispatchDigest(history, in.ReviewDispatchID)); p != nil && p.LedgerNamespace != "" && filepath.Clean(in.LedgerDir) != p.LedgerNamespace {
+			return errors.New(hoststate.ReasonReviewReceiptMismatch)
+		}
 		receipt, err := os.ReadFile(filepath.Join(in.LedgerDir, "runs", runID, "receipt.json"))
 		if err != nil {
 			return errors.New(hoststate.ReasonReviewReceiptMismatch)

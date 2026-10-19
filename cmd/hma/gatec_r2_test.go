@@ -78,7 +78,7 @@ func TestGateCR2PacketDerivesArtifact(t *testing.T) {
 	d.Packet, d.ReviewPacketDigest, d.ArtifactDigest = nil, "", hoststate.ReviewArtifactDigest("other-head", f.diff, "")
 	input := filepath.Join(t.TempDir(), "in.json")
 	writeJSON(t, input, hostReviewPacketInput{hostEnvelope: fxEnv("2026-09-16T12:04:30Z"), Dispatch: d, DispatchRunID: "r2",
-		IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x"})
+		IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x", LedgerDir: f.ledger})
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", filepath.Join(t.TempDir(), "p")}); err == nil || err.Error() != hoststate.ReasonReviewArtifactMismatch {
 		t.Fatalf("wrong host artifact: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestGateCR2PacketDerivesArtifact(t *testing.T) {
 	os.WriteFile(filepath.Join(f.root, "a"), []byte("dirty\n"), 0o600)
 	d.ArtifactDigest = ""
 	writeJSON(t, input, hostReviewPacketInput{hostEnvelope: fxEnv("2026-09-16T12:04:30Z"), Dispatch: d, DispatchRunID: "r3",
-		IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x"})
+		IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x", LedgerDir: f.ledger})
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", filepath.Join(t.TempDir(), "p")}); err == nil {
 		t.Fatal("unapproved dirty worktree accepted")
 	}
@@ -106,7 +106,7 @@ func TestGateCR2IndependenceRules(t *testing.T) {
 	d.Packet, d.ReviewPacketDigest, d.ArtifactDigest, d.Route, d.PreflightRecordDigest, d.Risk = nil, "", "", sameFamily, pf, model.RouteRiskLow
 	input := filepath.Join(t.TempDir(), "in.json")
 	writeJSON(t, input, hostReviewPacketInput{hostEnvelope: fxEnv("2026-09-16T12:04:20Z"), Dispatch: d, DispatchRunID: "final-same-family",
-		IssuingReason: hoststate.IssueFinal, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x"})
+		IssuingReason: hoststate.IssueFinal, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x", LedgerDir: f.ledger})
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", filepath.Join(t.TempDir(), "p")}); err == nil || err.Error() != hoststate.ReasonReviewerNotIndependent {
 		t.Fatalf("final audit same provider family: %v", err)
 	}

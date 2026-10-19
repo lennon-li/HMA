@@ -284,7 +284,7 @@ func (f *reviewFixture) packetAt(root, base, packetTS, runID string) error {
 		UnitID: "U1", Role: hoststate.RoleReview, Route: f.reviewer, PreflightRecordDigest: rpf,
 		BoundedTask: "review fixed packet", WorkContextDigest: "ctx-ming", ImplementationRecordDigest: f.implementation,
 		Risk: model.RouteRiskHigh,
-	}, DispatchRunID: runID, IssuingReason: hoststate.IssuePerChange, RepositoryRoot: root, BaseRevision: base, Task: "Review the change."})
+	}, DispatchRunID: runID, IssuingReason: hoststate.IssuePerChange, RepositoryRoot: root, BaseRevision: base, Task: "Review the change.", LedgerDir: f.ledger})
 	return run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", filepath.Join(f.t.TempDir(), "packet.md")})
 }
 

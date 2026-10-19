@@ -29,6 +29,36 @@ type Receipt struct {
 	ReportFiles          []ReportFile `json:"report_files"`
 }
 
+// LaunchIdentity is what a ledger receipt says, from launch on, about who
+// ran and against what: the actual route, the packet, and the target.
+type LaunchIdentity struct {
+	Agent                string `json:"agent"`
+	Model                string `json:"model"`
+	Provider             string `json:"provider"`
+	Effort               string `json:"effort"`
+	PacketSHA256         string `json:"packet_sha256"`
+	ProjectRoot          string `json:"project_root"`
+	LaunchHead           string `json:"launch_head"`
+	LaunchWorktreeSHA256 string `json:"launch_worktree_sha256"`
+}
+
+// Launch returns the receipt's launch identity.
+func (rc Receipt) Launch() LaunchIdentity {
+	return LaunchIdentity{Agent: rc.Agent, Model: rc.Model, Provider: rc.Provider, Effort: rc.Effort, PacketSHA256: rc.PacketSHA256,
+		ProjectRoot: rc.ProjectRoot, LaunchHead: rc.LaunchHead, LaunchWorktreeSHA256: rc.LaunchWorktreeSHA256}
+}
+
+// ReviewLaunchMatches reports whether a launch is exactly the one the
+// HMA-generated review dispatch d authorizes: its route (worker, model,
+// provider, effort), its packet, and its target (root, head, worktree).
+// Review import and launch reconciliation share it.
+func ReviewLaunchMatches(d *Dispatch, l LaunchIdentity) bool {
+	p := d.Packet
+	return p != nil && l.Agent == d.Route.WorkerID && l.Model == d.Route.Model && l.Provider == d.Route.Provider && l.Effort == d.Route.ReasoningEffort &&
+		l.PacketSHA256 == d.ReviewPacketDigest && l.LaunchHead == p.ExpectedLaunchHead && l.LaunchWorktreeSHA256 == p.ExpectedLaunchWorktree &&
+		sameDir(l.ProjectRoot, p.ProjectRoot)
+}
+
 // ReportFile is one report path the dispatcher saw written during the run.
 type ReportFile struct {
 	Path   string `json:"path"`
@@ -144,9 +174,7 @@ func EvaluateReviewImport(records []Record, in ReviewImport) (IndependentReview,
 		return IndependentReview{}, errors.New(ReasonReviewReceiptMismatch)
 	}
 	if rc.RunID != p.DispatchRunID || rc.Mode != "review" || rc.State != "completed" || rc.ExitCode == nil || *rc.ExitCode != 0 ||
-		rc.PacketSHA256 != d.ReviewPacketDigest || rc.LaunchHead != p.ExpectedLaunchHead || rc.LaunchWorktreeSHA256 != p.ExpectedLaunchWorktree ||
-		rc.Agent != d.Route.WorkerID || rc.Model != d.Route.Model || rc.Provider != d.Route.Provider || rc.Effort != d.Route.ReasoningEffort ||
-		!sameDir(rc.ProjectRoot, p.ProjectRoot) {
+		!ReviewLaunchMatches(d, rc.Launch()) {
 		return IndependentReview{}, errors.New(ReasonReviewReceiptMismatch)
 	}
 	// Launch must fall in the packet's half-open validity interval.

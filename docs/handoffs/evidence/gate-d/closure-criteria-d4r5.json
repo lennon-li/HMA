@@ -1,0 +1,223 @@
+{
+ "note": "Closure criteria for prior D4 findings (r1-r4); statuses and verdicts removed.",
+ "findings": [
+  {
+   "id": "D4-F01",
+   "title": "The host gate accepts a reconciliation made before a new launch",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4GateStaleLedger",
+     "expected": "The new unreserved launch closes the host gate before any transition append."
+    },
+    {
+     "method": "Add a review dispatch or loop evidence after a clean scan, then request progression",
+     "expected": "The prior scan is stale. A current clean scan remains a positive control."
+    }
+   ]
+  },
+  {
+   "id": "D4-F02",
+   "title": "Any historical approved plan can hide a new generation dependency rewind",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4HistoricalPlanHidesDependencyRevocation",
+     "expected": "The old plan is refused for the new generation, or the generation-bound plan still detects the U2 rewind."
+    },
+    {
+     "method": "Reconcile a run containing reservations from two plans, before and after each dependency rewind",
+     "expected": "Both generations use their own dependency graph. Legitimate earlier launches remain authorized."
+    }
+   ]
+  },
+  {
+   "id": "D4-F03",
+   "title": "Review dispatch validity ignores rewinds and lease generations",
+   "closure_check": [
+    {
+     "method": "Run both listed tests",
+     "expected": "Every review at or after the applicable rewind is unauthorized; a launch just before the rewind is authorized."
+    },
+    {
+     "method": "Renew a lease and launch the old review ID, then issue a fresh review in the new generation",
+     "expected": "Old dispatch remains revoked. The new dispatch is independently eligible when stage and route rules pass."
+    }
+   ]
+  },
+  {
+   "id": "D4-F04",
+   "title": "Review ledgers are neither bound nor included in scan coverage",
+   "closure_check": [
+    {
+     "method": "Run both listed tests",
+     "expected": "A wrong-namespace review is unauthorized or refused. The separate review ledger is scanned, the rogue becomes BLOCK, and the review gate closes."
+    },
+    {
+     "method": "Put implementation and review receipts in one namespace in reversed scan order",
+     "expected": "Both valid launches remain authorized and implementation attempt accounting is unchanged."
+    }
+   ]
+  },
+  {
+   "id": "D4-F05",
+   "title": "Rounding valid_from down authorizes pre-issuance launches",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4ExactLowerBound",
+     "expected": "Both earlier timestamps are unauthorized; the exact bound is authorized."
+    },
+    {
+     "method": "Launch at valid_until and one timestamp just before it",
+     "expected": "The upper tie is unauthorized. The strictly earlier in-window control is authorized."
+    }
+   ]
+  },
+  {
+   "id": "D4-F06",
+   "title": "An unknown journal controller bypasses all journal invariants",
+   "closure_check": [
+    {
+     "method": "Run both listed tests",
+     "expected": "The unknown controller and unreserved attempt are refused or become BLOCK."
+    },
+    {
+     "method": "Import the original admitted controller with its real reservation",
+     "expected": "The matching journal is accepted and introduces no BLOCK."
+    }
+   ]
+  },
+  {
+   "id": "D4-F07",
+   "title": "Journal clone baseline is discarded before reconciliation",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4JournalBaselineMutation",
+     "expected": "A changed baseline is refused or yields an unauthorized finding."
+    },
+    {
+     "method": "Test unchanged baseline, absent inventory {}, and a different live root",
+     "expected": "Matching empty baseline passes. Any changed baseline or live root fails."
+    }
+   ]
+  },
+  {
+   "id": "D4-F08",
+   "title": "Policy revocation is enforced by the hook but omitted by reconciliation",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4PolicyRevocation",
+     "expected": "The post-change launch is unauthorized, matching the hook's refusal."
+    },
+    {
+     "method": "Launch just before, at and after a recorded policy change, then restore the old policy",
+     "expected": "Before-change launch passes; tie and later launches fail. Restoring the policy does not revive the old generation."
+    }
+   ]
+  },
+  {
+   "id": "D4-F09",
+   "title": "A later clean scan recommends continuation while a historical BLOCK persists",
+   "closure_check": [
+    {
+     "method": "Run TestAuditD4LaterCleanScanRecommendation",
+     "expected": "The later clean scan preserves the BLOCK and recommends escalation."
+    },
+    {
+     "method": "Run a clean reconciliation with no historic violation",
+     "expected": "The clean control can still recommend continuation."
+    }
+   ]
+  },
+  {
+   "id": "D4R2-F01",
+   "title": "Review validity omits policy revocation and generation bounds",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD4RejectReviewAfterPolicyRevocation, ...RejectOldReviewAfterCorrectionGeneration, ...ReviewWallEnd, ...ReviewPolicyNotPresented",
+     "expected": "Pre-event and forward-progression controls stay authorized; policy, correction-generation and wall-end ties become unauthorized; no presented policy is refused."
+    },
+    {
+     "method": "Repeat through the CLI with retained generation plans and reversed event ingestion",
+     "expected": "Same classifications; missing generation or plan evidence refuses authorization."
+    }
+   ]
+  },
+  {
+   "id": "D4R2-F02",
+   "title": "Policy restoration revives a revoked reservation",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD4PolicyRestoreDoesNotReviveHook",
+     "expected": "Replay after restoring the policy is not launch eligible."
+    },
+    {
+     "method": "Fresh issuance after policy restoration; separately approved new generation",
+     "expected": "Fresh issuance under the revoked generation is refused; a new approved generation can reserve; hook and reconciliation agree at the revocation tie."
+    }
+   ]
+  },
+  {
+   "id": "D4R2-F03",
+   "title": "Reconciliation accepts the actual implementation worker as reviewer",
+   "closure_check": [
+    {
+     "method": "Run TestAuditorD4ReceiptRouteMustMatchReviewAuthority",
+     "expected": "The receipt produces UNAUTHORIZED_DISPATCH as BLOCK without a report import."
+    },
+    {
+     "method": "Vary worker, model, provider, effort, packet digest and target separately; check running and completed bound launches",
+     "expected": "Each variation is unauthorized; correctly bound launches stay authorized; an unfinished report grants no credit and does not by itself invalidate a legitimate launch."
+    }
+   ]
+  },
+  {
+   "id": "D4R3-F01",
+   "title": "Reconciliation observes policy drift without persisting revocation",
+   "closure_check": [
+    {
+     "method": "Run TestR3ReconcilePolicyObservationPersists and TestR3AddendumPolicyObservedRestoreMatrix",
+     "expected": "After a changed-policy reconcile and restore, replay and fresh issuance under the old generation are refused; a post-observation receipt is a BLOCK; before-change and new-generation controls stay eligible."
+    }
+   ]
+  },
+  {
+   "id": "D4R3-F02",
+   "title": "Global policy-pair deduplication loses revocation in later generations",
+   "closure_check": [
+    {
+     "method": "Run TestR3RepeatedPolicyChangeNewGeneration",
+     "expected": "A repeated change under a later generation is recorded; restoring the policy does not revive that generation; its post-change receipt is a BLOCK."
+    }
+   ]
+  },
+  {
+   "id": "D4R3-F03",
+   "title": "Review issued after a dependency rewind bypasses generation revocation",
+   "closure_check": [
+    {
+     "method": "Run TestR3ReviewIssuedAfterDependencyRewind and TestR3ReviewAfterDependencyRewindCLI; vary planning, route selection, correction",
+     "expected": "A dependency rewind before packet issuance refuses the packet or makes its launch a BLOCK; before-event, independent-unit, own-forward and fresh-generation controls remain authorized."
+    }
+   ]
+  },
+  {
+   "id": "D4R4-F01",
+   "title": "An unadmitted journal bypasses reconciliation at the transition gate",
+   "closure_check": [
+    {
+     "method": "Run TestR4IndependentUnadmittedJournalCannotBypassGate with no prior scan and after an earlier clean no-namespace scan (its own namespace-count precondition may no longer hold)",
+     "expected": "Import refuses the journal or the full gate requires reconciliation; no progression append. Explicit scan, admitted matching journal and legacy no-journal controls behave as before."
+    }
+   ]
+  },
+  {
+   "id": "D4R4-F02",
+   "title": "A journal without dispatch attempts skips controller admission binding",
+   "closure_check": [
+    {
+     "method": "Run TestR4IndependentEmptyJournalMustBindAdmission with zero-attempt matching and mismatched controls",
+     "expected": "Unknown or ambiguous controller is refused or BLOCK; an exactly matching empty journal stays clean."
+    }
+   ]
+  }
+ ]
+}

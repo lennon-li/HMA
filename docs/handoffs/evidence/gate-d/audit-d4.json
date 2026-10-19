@@ -1,0 +1,1258 @@
+{
+  "audit_id": "hma-gate-d-audit-20261018-d4",
+  "date": "2026-10-18T05:07:06.702399+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:a74c9f0901f89903ed0cb2425bc491ece4ea282d + tracked-diff-sha256:0ab71ef3d4a4c83c683c54e0f06770ea3d03aac4096a11fdc83b64b71cb14525 + untracked inventory FREEZE-START.json",
+  "isolation": "isolated",
+  "isolation_compromised": false,
+  "isolation_details": "Fresh auditor context. Shared host and workspace. Disposable copy for execution. No prior implementer narrative or audit verdict read before Phase 1 freeze.",
+  "verdict": "fix-required",
+  "gate_verdict": "FAIL",
+  "verdict_encoding": "FAIL is encoded as fix-required for the independent-audit report contract; these are the same decision.",
+  "scope": "Gate D part D4 only, trusted-host threat model",
+  "requirements": [
+    {
+      "id": "D4-01",
+      "requirement": "Every launch in namespace from first core record through import must match exactly one reservation or review dispatch. Labels alone confer no authorization.",
+      "source": "v5 \u00a71\u20132; v6 \u00a74.1",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Exact-one matching works for scanned runs. Review namespaces are not bound or fully scanned.",
+      "finding_ids": [
+        "D4-F04"
+      ],
+      "checks": [
+        {
+          "requirement": "No matching record",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Two matching records",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Scan all run namespaces from first core record",
+          "assessment": "NOT MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-02",
+      "requirement": "One record can authorize at most one ledger launch; unlaunched reservations remain charged and are listed.",
+      "source": "v6 \u00a74.2\u20133; Gate C scope \u00a70.1 row 3",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "No reuse, reservation charging and unlaunched listing pass supplied and independent controls.",
+      "finding_ids": [],
+      "checks": [
+        {
+          "requirement": "At most one launch per record",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Unlaunched reservations remain charged and listed",
+          "assessment": "MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-03",
+      "requirement": "Authorize only valid_from <= started_at < valid_until; equality at expiry or any revocation is unauthorized.",
+      "source": "v6 \u00a72; v7 \u00a71",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Upper-bound expiry and revocation ties are rejected. Subsecond launches before valid_from are authorized.",
+      "finding_ids": [
+        "D4-F05"
+      ],
+      "checks": [
+        {
+          "requirement": "Exact lower bound",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Exclusive upper bound and expiry ties",
+          "assessment": "MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-04",
+      "requirement": "Compute valid_until as minimum of original expiry and all applicable revocations in the whole chain, independent of ingestion order. Rewind affecting unit/dependency, terminal outcome, policy/contract change and generation expiry apply.",
+      "source": "v7 \u00a71\u20132",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Reservation transition/outcome minima and reversed event ordering work. Review revocation, generation-bound plan selection and policy revocation fail.",
+      "finding_ids": [
+        "D4-F02",
+        "D4-F03",
+        "D4-F08"
+      ],
+      "checks": [
+        {
+          "requirement": "Reservation min(original expiry, transition/outcome events)",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Expiry earlier than later revocation",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Core event ingestion order for tested reservation minima",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Review applicable revocations",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Generation-correct dependency graph",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Policy-change revocation provenance",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Contract-change rewind revokes implementation generation",
+          "assessment": "MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-05",
+      "requirement": "Bind leases to approval sequence+head anchor, reservation/review to own sequence and exactly one lease generation. Renewal never revives old records; new generation requires a new reservation.",
+      "source": "v7 \u00a71\u20132",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Reservation replay and old-generation launch refusal pass. Review dispatches have no owning lease generation.",
+      "finding_ids": [
+        "D4-F03"
+      ],
+      "checks": [
+        {
+          "requirement": "Reservation issuing approval identity and renewal does not revive old reservation",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "New generation needs new reservation",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Review dispatch identity bound to one lease generation",
+          "assessment": "NOT MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-06",
+      "requirement": "Review dispatch requires eligible stage and independent route. Review receipt mode must be review; reservation/review run ID collision is unauthorized.",
+      "source": "v5 \u00a71",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Mode refusal, run-ID collision and route independence controls pass. Review namespace and revocation checks fail.",
+      "finding_ids": [
+        "D4-F03",
+        "D4-F04"
+      ],
+      "checks": [
+        {
+          "requirement": "Review receipt mode and implementation relabelled review refusal",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Reservation/review run-ID collision refusal",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Independent reviewer route enforcement",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Review authority remains valid after issuance",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Review namespace agreement",
+          "assessment": "NOT MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-07",
+      "requirement": "Journal envelope digest, controller ID, live root, baseline digest and namespace must equal admission; each journal dispatch ID must have a reservation.",
+      "source": "v6 \u00a74.4\u20135; Gate C scope row 3",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "Envelope/namespace/unit mismatch checks pass when an admission matches. Unknown controllers skip checks. Baseline agreement is omitted.",
+      "finding_ids": [
+        "D4-F06",
+        "D4-F07"
+      ],
+      "checks": [
+        {
+          "requirement": "Envelope and namespace equality with matched admission",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Live root checked against repository during import",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Controller identity equality with admission",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Clone baseline equality with admission",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Every HMA-bound journal dispatch ID reserved",
+          "assessment": "NOT MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-08",
+      "requirement": "Any unauthorized launch yields unwaivable UNAUTHORIZED_DISPATCH BLOCK. Review snapshots or later reconciliation cannot conceal unresolved violation.",
+      "source": "v5 \u00a71\u20132; architecture \u00a77, \u00a79; user focus",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "Observed unauthorized entries produce unowned BLOCK findings. Actual approving review snapshots and later clean scans preserve them. The gate remains blocked. Recommendation output has a separate medium defect.",
+      "finding_ids": [
+        "D4-F09"
+      ],
+      "checks": [
+        {
+          "requirement": "UNAUTHORIZED_DISPATCH maps to unwaivable BLOCK",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Approving review snapshot preserves historical BLOCK",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Later clean reconciliation preserves historical BLOCK",
+          "assessment": "MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-09",
+      "requirement": "hma host reconcile must persist trustworthy complete evidence; forward transition requires clean current reconciliation. No host stage forgery or envelope widening.",
+      "source": "original objective Gate D; user D4 scope; architecture \u00a77, \u00a714",
+      "assessment": "PARTIAL",
+      "status": "fail",
+      "observation": "The CLI persists reconciliations and findings. Missing/new-reservation/stale-core reconciliations are refused. A new ledger launch and an omitted review ledger bypass freshness/coverage. The historical-plan check is also insufficient.",
+      "finding_ids": [
+        "D4-F01",
+        "D4-F02",
+        "D4-F04",
+        "D4-F09"
+      ],
+      "checks": [
+        {
+          "requirement": "Persist scan and BLOCK evidence without stage advance",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Missing reconciliation for reserved unit refused",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "New reservation or changed core invalidates saved scan",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "Current complete ledger reconciliation at host gate",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Generation-bound plan required for reconciliation",
+          "assessment": "NOT MET"
+        },
+        {
+          "requirement": "Next-action output agrees with unresolved BLOCK",
+          "assessment": "NOT MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log"
+      ]
+    },
+    {
+      "id": "D4-10",
+      "requirement": "D1\u2013D3, Gate B and Gate C behavior stays intact; D4 does not claim D5 criterion credit/findings disposition/full packet or D6 amendment.",
+      "source": "user scope; Gate C scope \u00a70.1",
+      "assessment": "MET",
+      "status": "pass",
+      "observation": "All supplied regression packages pass with the documented audit-copy settings. The post-freeze D4 handoff makes no D5/D6 completion or full Gate D pass claim. This audit grants no D5/D6 acceptance.",
+      "finding_ids": [],
+      "checks": [
+        {
+          "requirement": "D1\u2013D3, Gate B and Gate C supplied regression suite",
+          "assessment": "MET"
+        },
+        {
+          "requirement": "D5/D6 no premature handoff claims",
+          "assessment": "MET"
+        }
+      ],
+      "evidence_refs": [
+        "independent-final-race.log",
+        "test-adjusted.log",
+        "race-adjusted.log",
+        "vet.log",
+        "docs/handoffs/2026-10-18-gate-d-d4.md (read only after PHASE1 hash)"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D4-F01",
+      "title": "The host gate accepts a reconciliation made before a new launch",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "A clean scan opens the full host implementation-to-review gate. Adding an unreserved receipt without changing the core or host chains leaves that gate open. A fresh scan finds the rogue and then closes the gate. Root cause: The gate compares only the last reservation sequence, core head and saved unauthorized list. It does not bind or recheck the current ledger. It also returns immediately for units without reservations and does not use review dispatches or journal records as freshness inputs.",
+      "evidence": [
+        {
+          "source": "cmd/hma/transition.go:355\u2013382",
+          "observation": "A clean scan opens the full host implementation-to-review gate. Adding an unreserved receipt without changing the core or host chains leaves that gate open. A fresh scan finds the rogue and then closes the gate."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4GateStaleLedger",
+          "observation": "A clean scan opens the full host implementation-to-review gate. Adding an unreserved receipt without changing the core or host chains leaves that gate open. A fresh scan finds the rogue and then closes the gate."
+        }
+      ],
+      "requirement_ids": [
+        "D4-09"
+      ],
+      "test": "TestAuditD4GateStaleLedger",
+      "fix": {
+        "action": "Make the gated transition reconcile a stable ledger snapshot under a launch/transition serialization mechanism. Bind the namespace inventory, relevant host history, core head, plan-generation inputs and receipt content digests. Refuse progression when any bound input changes. Apply the requirement to review launches and imported journals, including units with no implementation reservation.",
+        "why": "A current core head does not prove the launch ledger stayed unchanged.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4GateStaleLedger",
+            "expected": "The new unreserved launch closes the host gate before any transition append."
+          },
+          {
+            "method": "Add a review dispatch or loop evidence after a clean scan, then request progression",
+            "expected": "The prior scan is stale. A current clean scan remains a positive control."
+          }
+        ],
+        "tradeoffs": "Adds ledger I/O and lock-order requirements. A scan alone cannot close a launch race unless dispatch and transitions share serialization or an immutable ledger generation.",
+        "alternative": "Seal the run namespace before final reconciliation and progression. This is simpler but stops additional launches until an explicit new execution window.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F02",
+      "title": "Any historical approved plan can hide a new generation dependency rewind",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "A new approved plan adds U1 -> U2. A new U1 reservation is issued. U2 then rewinds. Reconciliation with the old plan reports d-new-plan authorized and no violations. Reconciliation with the new plan reports the violation. Root cause: The CLI accepts a plan digest found in any historical approval, then uses that one dependency graph for every reservation generation.",
+      "evidence": [
+        {
+          "source": "cmd/hma/reconcile.go:62\u201375; internal/engine/revocation.go:22,53\u201355",
+          "observation": "A new approved plan adds U1 -> U2. A new U1 reservation is issued. U2 then rewinds. Reconciliation with the old plan reports d-new-plan authorized and no violations. Reconciliation with the new plan reports the violation."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4HistoricalPlanHidesDependencyRevocation",
+          "observation": "A new approved plan adds U1 -> U2. A new U1 reservation is issued. U2 then rewinds. Reconciliation with the old plan reports d-new-plan authorized and no violations. Reconciliation with the new plan reports the violation."
+        }
+      ],
+      "requirement_ids": [
+        "D4-04",
+        "D4-09"
+      ],
+      "test": "TestAuditD4HistoricalPlanHidesDependencyRevocation",
+      "fix": {
+        "action": "Resolve each reservation and review dispatch to its issuing generation and that issuer approval's accepted plan digest. Load the exact immutable plan artifact for that generation. Refuse missing or mismatched artifacts. Do not apply an arbitrary historical plan to other generations.",
+        "why": "Revocation dependencies belong to the plan that granted the authority. One current or historic graph is insufficient for a mixed-generation history.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4HistoricalPlanHidesDependencyRevocation",
+            "expected": "The old plan is refused for the new generation, or the generation-bound plan still detects the U2 rewind."
+          },
+          {
+            "method": "Reconcile a run containing reservations from two plans, before and after each dependency rewind",
+            "expected": "Both generations use their own dependency graph. Legitimate earlier launches remain authorized."
+          }
+        ],
+        "tradeoffs": "Requires retaining plan artifacts by digest and a migration policy for historic records. Do not silently choose the latest plan for old records.",
+        "alternative": "Require the caller to supply a complete digest-keyed plan bundle for all generations and fail closed when it is incomplete.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F03",
+      "title": "Review dispatch validity ignores rewinds and lease generations",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Reviews launched at a unit rewind, dependency rewind or whole-run rewind are authorized. The CLI also authorizes a real HMA-generated review packet after its unit rewinds. Root cause: Only reservations call RevokedAt. Review validity takes the packet TTL and one terminal timestamp. ReviewPacketBinding has no lease generation, and review validity is not capped at its generation's wall-time end.",
+      "evidence": [
+        {
+          "source": "internal/host/reconcile.go:195\u2013213; internal/host/host.go:192\u2013208",
+          "observation": "Reviews launched at a unit rewind, dependency rewind or whole-run rewind are authorized. The CLI also authorizes a real HMA-generated review packet after its unit rewinds."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4ReviewAfterRewind; TestAuditD4GeneratedReviewRewind",
+          "observation": "Reviews launched at a unit rewind, dependency rewind or whole-run rewind are authorized. The CLI also authorizes a real HMA-generated review packet after its unit rewinds."
+        }
+      ],
+      "requirement_ids": [
+        "D4-04",
+        "D4-05",
+        "D4-06"
+      ],
+      "test": "TestAuditD4ReviewAfterRewind; TestAuditD4GeneratedReviewRewind",
+      "fix": {
+        "action": "Persist the review dispatch's own identity and exact owning lease generation at issuance. Derive its end as the minimum of its TTL, its generation expiry and every applicable revocation. Preserve prior generation ends after renewal. Use a review-specific revocation rule so a legitimate forward move into review does not revoke the review itself.",
+        "why": "Gate A v7 applies the monotone minimum and generation identity to both reservation and review records.",
+        "verification": [
+          {
+            "method": "Run both listed tests",
+            "expected": "Every review at or after the applicable rewind is unauthorized; a launch just before the rewind is authorized."
+          },
+          {
+            "method": "Renew a lease and launch the old review ID, then issue a fresh review in the new generation",
+            "expected": "Old dispatch remains revoked. The new dispatch is independently eligible when stage and route rules pass."
+          }
+        ],
+        "tradeoffs": "Adds fields to review records and needs fail-closed handling for old packet records. Blindly reusing the reservation stage-exit rule would reject legitimate reviews.",
+        "alternative": "Invalidate and reissue all pending review packets on any generation change, with an explicit immutable cancellation record used during import.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F04",
+      "title": "Review ledgers are neither bound nor included in scan coverage",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "The classifier authorizes a review in an unrelated namespace. An actual imported review in a separate ledger and a rogue write launch in that ledger are both omitted by hma host reconcile. The full host review-to-verification gate then opens. Root cause: Namespaces come only from loop admissions. Review dispatches have no ledger namespace binding, and review import does not persist its ledger directory for reconciliation.",
+      "evidence": [
+        {
+          "source": "internal/host/reconcile.go:69\u201379,124\u2013136; cmd/hma/review.go:32\u201343,329; internal/host/host.go:192\u2013208",
+          "observation": "The classifier authorizes a review in an unrelated namespace. An actual imported review in a separate ledger and a rogue write launch in that ledger are both omitted by hma host reconcile. The full host review-to-verification gate then opens."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4ReviewNamespace; TestAuditD4ReviewLedgerCoverage",
+          "observation": "The classifier authorizes a review in an unrelated namespace. An actual imported review in a separate ledger and a rogue write launch in that ledger are both omitted by hma host reconcile. The full host review-to-verification gate then opens."
+        }
+      ],
+      "requirement_ids": [
+        "D4-01",
+        "D4-06",
+        "D4-09"
+      ],
+      "test": "TestAuditD4ReviewNamespace; TestAuditD4ReviewLedgerCoverage",
+      "fix": {
+        "action": "Bind the canonical ledger namespace when issuing each review dispatch. Require receipt import from that namespace. Include every run-declared review and implementation namespace in reconciliation for the whole run lifetime. Check a review receipt namespace before consuming its record.",
+        "why": "A scan of implementation admission namespaces cannot certify a separate review namespace.",
+        "verification": [
+          {
+            "method": "Run both listed tests",
+            "expected": "A wrong-namespace review is unauthorized or refused. The separate review ledger is scanned, the rogue becomes BLOCK, and the review gate closes."
+          },
+          {
+            "method": "Put implementation and review receipts in one namespace in reversed scan order",
+            "expected": "Both valid launches remain authorized and implementation attempt accounting is unchanged."
+          }
+        ],
+        "tradeoffs": "Changes review-packet input and persisted binding. Canonicalize paths and preserve legacy records explicitly rather than inventing a namespace.",
+        "alternative": "Require a single immutable run namespace at run creation and refuse every dispatch/import outside it.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F05",
+      "title": "Rounding valid_from down authorizes pre-issuance launches",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "For valid_from 2026-10-18T12:00:02.900Z, started_at values 12:00:02Z and 12:00:02.800Z are both authorized. The exact valid_from control is also authorized. Root cause: The comparison floors the lower bound to whole seconds even when the receipt provides subsecond precision.",
+      "evidence": [
+        {
+          "source": "internal/host/reconcile.go:138\u2013144",
+          "observation": "For valid_from 2026-10-18T12:00:02.900Z, started_at values 12:00:02Z and 12:00:02.800Z are both authorized. The exact valid_from control is also authorized."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4ExactLowerBound",
+          "observation": "For valid_from 2026-10-18T12:00:02.900Z, started_at values 12:00:02Z and 12:00:02.800Z are both authorized. The exact valid_from control is also authorized."
+        }
+      ],
+      "requirement_ids": [
+        "D4-03"
+      ],
+      "test": "TestAuditD4ExactLowerBound",
+      "fix": {
+        "action": "Compare started_at with the exact valid_from. If a whole-second receipt cannot establish ordering, reject the ambiguous launch or improve ledger timestamp precision. Do not widen the approved interval.",
+        "why": "The approved interval is [valid_from, valid_until). Host clock disclosure does not approve a lower-bound exception.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4ExactLowerBound",
+            "expected": "Both earlier timestamps are unauthorized; the exact bound is authorized."
+          },
+          {
+            "method": "Launch at valid_until and one timestamp just before it",
+            "expected": "The upper tie is unauthorized. The strictly earlier in-window control is authorized."
+          }
+        ],
+        "tradeoffs": "Existing whole-second receipts may fail closed for legitimate same-second launches. Raising ledger precision avoids that compatibility cost.",
+        "alternative": "Keep whole-second receipts but delay launch to the next second after reservation issuance and retain the exact comparison.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F06",
+      "title": "An unknown journal controller bypasses all journal invariants",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Changing an admitted journal's controller run_id to unknown-controller and adding an unreserved attempt is accepted by loop-evidence import. Reconciliation reports no unauthorized entries. Root cause: The admission lookup uses the supplied controller ID. If no admission matches, reconciliation continues before checking the journal attempts.",
+      "evidence": [
+        {
+          "source": "internal/host/reconcile.go:167\u2013188; cmd/hma/loop.go:200\u2013206",
+          "observation": "Changing an admitted journal's controller run_id to unknown-controller and adding an unreserved attempt is accepted by loop-evidence import. Reconciliation reports no unauthorized entries."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4JournalUnknownController; TestAuditD4JournalControllerMutation",
+          "observation": "Changing an admitted journal's controller run_id to unknown-controller and adding an unreserved attempt is accepted by loop-evidence import. Reconciliation reports no unauthorized entries."
+        }
+      ],
+      "requirement_ids": [
+        "D4-07"
+      ],
+      "test": "TestAuditD4JournalUnknownController; TestAuditD4JournalControllerMutation",
+      "fix": {
+        "action": "For an HMA-bound journal, require exactly one matching admission. Validate controller, unit, envelope, namespace and generation against it. Check every nonempty journal dispatch ID for a reservation even when admission lookup fails; record the mismatch as UNAUTHORIZED_DISPATCH.",
+        "why": "Absence of a matching admission is evidence of missing authority, not evidence that no hook ran.",
+        "verification": [
+          {
+            "method": "Run both listed tests",
+            "expected": "The unknown controller and unreserved attempt are refused or become BLOCK."
+          },
+          {
+            "method": "Import the original admitted controller with its real reservation",
+            "expected": "The matching journal is accepted and introduces no BLOCK."
+          }
+        ],
+        "tradeoffs": "Legacy HMA-bound journals without admissions will no longer produce a clean D4 result. They need an explicit migration or a disclosed non-authorizing compatibility path.",
+        "alternative": "Reject non-admitted HMA-bound journals before executing the recapture command. Keep independent legacy evidence ingestion outside launch authorization.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F07",
+      "title": "Journal clone baseline is discarded before reconciliation",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "After reservation admission with the empty baseline digest, changing state.repo.workspace_baseline_inventory is accepted by loop-evidence import. Reconciliation still reports d-1 authorized with no violations. Root cause: The importer parses only repo.root, never records the journal baseline digest in LoopEvidence, and reconciliation compares only envelope, namespace and unit.",
+      "evidence": [
+        {
+          "source": "cmd/hma/loop.go:35\u201339,200\u2013206; internal/host/host.go:326\u2013340; internal/host/reconcile.go:176\u2013178",
+          "observation": "After reservation admission with the empty baseline digest, changing state.repo.workspace_baseline_inventory is accepted by loop-evidence import. Reconciliation still reports d-1 authorized with no violations."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4JournalBaselineMutation",
+          "observation": "After reservation admission with the empty baseline digest, changing state.repo.workspace_baseline_inventory is accepted by loop-evidence import. Reconciliation still reports d-1 authorized with no violations."
+        }
+      ],
+      "requirement_ids": [
+        "D4-07"
+      ],
+      "test": "TestAuditD4JournalBaselineMutation",
+      "fix": {
+        "action": "At journal import, compute workspace_baseline_inventory's canonical digest using the same absent-inventory rule as admission. Bind that digest and the canonical live root to the captured journal evidence. Compare the full association tuple to the exact admission before returning a clean result.",
+        "why": "Gate A v6 \u00a74.4 expressly requires clone baseline and live-root agreement, not just envelope agreement.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4JournalBaselineMutation",
+            "expected": "A changed baseline is refused or yields an unauthorized finding."
+          },
+          {
+            "method": "Test unchanged baseline, absent inventory {}, and a different live root",
+            "expected": "Matching empty baseline passes. Any changed baseline or live root fails."
+          }
+        ],
+        "tradeoffs": "Adds evidence fields. Historic journal records lack enough retained association data for complete proof and must remain non-authorizing until reconstructed.",
+        "alternative": "Retain the raw journal as an immutable content-addressed artifact and derive the association during reconciliation. This costs more I/O but preserves re-verification inputs.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F08",
+      "title": "Policy revocation is enforced by the hook but omitted by reconciliation",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "diagnosis": "Changing the current policy makes replay return launch_eligible false. A launch that ignores that refusal is nevertheless classified authorized by hma host reconcile. Root cause: Reconciliation has no current-policy input or immutable policy-change event history. RevokedAt handles transitions and outcomes, so it cannot include the policy-change time in the validity minimum.",
+      "evidence": [
+        {
+          "source": "cmd/hma/reconcile.go:19\u201323,47\u201375; internal/engine/revocation.go:34\u201357",
+          "observation": "Changing the current policy makes replay return launch_eligible false. A launch that ignores that refusal is nevertheless classified authorized by hma host reconcile."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4PolicyRevocation",
+          "observation": "Changing the current policy makes replay return launch_eligible false. A launch that ignores that refusal is nevertheless classified authorized by hma host reconcile."
+        }
+      ],
+      "requirement_ids": [
+        "D4-04"
+      ],
+      "test": "TestAuditD4PolicyRevocation",
+      "fix": {
+        "action": "Record applicable policy changes with immutable timestamps and digests under trusted host control, bound to affected lease generations. Include those events in the whole-chain minimum. Capture current policy identity during reconciliation and refuse a clean result when required revocation provenance is missing.",
+        "why": "A launch forbidden by the active lease cannot become authorized merely because the importer lacks policy history.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4PolicyRevocation",
+            "expected": "The post-change launch is unauthorized, matching the hook's refusal."
+          },
+          {
+            "method": "Launch just before, at and after a recorded policy change, then restore the old policy",
+            "expected": "Before-change launch passes; tie and later launches fail. Restoring the policy does not revive the old generation."
+          }
+        ],
+        "tradeoffs": "Needs an immutable policy-event representation and host integration. Reading only the latest policy file cannot distinguish valid historic launches from post-change launches.",
+        "alternative": "Containment: refuse reconciliation of any generation whose policy identity no longer matches until the host can provide trustworthy change-time provenance. This may overblock legitimate earlier launches.",
+        "effort": "medium",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D4-F09",
+      "title": "A later clean scan recommends continuation while a historical BLOCK persists",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "diagnosis": "After a rogue receipt records an unauthorized-dispatch BLOCK, removing only the scratch receipt and reconciling again returns CONTINUE_HMA_TRANSITION. The historical BLOCK remains and the gate correctly rejects progression. Root cause: The result next_action depends only on this scan's unauthorized list and does not inspect projected unresolved findings.",
+      "evidence": [
+        {
+          "source": "cmd/hma/reconcile.go:109\u2013113",
+          "observation": "After a rogue receipt records an unauthorized-dispatch BLOCK, removing only the scratch receipt and reconciling again returns CONTINUE_HMA_TRANSITION. The historical BLOCK remains and the gate correctly rejects progression."
+        },
+        {
+          "source": "independent-final-race.log; TestAuditD4LaterCleanScanRecommendation",
+          "observation": "After a rogue receipt records an unauthorized-dispatch BLOCK, removing only the scratch receipt and reconciling again returns CONTINUE_HMA_TRANSITION. The historical BLOCK remains and the gate correctly rejects progression."
+        }
+      ],
+      "requirement_ids": [
+        "D4-08",
+        "D4-09"
+      ],
+      "test": "TestAuditD4LaterCleanScanRecommendation",
+      "fix": {
+        "action": "Choose the result next_action from both the scan and the projected core findings after the transaction. Return ESCALATE_TO_HUMAN while an unresolved unauthorized-dispatch BLOCK remains, even when this scan is clean.",
+        "why": "The human decision surface must not direct an action the deterministic gate refuses.",
+        "verification": [
+          {
+            "method": "Run TestAuditD4LaterCleanScanRecommendation",
+            "expected": "The later clean scan preserves the BLOCK and recommends escalation."
+          },
+          {
+            "method": "Run a clean reconciliation with no historic violation",
+            "expected": "The clean control can still recommend continuation."
+          }
+        ],
+        "tradeoffs": "No authorization expansion is required. Keep historical evidence visible; do not clear the BLOCK to make the recommendation consistent.",
+        "alternative": "Expose an explicit blocked field and derive one required next action centrally from the same gate decision.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    }
+  ],
+  "evidence_ledger": [
+    {
+      "id": "E-00",
+      "source": "FREEZE-START.json; tracked.diff; SOURCE-MANIFEST.json; COPY-VERIFICATION.json",
+      "observation": "Frozen HEAD, tracked diff and all untracked SHA-256 values; 259 copied primary files match the source manifest."
+    },
+    {
+      "id": "E-01",
+      "source": "REQUIREMENTS.json",
+      "observation": "Requirements and failure hypotheses were recorded before reading the diff."
+    },
+    {
+      "id": "E-02",
+      "source": "test-adjusted.json; test-adjusted.log",
+      "observation": "Supplied suite passes in all 12 packages. Auditor tests alone are excluded by -skip ^TestAuditD4."
+    },
+    {
+      "id": "E-03",
+      "source": "vet.json; vet.log",
+      "observation": "go vet ./... exits 0 with no diagnostics."
+    },
+    {
+      "id": "E-04",
+      "source": "race-adjusted.json; race-adjusted.log",
+      "observation": "Supplied race suite passes in all 12 packages without FAIL or DATA RACE diagnostics."
+    },
+    {
+      "id": "E-05",
+      "source": "independent-final-race.json; independent-final-race.log",
+      "observation": "17 top-level auditor tests: 12 fail on requirement assertions and 5 pass. There are no DATA RACE diagnostics. Assertions fail in both host classification and CLI import/gate behavior."
+    },
+    {
+      "id": "E-06",
+      "source": "source/internal/host/audit_d4_test.go; source/cmd/hma/audit_d4_test.go",
+      "observation": "Auditor-authored tests are retained outside the repository."
+    },
+    {
+      "id": "E-07",
+      "source": "test.log; race.log; run-check.py; run-check-adjusted.py",
+      "observation": "Initial environment failures and exact environment corrections are retained."
+    },
+    {
+      "id": "E-08",
+      "source": "go-version.txt; git-version.txt; system.txt",
+      "observation": "Go 1.27.1 linux/amd64; Git 2.43.0; Linux environment."
+    },
+    {
+      "id": "E-09",
+      "source": "FREEZE-END.json",
+      "observation": "HEAD, git status --short, tracked binary diff digest and every untracked SHA-256 match the starting freeze, including ignored-scope artifact hashes."
+    },
+    {
+      "id": "E-10",
+      "source": "docs/handoffs/2026-10-18-gate-d-d4.md",
+      "observation": "The handoff explicitly discloses lower-bound flooring, omitted policy-change reconstruction, loop-only namespace coverage and missing journal baseline. These disclosures match the reproduced behavior. They do not amend Gate A v5/v6/v7 or waive the original requirements. No D5/D6 completion, criterion-credit or full Gate D pass claim was found."
+    }
+  ],
+  "limitations": [
+    "Fresh audit conversation with no implementer narrative or previous verdict supplied. Primary comments and supplied tests were inspected as artifacts only. Blinding is context isolation on a shared trusted host, not a separate VM, container or OS-enforced repository read-only mount.",
+    "The target is a dirty main worktree, not a committed D4 revision. Freeze manifests and the copied source hashes identify the exact bytes. The copy excludes .git, .serena/, architecture-amendment handoffs and the initially blinded D4 handoff.",
+    "All tests ran in the disposable source copy. CLI fixture helpers create synthetic chained approvals in scratch stores. No real human approval or production stage transition was exercised. Host gate functions were exercised directly; no finding asserts that human challenge binding was forged.",
+    "The initial full test and race runs failed because GOTMPDIR differed from TMPDIR and the copy lacked VCS metadata for nested builds. Corrected runs use one temporary root and GOFLAGS=-buildvcs=false. Original failure logs are retained; they are not attributed to D4 defects.",
+    "The host clock and host-managed ledger are trusted, as required by the scope. The audit does not assess a hostile operating system, compromised host store, or arbitrary forged host records.",
+    "No approved callable Jev adapter was exposed in the host tool set. The auditor used the explicit fallback path. No worker dispatch, nested agent CLI or model API was invoked.",
+    "D5 criterion credit, imported findings disposition/full packet and D6 amendment are excluded. Their full acceptance is not inferred from passing regression tests.",
+    "Proposed fixes have not been implemented or independently validated. The race detector found no DATA RACE diagnostics in the supplied suite or the independent negative controls. This does not prove absence of other races.",
+    "A clean supplied suite is regression evidence only. The named journal association test does not cover all five required association fields, and its passing result does not override the independent failures."
+  ],
+  "phase1_frozen": true,
+  "phase1_frozen_at": "2026-10-18T05:07:06.702419+00:00",
+  "unblinding": {
+    "performed": true,
+    "after_phase1_sha256": "d2c61bd65e3045354dcdaefb75dd86ffa9f31cd1b852235bd5c85fb9f71499db",
+    "source": "docs/handoffs/2026-10-18-gate-d-d4.md",
+    "source_sha256": "54400be8b78b93bb2d77194063f13ee7af640d3098e7845c7e2dd7bd5b96ca5d",
+    "observation": "The handoff explicitly discloses lower-bound flooring, omitted policy-change reconstruction, loop-only namespace coverage and missing journal baseline. These disclosures match the reproduced behavior. They do not amend Gate A v5/v6/v7 or waive the original requirements. No D5/D6 completion, criterion-credit or full Gate D pass claim was found.",
+    "effect": "No finding or verdict changed. D4-10 scope-claim coverage is now MET instead of its pre-unblinding unknown subcheck."
+  },
+  "improvement_opportunities": [],
+  "improvement_opportunity_reason": "The smallest useful improvements are the required corrections listed in the findings. No separate redesign is proposed.",
+  "next_action": {
+    "action": "REMEDIATE_D4_AND_RETURN_FOR_INDEPENDENT_REAUDIT",
+    "rationale": "Eight observed high findings prevent D4 acceptance; one medium finding misstates the required next action.",
+    "owner": "HMA orchestrator / implementer, followed by the independent auditor",
+    "proposed_route": {
+      "worker": "Ming (implementation author named in the post-freeze handoff)",
+      "provider": "Anthropic",
+      "model": "claude-opus-5-5",
+      "reasoning_effort": "Not stated in the source handoff. The HMA host must select an approved value and attest the exact route before dispatch.",
+      "access_service": "Claude Code CLI (source handoff declaration; no runtime attestation in this audit)",
+      "condition": "Proposed route only. Coordinator must establish deterministic eligibility and exact-route hi preflight. No worker was dispatched by this auditor."
+    },
+    "permission_envelope": "This audit remains read-only on /home/yeli/repos. Proposed remediation: bounded D4 code and meaningful regression tests; no git publication, stage advance, criterion credit or D6 amendment.",
+    "exact_approval_required": "No new approval is requested by this audit. The human-gated coordinator must supply any challenge-bound approval required by the existing HMA workflow before a stage transition. The read-only auditor has no remediation write authority.",
+    "stop_conditions": [
+      "Do not claim Gate D/D4 passed while any high finding remains.",
+      "Stop if a correction requires contract changes outside the approved design; return that change to the human gate.",
+      "Return the exact corrected snapshot and raw checks for independent re-audit."
+    ]
+  },
+  "phase1_sha256": "d2c61bd65e3045354dcdaefb75dd86ffa9f31cd1b852235bd5c85fb9f71499db",
+  "finalized_at": "2026-10-18T05:08:45.071062+00:00",
+  "target_unchanged": true,
+  "freeze_end": "FREEZE-END.json",
+  "commands": [
+    {
+      "label": "test",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T04:59:45.657769+00:00",
+      "end": "2026-10-18T05:01:28.813911+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestD5HMABoundLaunchRequiresEligibleTrue (0.04s)",
+        "--- FAIL: TestD5ResumeReplayUsesSameDispatchID (0.03s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t92.921s",
+        "--- FAIL: TestGateBR2SyntheticMarkerDirectory (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticSecondSeed (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticForeignSeed (0.00s)",
+        "--- FAIL: TestSyntheticStoreAcceptsSeededRun (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesCopiedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesSymlinkedMarker (0.01s)",
+        "--- FAIL: TestSyntheticStoreRefusesOtherRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesNonSeedRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesAlteredSeed (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.015s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/test.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "vet",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T04:59:54.263517+00:00",
+      "end": "2026-10-18T04:59:56.406293+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "output": "/tmp/hma-gate-d-20261018-d4/vet.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "race",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T04:59:54.303470+00:00",
+      "end": "2026-10-18T05:02:02.281506+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestD5HMABoundLaunchRequiresEligibleTrue (0.04s)",
+        "--- FAIL: TestD5ResumeReplayUsesSameDispatchID (0.04s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t108.852s",
+        "--- FAIL: TestGateBR2SyntheticMarkerDirectory (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticSecondSeed (0.00s)",
+        "--- FAIL: TestGateBR2SyntheticForeignSeed (0.00s)",
+        "--- FAIL: TestSyntheticStoreAcceptsSeededRun (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesCopiedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesSymlinkedMarker (0.00s)",
+        "--- FAIL: TestSyntheticStoreRefusesOtherRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesNonSeedRun (0.00s)",
+        "--- FAIL: TestSeedRouteApprovalRefusesAlteredSeed (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/scripts/dogfood/hostinput\t0.036s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/race.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "test-adjusted",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-skip",
+        "^TestAuditD4",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:02:14.977975+00:00",
+      "end": "2026-10-18T05:03:53.019444+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "output": "/tmp/hma-gate-d-20261018-d4/test-adjusted.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "race-adjusted",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-skip",
+        "^TestAuditD4",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:02:16.106575+00:00",
+      "end": "2026-10-18T05:04:17.931194+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "output": "/tmp/hma-gate-d-20261018-d4/race-adjusted.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "independent",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/host",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditD4"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:01:42.861116+00:00",
+      "end": "2026-10-18T05:01:47.143448+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditD4ExactLowerBound (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02Z (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02.800Z (0.00s)",
+        "--- FAIL: TestAuditD4ReviewAfterRewind (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_U (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_D (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_ (0.00s)",
+        "--- FAIL: TestAuditD4ReviewNamespace (0.00s)",
+        "--- FAIL: TestAuditD4JournalUnknownController (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.010s",
+        "--- FAIL: TestAuditD4GateStaleLedger (0.74s)",
+        "--- FAIL: TestAuditD4JournalBaselineMutation (0.69s)",
+        "--- FAIL: TestAuditD4JournalControllerMutation (0.75s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t2.838s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/independent.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "independent-expanded",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./internal/host",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditD4"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:03:05.487479+00:00",
+      "end": "2026-10-18T05:03:14.337507+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditD4ExactLowerBound (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02Z (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02.800Z (0.00s)",
+        "--- FAIL: TestAuditD4ReviewAfterRewind (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_U (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_D (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_ (0.00s)",
+        "--- FAIL: TestAuditD4ReviewNamespace (0.00s)",
+        "--- FAIL: TestAuditD4JournalUnknownController (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.004s",
+        "--- FAIL: TestAuditD4GateStaleLedger (1.00s)",
+        "--- FAIL: TestAuditD4JournalBaselineMutation (0.87s)",
+        "--- FAIL: TestAuditD4JournalControllerMutation (0.90s)",
+        "--- FAIL: TestAuditD4PolicyRevocation (0.68s)",
+        "--- FAIL: TestAuditD4GeneratedReviewRewind (1.13s)",
+        "--- FAIL: TestAuditD4LaterCleanScanRecommendation (0.71s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t7.416s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/independent-expanded.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "review-ledger",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditD4ReviewLedgerCoverage$"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:03:31.788572+00:00",
+      "end": "2026-10-18T05:03:34.433199+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditD4ReviewLedgerCoverage (1.23s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t1.230s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/review-ledger.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "historical-plan",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditD4HistoricalPlanHidesDependencyRevocation$"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:04:26.092500+00:00",
+      "end": "2026-10-18T05:04:28.302118+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditD4HistoricalPlanHidesDependencyRevocation (0.63s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t0.639s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/historical-plan.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    },
+    {
+      "label": "independent-final-race",
+      "argv": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "./internal/host",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditD4"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261018-d4/source",
+      "start": "2026-10-18T05:04:56.285617+00:00",
+      "end": "2026-10-18T05:05:07.831925+00:00",
+      "exit_code": 1,
+      "fail_lines": [
+        "--- FAIL: TestAuditD4ExactLowerBound (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02Z (0.00s)",
+        "    --- FAIL: TestAuditD4ExactLowerBound/2026-10-18T12:00:02.800Z (0.00s)",
+        "--- FAIL: TestAuditD4ReviewAfterRewind (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_U (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_D (0.00s)",
+        "    --- FAIL: TestAuditD4ReviewAfterRewind/rewind_ (0.00s)",
+        "--- FAIL: TestAuditD4ReviewNamespace (0.00s)",
+        "--- FAIL: TestAuditD4JournalUnknownController (0.00s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/internal/host\t0.018s",
+        "--- FAIL: TestAuditD4GateStaleLedger (0.79s)",
+        "--- FAIL: TestAuditD4JournalBaselineMutation (0.73s)",
+        "--- FAIL: TestAuditD4JournalControllerMutation (0.70s)",
+        "--- FAIL: TestAuditD4PolicyRevocation (0.55s)",
+        "--- FAIL: TestAuditD4GeneratedReviewRewind (0.91s)",
+        "--- FAIL: TestAuditD4LaterCleanScanRecommendation (0.60s)",
+        "--- FAIL: TestAuditD4ReviewLedgerCoverage (1.12s)",
+        "--- FAIL: TestAuditD4HistoricalPlanHidesDependencyRevocation (0.81s)",
+        "FAIL",
+        "FAIL\tgithub.com/lennon-li/HMA/cmd/hma\t7.962s",
+        "FAIL"
+      ],
+      "output": "/tmp/hma-gate-d-20261018-d4/independent-final-race.log",
+      "truncated": false,
+      "environment": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261018-d4/gocache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261018-d4/gotmp",
+        "GOFLAGS": "-buildvcs=false",
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    }
+  ],
+  "verification_summary": {
+    "supplied_test_packages": 12,
+    "supplied_suite": "passed after documented environment corrections",
+    "vet": "passed",
+    "supplied_race_suite": "passed after documented environment corrections",
+    "auditor_top_level_tests": 17,
+    "auditor_failing_top_level_tests": 12,
+    "auditor_passing_top_level_tests": 5,
+    "race_diagnostics": 0,
+    "repository_unchanged": true,
+    "mandatory_exit_test_names_present_and_executed": [
+      "TestOneReservationPerLaunchNoReuse",
+      "TestUnlaunchedReservationCharged",
+      "TestUnreservedDispatchBlocks",
+      "TestEnvelopeAndAssociationMustMatchAdmission",
+      "TestLaunchAtValidUntilUnauthorized",
+      "TestLaunchAtRevocationTimeUnauthorized",
+      "TestValidUntilMinOfTwoRevocations",
+      "TestExpiryThenLaterRevocation",
+      "TestRenewalDoesNotReviveOldGeneration",
+      "TestNewGenerationNeedsNewReservation",
+      "TestLaunchAtEarliestEndUnauthorized",
+      "TestLaunchBeforeEarliestEndAuthorized"
+    ]
+  }
+}

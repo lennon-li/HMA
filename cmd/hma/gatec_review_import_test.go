@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lennon-li/HMA/internal/engine"
 	hoststate "github.com/lennon-li/HMA/internal/host"
 	"github.com/lennon-li/HMA/internal/model"
 	"github.com/lennon-li/HMA/internal/repostate"
@@ -32,6 +33,7 @@ type reviewFixture struct {
 	reason                    hoststate.IssuingReason
 	importTS                  string
 	base, packetTS            string
+	policy, planDigest        string
 }
 
 // step runs one host command with v as input and returns the new host head.
@@ -74,7 +76,7 @@ func (f *reviewFixture) packet(preflightTS, packetTS, expires, runID string) {
 		UnitID: "U1", Role: hoststate.RoleReview, Route: f.reviewer, PreflightRecordDigest: rpf,
 		BoundedTask: "review fixed packet", WorkContextDigest: "ctx-ming", ImplementationRecordDigest: f.implementation,
 		ArtifactDigest: hoststate.ReviewArtifactDigest(f.head, f.diff, ""), Risk: model.RouteRiskHigh, FinalValidation: f.final,
-	}, DispatchRunID: runID, IssuingReason: f.reason, RepositoryRoot: f.root, BaseRevision: f.base, Task: "Review the change."})
+	}, DispatchRunID: runID, IssuingReason: f.reason, RepositoryRoot: f.root, BaseRevision: f.base, Task: "Review the change.", LedgerDir: f.ledger})
 	f.packetTS = packetTS
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", f.packetPath}); err != nil {
 		f.t.Fatalf("review-packet: %v", err)
@@ -93,7 +95,8 @@ func newReviewFixture(t *testing.T, reason hoststate.IssuingReason, final bool) 
 	t.Helper()
 	f := &reviewFixture{t: t, store: t.TempDir(), ledger: t.TempDir(), reviewWorker: "ming", final: final, reason: reason}
 	f.root, f.base, f.head, f.diff = ciRepo(t)
-	seedRouteAuthorizationAt(t, f.store, "run", "U1", "approved-route", f.base)
+	f.planDigest, f.policy = retainReviewPlan(t, f.store)
+	seedRouteAuthorizationPlan(t, f.store, "run", "U1", "approved-route", f.base, f.planDigest)
 	bindRepository(t, f.store, "run", f.root, "repo")
 	f.impl = cliRoute("jax", "openai", "openai", "luna", "gpt", "approved-route", false)
 	f.reviewer = cliRoute("ming", "anthropic", "anthropic", "sonnet", "claude", "approved-route", true)
@@ -161,7 +164,53 @@ func (f *reviewFixture) importReport(reportPath string) error {
 	return run([]string{"host", "review-import", "--input", input, "--store", f.store})
 }
 
+// gate reconciles the run's ledgers (as a host must before a gated
+// transition, Gate D D4) and then checks the review gate.
 func (f *reviewFixture) gate() error {
+	f.t.Helper()
+	input := filepath.Join(f.t.TempDir(), "reconcile.json")
+	writeJSON(f.t, input, hostReconcileInput{hostEnvelope: fxEnv("2026-09-16T12:09:00Z"), PolicyPath: f.policy})
+	if _, err := captureStdout(f.t, func() error { return run([]string{"host", "reconcile", "--input", input, "--store", f.store}) }); err != nil {
+		return err
+	}
+	return f.gateOnly()
+}
+
+// retainReviewPlan stores the accepted plan of the review fixture's lease
+// generation (U1, two hours of wall time from the route approval) and
+// writes its route policy; it returns the plan digest and policy path.
+func retainReviewPlan(t *testing.T, storePath string) (string, string) {
+	t.Helper()
+	pol := model.RoutePolicy{Version: model.RoutePolicyVersionV1}
+	proj, _ := model.NormalizeRoutePolicy(pol)
+	policyDigest, _ := engine.RoutePolicyDigest(proj)
+	all := []string{model.PermissionReadOnly, model.PermissionBoundedWrite, model.PermissionNoExternalEffect}
+	p := model.Plan{Schema: model.PlanSchema, RunID: "run", AcceptanceContractDigest: "contract", PolicyDigest: policyDigest,
+		Units: []model.PlanUnit{{ID: "U1", Behavior: "b", CriteriaAdvanced: []string{"C1"}, AllowedFiles: []string{"a"}, AllowedActions: []string{"edit"},
+			ForbiddenFiles: []string{"docs"}, ForbiddenActions: []string{"push"}, PreChangeEvidence: "failing test", MinimumImplementation: "m",
+			ReuseAnalysis: "r", PermissionClasses: all, ImplementerRoute: "impl", EscalationRoute: "esc", ValidatorRoute: "val",
+			IndependenceRequirement: "family", VerificationCommands: []model.Check{{Executable: "go", Argv: []string{"test"}, WorkingDir: "."}},
+			RequiredEvidence: []string{"go test"}, StopConditions: []string{"s"}, RollbackConditions: []string{"r"}, EscalationConditions: []string{"e"},
+			NonGoals: []string{"n"}, Dependencies: []string{},
+			Budgets: model.UnitBudgets{MaxComplexity: 5, MaxFiles: 3, MaxDiffLines: 100, MaxToolSteps: 50, MaxRetries: 1, MaxAttempts: 3, MaxWallMinutes: 120, CostCeiling: 10}}}}
+	pb, _ := json.Marshal(p)
+	plan, digest, err := model.ParsePlan(pb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := retainPlan(storePath, plan, digest); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "policy.json")
+	b, _ := json.Marshal(pol)
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return digest, path
+}
+
+// gateOnly checks the review gate without reconciling first.
+func (f *reviewFixture) gateOnly() error {
 	return requireHostTransitionGate(f.store, transition.Input{RunID: "run", ExpectedApproval: model.ApprovalBinding{
 		UnitID: "U1", CurrentStage: model.StageImplementationReview, ProposedTargetStage: model.StageVerification,
 		ProducedHeadDigest: f.head, DiffDigest: f.diff,
@@ -359,7 +408,7 @@ func TestGateCPacketInsideRepositoryRefused(t *testing.T) {
 	d.Packet, d.ReviewPacketDigest = nil, ""
 	input := filepath.Join(t.TempDir(), "in.json")
 	writeJSON(t, input, hostReviewPacketInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:04:30Z"},
-		Dispatch: d, DispatchRunID: "other-run", IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x"})
+		Dispatch: d, DispatchRunID: "other-run", IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x", LedgerDir: f.ledger})
 	out := filepath.Join(f.root, "packet.md")
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", out}); err == nil {
 		t.Fatal("packet inside repository accepted")
@@ -377,7 +426,7 @@ func TestGateCPacketRunIDReuseRefused(t *testing.T) {
 	d.Packet, d.ReviewPacketDigest = nil, ""
 	input := filepath.Join(t.TempDir(), "in.json")
 	writeJSON(t, input, hostReviewPacketInput{hostEnvelope: hostEnvelope{RunID: "run", Actor: "fury", Timestamp: "2026-09-16T12:04:30Z"},
-		Dispatch: d, DispatchRunID: f.runID, IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x"})
+		Dispatch: d, DispatchRunID: f.runID, IssuingReason: hoststate.IssuePerChange, RepositoryRoot: f.root, BaseRevision: f.base, Task: "x", LedgerDir: f.ledger})
 	out := filepath.Join(t.TempDir(), "packet2.md")
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", out}); err == nil || err.Error() != hoststate.ReasonReviewPacketMismatch {
 		t.Fatalf("err = %v", err)

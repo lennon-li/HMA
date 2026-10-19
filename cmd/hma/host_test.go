@@ -55,11 +55,18 @@ func seedLoopRun(t *testing.T, dir string) (string, string) {
 // seedRouteAuthorizationAt seeds a route approval that binds base.
 func seedRouteAuthorizationAt(t *testing.T, dir, runID, unitID, digest, base string) *store.Store {
 	t.Helper()
+	return seedRouteAuthorizationPlan(t, dir, runID, unitID, digest, base, "plan")
+}
+
+// seedRouteAuthorizationPlan is seedRouteAuthorizationAt with the approval
+// bound to the accepted plan digest planDigest.
+func seedRouteAuthorizationPlan(t *testing.T, dir, runID, unitID, digest, base, planDigest string) *store.Store {
+	t.Helper()
 	s := store.New(dir)
 	a := &model.ApprovalBinding{UnitID: unitID, RunID: runID, TransitionDigest: digest,
 		CurrentStage: model.StageRouteSelection, ProposedTargetStage: model.StageImplementationAuthorization,
 		RepositoryIdentityDigest: "repo", BaseRevisionDigest: base, StageTimeDigest: "head:1",
-		AcceptedPlanDigest: "plan", ChallengeNonce: "nonce-route", Approver: "human", Timestamp: "2026-09-16T11:00:00Z"}
+		AcceptedPlanDigest: planDigest, ChallengeNonce: "nonce-route", Approver: "human", Timestamp: "2026-09-16T11:00:00Z"}
 	rec := model.Record{UnitID: unitID, Kind: model.KindStageTransition, Version: 1,
 		Metadata: model.RecordMetadata{RunID: runID, Sequence: 1, Timestamp: "2026-09-16T11:00:00Z", Actor: "human"},
 		Stage:    model.StageRouteSelection, Control: model.ControlApproved, Approval: a}
