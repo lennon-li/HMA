@@ -48,19 +48,9 @@ func runHostReconcile(args []string) error {
 	if _, err := validateHostEnvelope(in.hostEnvelope); err != nil {
 		return err
 	}
-	policyDigest := ""
-	if in.PolicyPath != "" {
-		var policy model.RoutePolicy
-		if err := decodeStrictFile(in.PolicyPath, &policy); err != nil {
-			return err
-		}
-		proj, err := model.NormalizeRoutePolicy(policy)
-		if err != nil {
-			return err
-		}
-		if policyDigest, err = engine.RoutePolicyDigest(proj); err != nil {
-			return err
-		}
+	policyDigest, err := policyDigestFile(in.PolicyPath)
+	if err != nil {
+		return err
 	}
 	var out reconcileResult
 	var rec hoststate.Record
@@ -138,6 +128,23 @@ func runHostReconcile(args []string) error {
 	return json.NewEncoder(os.Stdout).Encode(out)
 }
 
+// policyDigestFile returns the digest of the route policy at path, or ""
+// when path is empty.
+func policyDigestFile(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	var policy model.RoutePolicy
+	if err := decodeStrictFile(path, &policy); err != nil {
+		return "", err
+	}
+	proj, err := model.NormalizeRoutePolicy(policy)
+	if err != nil {
+		return "", err
+	}
+	return engine.RoutePolicyDigest(proj)
+}
+
 // reconcileNow scans every declared namespace and reconciles it at now; it
 // also returns the stored plans it used.
 func reconcileNow(storePath string, core []model.Record, history []hoststate.Record, policyDigest string, now time.Time) (hoststate.Reconciliation, map[string]model.Plan, error) {
@@ -203,10 +210,11 @@ func scanLedger(ns string) []hoststate.LedgerRun {
 // core findings carry an unauthorized-dispatch BLOCK, and, for a run that
 // declares any ledger namespace, unless the latest reconciliation is clean,
 // no launch authority or journal was recorded after it, it is bound to the
-// current core head, and the ledger still holds exactly what it reconciled.
+// current core head, the ledger still holds exactly what it reconciled, and
+// the presented current policy (policyPath, required) is the one it used.
 // The caller holds the host run lock, so no hook or import can record
 // anything meanwhile.
-func requireReconciledLaunches(storePath, runID, unit string, history []hoststate.Record) error {
+func requireReconciledLaunches(storePath, runID, unit, policyPath string, history []hoststate.Record) error {
 	core, err := store.New(storePath).Load(runID)
 	if err != nil {
 		return err
@@ -238,6 +246,14 @@ func requireReconciledLaunches(storePath, runID, unit string, history []hoststat
 	}
 	if hoststate.InventoryDigest(runs) != last.Reconciliation.InventoryDigest {
 		return required
+	}
+	// A policy edit after the reconciliation is a change it never saw.
+	current, err := policyDigestFile(policyPath)
+	if err != nil {
+		return err
+	}
+	if current == "" || current != last.Reconciliation.PolicyDigest {
+		return errors.New(hoststate.ReasonPolicyNotCurrent)
 	}
 	return nil
 }

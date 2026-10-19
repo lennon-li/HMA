@@ -47,6 +47,11 @@ type Input struct {
 	// (ACCEPTANCE_CRITERIA -> PLANNING with a contract digest) and optional
 	// later; HMA recomputes its digest and never trusts a supplied one.
 	AcceptanceContract json.RawMessage `json:"acceptance_contract,omitempty"`
+	// PolicyPath names the current effective route policy. The host gate at
+	// the coding progression edges requires it whenever the run declares a
+	// ledger namespace, and refuses unless its digest is the one the latest
+	// launch reconciliation used (Gate D, D4). Apply does not read it.
+	PolicyPath string `json:"policy_path,omitempty"`
 }
 
 // Result reports what was recorded. MachineAdvanced is always false: the

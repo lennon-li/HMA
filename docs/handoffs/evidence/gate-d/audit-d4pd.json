@@ -1,0 +1,320 @@
+{
+  "audit_id": "hma-gate-d-audit-20261019-d4pd",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:0b7aff6c9783c6d905aea72878cb037aabe1e69c; worktree-diff-sha256:355c1d33450e968e35be5c6df63b29d641a162477ba5138983d1ca9c3616cebf",
+  "isolation": "isolated",
+  "verdict": "pass",
+  "objective_authority": "Lennon, 2026-10-19: \"the transition gate must take the current policy and refuse when it differs from the policy the last launch reconciliation used.\" User audit scope; docs/architecture.md \u00a7\u00a77,9,14,18; AGENTS.md.",
+  "date": "2026-10-19T14:53:04.936345+00:00",
+  "requirements": [
+    {
+      "id": "R1",
+      "statement": "Both implementation authorization -> review and review -> verification refuse any declared ledger namespace unless a current policy is explicitly supplied and readable.",
+      "status": "pass",
+      "evidence_refs": [
+        "E2",
+        "E3",
+        "E4"
+      ],
+      "observation": "Both coding edges reject omitted paths, nonexistent files, directories, empty/null/malformed documents, unknown fields, multiple documents, invalid versions and permissions. CLI refusals occur before the gate hook and preserve both record chains."
+    },
+    {
+      "id": "R2",
+      "statement": "Canonical policy digest must equal the latest launch reconciliation policy digest; field-order/whitespace changes may pass, semantic policy drift must fail.",
+      "status": "pass",
+      "evidence_refs": [
+        "E2",
+        "E3",
+        "E4",
+        "E5"
+      ],
+      "observation": "Both edges reject semantic drift. Canonical-equivalent JSON and permission-set order changes pass. Missing or wrong policy digest on the latest reconciliation fails even when an older digest matches."
+    },
+    {
+      "id": "R3",
+      "statement": "Reconciliation under the new policy restores eligibility only if all preexisting ledger/review/transition requirements also pass; merely presenting a changed policy must not restore eligibility.",
+      "status": "pass",
+      "evidence_refs": [
+        "E3",
+        "E4"
+      ],
+      "observation": "Clean new-policy reconciliation reopens the implementation gate. A dated policy observation followed by clean reconciliation reopens the review gate. An undated change with a prior launched review keeps the unauthorized-dispatch BLOCK. An old reconciliation snapshot and reconciliation without policy remain closed."
+    },
+    {
+      "id": "R4",
+      "statement": "No-ledger-namespace runs preserve existing behavior and do not acquire a policy requirement.",
+      "status": "pass",
+      "evidence_refs": [
+        "E2",
+        "E3",
+        "E4",
+        "E6"
+      ],
+      "observation": "No namespace returns before policy-file access. Omitted, absent and directory paths preserve legacy reconciliation-gate behavior. Existing no-namespace Gate B/C transition tests pass."
+    },
+    {
+      "id": "R5",
+      "statement": "Policy comparison and ledger gate execute under host run lock on the same snapshot used for transition append.",
+      "status": "pass",
+      "evidence_refs": [
+        "E2",
+        "E3",
+        "E4"
+      ],
+      "observation": "CLI supplies the locked host history to the gate and holds that lock through transition.Apply. A waiting transition reads policy after lock acquisition. A real approved fixture transition appends exactly one record before a contending host operation acquires the lock."
+    },
+    {
+      "id": "R6",
+      "statement": "Preserve D1-D4 ledger freshness, integrity and namespace isolation plus Gate B approval binding and Gate C independent review.",
+      "status": "pass",
+      "evidence_refs": [
+        "E2",
+        "E3",
+        "E4",
+        "E6",
+        "E7"
+      ],
+      "observation": "The existing suite and four permitted earlier auditor probes pass. Namespace enumeration, prior unauthorized findings, latest reconciliation, core-head binding and ledger inventory checks remain ahead of the new comparison. No scoped D1-D4, Gate B or Gate C regression was reproduced."
+    },
+    {
+      "id": "R7",
+      "statement": "Run full go test, go vet, go test -race and independent negative controls outside repository; inspect FAIL output even on zero exit status.",
+      "status": "pass",
+      "evidence_refs": [
+        "E3",
+        "E4",
+        "E5",
+        "E6",
+        "E7",
+        "E8"
+      ],
+      "observation": "Full normal and race suites, go vet, and 11 targeted top-level tests pass after correcting audit-environment/fixture errors. Both exit status and FAIL lines were checked. The deliberate removed-check overlay fails 22 refusal subcases."
+    },
+    {
+      "id": "R8",
+      "statement": "Verify repository status, binary diff digest and all untracked hashes unchanged; maintain blinding through frozen Phase 1.",
+      "status": "pass",
+      "evidence_refs": [
+        "E1",
+        "E9"
+      ],
+      "observation": "HEAD, branch, git status, binary diff digest, all Git-visible untracked file hashes and copied tracked bytes match the start freeze. No prohibited handoff or temporary audit context was semantically read. No unblinding was performed."
+    }
+  ],
+  "findings": [],
+  "improvement_opportunities": [],
+  "limitations": [
+    "Isolation is context/blinding isolation in this fresh audit session. The filesystem and OS are shared. Repository read-only behavior is procedural; the sandbox technically permits repository writes. No original repository writes were performed.",
+    "The trusted host supplies the effective current policy path. This change does not discover an organization-wide policy or defend against a malicious host supplying an obsolete alternate file. A fully hostile host and unsynchronized external filesystem mutations are outside the stated threat model.",
+    "Outcome checks use local synthetic stores, fixtures and approval records. They do not constitute production execution or real human authorization. Some namespace enumeration checks deliberately use synthetic in-memory history to isolate the gate condition.",
+    "Scope is the six changed Go files plus necessary unchanged call paths. .serena/ and docs/handoffs/2026-10-16-arch-amendment-*.md are excluded. The modified docs/handoffs/2026-10-18-gate-d-d4.md was not read, including after Phase 1. All other /tmp/hma-gate-* and /tmp/claude-* context was avoided except the specifically permitted test file.",
+    "Audit-environment and audit-fixture failures are retained in E10. They are not implementation findings. GOFLAGS=-buildvcs=false is required for nested builds in the Git-metadata-free source copy. GOTMPDIR and TMPDIR both point inside this output directory.",
+    "The current policy check covers host CLI transitions. transition.Apply remains a trusted lower-level API and does not read policy_path; this is explicit in its Input documentation and was not broadened by this change.",
+    "No approved Jev tool was exposed in the host tool inventory. Advisory judgments used the auditor/human fallback. No nested agent CLI, model API, subagent dispatch or optional unblinding was used.",
+    "Persisted test stdout/stderr logs are complete. Some console displays were truncated; the report relies on complete log artifacts, not those excerpts. Passing tests do not prove correctness for every possible input."
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "source": "freeze-start.json; source-manifest.json; requirements-before-diff.json",
+      "observation": "Target frozen and requirements written before reading the scoped diff."
+    },
+    {
+      "id": "E2",
+      "source": "scoped.diff; code-evidence.txt; source/",
+      "observation": "Six changed Go files inspected. Source copy includes 164 tracked files and no handoff documents."
+    },
+    {
+      "id": "E3",
+      "source": "independent-result.json; independent.log; source/cmd/hma/auditor_d4pd_test.go; source/cmd/hma/auditor_d4pd_outcome_test.go; source/cmd/hma/auditor_d4_previous_test.go",
+      "observation": "11 top-level tests and 44 total test/subtest pass records. Includes original policy-drift probe and three D4 regression probes."
+    },
+    {
+      "id": "E4",
+      "source": "independent-race-result.json; independent-race.log",
+      "observation": "Same 11 top-level tests pass with the Go race detector. No FAIL line or race report."
+    },
+    {
+      "id": "E5",
+      "source": "mutation-overlay.json; mutant-reconcile.go; mutant-result.json; mutant.log",
+      "observation": "Removing only the current-policy check causes all 22 policy-refusal matrix subcases to fail; current and equivalent-policy controls still pass. Expected negative-control failure."
+    },
+    {
+      "id": "E6",
+      "source": "test-result.json; test.log",
+      "observation": "Full go test -count=1 ./... passes in all 12 packages. No FAIL lines."
+    },
+    {
+      "id": "E7",
+      "source": "race-final-result.json; race-final.log",
+      "observation": "Full go test -race -count=1 ./... passes. No FAIL lines or race report."
+    },
+    {
+      "id": "E8",
+      "source": "vet-result.json; vet.log; version-result.json; version.log; environment.json; run_checks.py",
+      "observation": "go vet ./... passes. Go reports go1.27.1 linux/amd64. Runner records argument vectors, cwd, environment overrides, times, exit codes and complete output log paths."
+    },
+    {
+      "id": "E9",
+      "source": "freeze-end.json; freeze-comparison.json",
+      "observation": "All freeze comparisons match. The full binary diff hash includes the handoff file that was not semantically inspected. Untracked hashes include the ignored-from-audit paths without semantic inspection."
+    },
+    {
+      "id": "E10",
+      "source": "environment-initial-test.log; environment-initial-test-result.json; environment-initial-race.log; environment-initial-race-result.json; fixture-initial-independent.log; fixture-append-initial-independent.log; race.log; race-result.json",
+      "observation": "Retained failed audit attempts. Initial environment split GOTMPDIR from TMPDIR and omitted -buildvcs=false. Initial review fixture lacked findings import; initial full-append fixture illegally bound produced head/diff at implementation authorization. These were corrected only in the audit environment/test files. The intermediate full race execution retains the latter fixture failure."
+    }
+  ],
+  "checks": {
+    "test": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261019-d4pd/source",
+      "environment_overrides": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261019-d4pd/gocache",
+        "GOMODCACHE": "/tmp/hma-gate-d-20261019-d4pd/gomodcache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "started": "2026-10-19T14:47:25.576079+00:00",
+      "ended": "2026-10-19T14:49:34.160091+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "start_failure": false,
+      "log_truncated": false
+    },
+    "vet": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261019-d4pd/source",
+      "environment_overrides": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261019-d4pd/gocache",
+        "GOMODCACHE": "/tmp/hma-gate-d-20261019-d4pd/gomodcache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "started": "2026-10-19T14:48:49.348539+00:00",
+      "ended": "2026-10-19T14:48:49.731696+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "start_failure": false,
+      "log_truncated": false
+    },
+    "race-final": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/tmp/hma-gate-d-20261019-d4pd/source",
+      "environment_overrides": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261019-d4pd/gocache",
+        "GOMODCACHE": "/tmp/hma-gate-d-20261019-d4pd/gomodcache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "started": "2026-10-19T14:50:13.583395+00:00",
+      "ended": "2026-10-19T14:52:44.581562+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "start_failure": false,
+      "log_truncated": false
+    },
+    "independent": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditorD4"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261019-d4pd/source",
+      "environment_overrides": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261019-d4pd/gocache",
+        "GOMODCACHE": "/tmp/hma-gate-d-20261019-d4pd/gomodcache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "started": "2026-10-19T14:49:14.571400+00:00",
+      "ended": "2026-10-19T14:49:28.196621+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "start_failure": false,
+      "log_truncated": false
+    },
+    "independent-race": {
+      "command": [
+        "/home/yeli/.local/go/bin/go",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "./cmd/hma",
+        "-run",
+        "^TestAuditorD4"
+      ],
+      "cwd": "/tmp/hma-gate-d-20261019-d4pd/source",
+      "environment_overrides": {
+        "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin",
+        "GOCACHE": "/tmp/hma-gate-d-20261019-d4pd/gocache",
+        "GOMODCACHE": "/tmp/hma-gate-d-20261019-d4pd/gomodcache",
+        "GOTMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "TMPDIR": "/tmp/hma-gate-d-20261019-d4pd/tmp",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-buildvcs=false"
+      },
+      "started": "2026-10-19T14:49:28.249289+00:00",
+      "ended": "2026-10-19T14:49:46.246221+00:00",
+      "exit_code": 0,
+      "fail_lines": [],
+      "start_failure": false,
+      "log_truncated": false
+    }
+  },
+  "phase1_frozen": true,
+  "unblinding_performed": false,
+  "requested_route": {
+    "worker": "liz",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "mode": "review/read-only",
+    "provenance": "user dispatch label; runtime model identity not independently attested"
+  },
+  "next_action": {
+    "action": "HUMAN_REVIEW_AUDIT",
+    "owner": "Lennon",
+    "rationale": "The scoped policy-drift change has satisfactory independent evidence. Human authority remains required for acceptance and any stage transition.",
+    "route": "Human review; no worker execution proposed",
+    "permission_envelope": "Read the frozen audit and evidence; no repository or store mutation, commit, push, release or stage advancement.",
+    "exact_approval_required": "Lennon must explicitly accept or reject this audit for HEAD 0b7aff6c9783c6d905aea72878cb037aabe1e69c and working-tree binary diff SHA-256 355c1d33450e968e35be5c6df63b29d641a162477ba5138983d1ca9c3616cebf. This report grants no transition approval.",
+    "stop_and_escalation_conditions": "Stop if the target digest changes or new failing evidence appears. Return the changed target or contradiction for independent review."
+  },
+  "phase1_sha256": "25502148a8d50e6b5c4202fb96a6801ba2e437958c400bdc456cc815f7deeedb",
+  "phase1_file": "PHASE1.json"
+}

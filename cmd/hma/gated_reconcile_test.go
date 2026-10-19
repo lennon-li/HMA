@@ -40,7 +40,7 @@ func (f *attemptFixture) reconcile() (reconcileResult, error) {
 
 func (f *attemptFixture) gate() error {
 	h, _ := hoststate.NewStore(f.store).Load("run")
-	return requireReconciledLaunches(f.store, "run", "U1", h)
+	return requireReconciledLaunches(f.store, "run", "U1", f.policy, h)
 }
 
 // End to end: an authorized launch reconciles clean and opens the gate; an
@@ -352,7 +352,7 @@ func TestUnadmittedJournalClosesGate(t *testing.T) {
 		t.Fatal(err)
 	}
 	h, _ := hoststate.NewStore(f.store).Load("run")
-	if err := requireReconciledLaunches(f.store, "run", "U1", h); err == nil || err.Error() != hoststate.ReasonReconciliationRequired {
+	if err := requireReconciledLaunches(f.store, "run", "U1", f.policy, h); err == nil || err.Error() != hoststate.ReasonReconciliationRequired {
 		t.Fatalf("gate before reconciliation: %v", err)
 	}
 	res, err := f.reconcile()
@@ -361,5 +361,36 @@ func TestUnadmittedJournalClosesGate(t *testing.T) {
 	}
 	if err := f.gate(); err == nil {
 		t.Fatal("gate opened after unadmitted journal")
+	}
+}
+
+// Lennon decision 2026-10-19 (Liz D4 r2 open question): the gate needs the
+// current policy and refuses when it is not the one the latest
+// reconciliation used; reconciling under the new policy reopens it.
+func TestGateRequiresReconciledPolicy(t *testing.T) {
+	f := newAttemptFixture(t, 3)
+	f.mustAttempt(f.request(f.loopDir, 1, "not-launched", nil))
+	if _, err := f.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.gate(); err != nil {
+		t.Fatalf("control: %v", err)
+	}
+	h, _ := hoststate.NewStore(f.store).Load("run")
+	if err := requireReconciledLaunches(f.store, "run", "U1", "", h); err == nil || err.Error() != hoststate.ReasonPolicyNotCurrent {
+		t.Fatalf("no policy presented: %v", err)
+	}
+	changed, _ := json.Marshal(model.RoutePolicy{Version: model.RoutePolicyVersionV1, PermissionClasses: []string{model.PermissionReadOnly}})
+	if err := os.WriteFile(f.policy, changed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.gate(); err == nil || err.Error() != hoststate.ReasonPolicyNotCurrent {
+		t.Fatalf("policy drift: %v", err)
+	}
+	if _, err := f.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.gate(); err != nil {
+		t.Fatalf("after reconciling the new policy: %v", err)
 	}
 }

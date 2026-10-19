@@ -102,6 +102,7 @@ const (
 	ReasonReviewTargetChanged         = "HOST_REVIEW_TARGET_CHANGED"
 	ReasonReconciliationRequired      = "HOST_RECONCILIATION_REQUIRED"
 	ReasonUnauthorizedDispatch        = "HOST_UNAUTHORIZED_DISPATCH"
+	ReasonPolicyNotCurrent            = "HOST_POLICY_NOT_CURRENT"
 	ReasonReservationConflict         = "HOST_RESERVATION_CONFLICT"
 	ReasonLeaseInactive               = "HOST_LEASE_INACTIVE"
 	ReasonAdmissionRefused            = "HOST_LOOP_ADMISSION_REFUSED"

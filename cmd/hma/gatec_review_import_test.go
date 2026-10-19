@@ -211,7 +211,7 @@ func retainReviewPlan(t *testing.T, storePath string) (string, string) {
 
 // gateOnly checks the review gate without reconciling first.
 func (f *reviewFixture) gateOnly() error {
-	return requireHostTransitionGate(f.store, transition.Input{RunID: "run", ExpectedApproval: model.ApprovalBinding{
+	return requireHostTransitionGate(f.store, transition.Input{RunID: "run", PolicyPath: f.policy, ExpectedApproval: model.ApprovalBinding{
 		UnitID: "U1", CurrentStage: model.StageImplementationReview, ProposedTargetStage: model.StageVerification,
 		ProducedHeadDigest: f.head, DiffDigest: f.diff,
 	}})
