@@ -611,8 +611,16 @@ func requireApprovedRepository(history []hoststate.Record, core []model.Record, 
 	if p == nil || !sameStore(repo.Root, p.ProjectRoot) || a.RepositoryIdentityDigest != repo.RepositoryIdentity || p.BaseRevision != a.BaseRevisionDigest {
 		return bad
 	}
-	if err := repostate.VerifyBase(context.Background(), p.ProjectRoot, a.BaseRevisionDigest); err != nil {
+	if err := repostate.VerifyBase(boundedCtx(), p.ProjectRoot, a.BaseRevisionDigest); err != nil {
 		return bad
 	}
 	return nil
+}
+
+// boundedCtx is a context that ends: a git read that blocks (a FIFO named as
+// an alternates file, say) must not hold the run locks forever.
+func boundedCtx() context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	time.AfterFunc(10*time.Minute, cancel)
+	return ctx
 }

@@ -657,3 +657,24 @@ func TestSnapshotSeesFilesHiddenByChangedGitignore(t *testing.T) {
 		t.Fatal("file hidden by an uncommitted .gitignore change kept the worktree digest")
 	}
 }
+
+// Liz D5a r4 F08: the environment a git command runs in carries no user or
+// system configuration and disables fsmonitor and hooks.
+func TestGitEnvDisablesConfiguredLaunchers(t *testing.T) {
+	env := GitEnv([]string{"GIT_CONFIG_GLOBAL=/home/x/.gitconfig", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=diff.external", "GIT_CONFIG_VALUE_0=evil", "PATH=/usr/bin"})
+	want := map[string]bool{"GIT_CONFIG_GLOBAL=/dev/null": false, "GIT_CONFIG_SYSTEM=/dev/null": false, "GIT_CONFIG_NOSYSTEM=1": false,
+		"GIT_CONFIG_KEY_0=core.fsmonitor": false, "GIT_CONFIG_KEY_1=core.hooksPath": false, "GIT_CONFIG_KEY_2=log.showSignature": false, "PATH=/usr/bin": false}
+	for _, e := range env {
+		if _, ok := want[e]; ok {
+			want[e] = true
+		}
+		if strings.Contains(e, "evil") || strings.Contains(e, ".gitconfig") || strings.Contains(e, "diff.external") {
+			t.Fatalf("caller configuration leaked: %s", e)
+		}
+	}
+	for e, seen := range want {
+		if !seen {
+			t.Fatalf("missing %s in %v", e, env)
+		}
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/lennon-li/HMA/internal/engine"
 	hoststate "github.com/lennon-li/HMA/internal/host"
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 	"github.com/lennon-li/HMA/internal/transition"
 )
@@ -294,6 +295,18 @@ func runTransition(args []string) error {
 	err = hoststate.NewStore(*storePath).WithRunLock(in.RunID, func(history []hoststate.Record) error {
 		if err := requireHostTransitionGateIn(*storePath, in, history); err != nil {
 			return err
+		}
+		if o := in.ExpectedApproval.ProposedTargetOutcome; o == model.OutcomeVerifiedSuccess || o == model.OutcomeVerifiedWithWaivers {
+			// The closure artifact is what HMA observes now in the
+			// transition's repository at its base.
+			snap, err := repostate.Snapshot(context.Background(), in.RepositoryRoot, in.BaseRevision, in.DirtyWorktreeApproved)
+			if err != nil {
+				return err
+			}
+			artifact := hoststate.ReviewArtifactDigest(snap.Head, snap.Diff, snap.Worktree)
+			if err := requireIndependentCredit(*storePath, in.RunID, artifact, history); err != nil {
+				return err
+			}
 		}
 		if transitionGateHook != nil {
 			transitionGateHook()

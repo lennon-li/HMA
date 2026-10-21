@@ -93,10 +93,19 @@ func (f *reviewFixture) packet(preflightTS, packetTS, expires, runID string) {
 
 func newReviewFixture(t *testing.T, reason hoststate.IssuingReason, final bool) *reviewFixture {
 	t.Helper()
+	return newReviewFixtureSeeded(t, reason, final, func(f *reviewFixture) {
+		f.planDigest, f.policy = retainReviewPlan(t, f.store)
+		seedRouteAuthorizationPlan(t, f.store, "run", "U1", "approved-route", f.base, f.planDigest)
+	})
+}
+
+// newReviewFixtureSeeded is newReviewFixture with seed writing the core
+// chain up to and including the unit's route approval.
+func newReviewFixtureSeeded(t *testing.T, reason hoststate.IssuingReason, final bool, seed func(*reviewFixture)) *reviewFixture {
+	t.Helper()
 	f := &reviewFixture{t: t, store: t.TempDir(), ledger: t.TempDir(), reviewWorker: "ming", final: final, reason: reason}
 	f.root, f.base, f.head, f.diff = ciRepo(t)
-	f.planDigest, f.policy = retainReviewPlan(t, f.store)
-	seedRouteAuthorizationPlan(t, f.store, "run", "U1", "approved-route", f.base, f.planDigest)
+	seed(f)
 	bindRepository(t, f.store, "run", f.root, "repo")
 	f.impl = cliRoute("jax", "openai", "openai", "luna", "gpt", "approved-route", false)
 	f.reviewer = cliRoute("ming", "anthropic", "anthropic", "sonnet", "claude", "approved-route", true)

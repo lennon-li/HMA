@@ -28,7 +28,13 @@ import (
 // Worktree is empty for a clean worktree, which is the revision-reproducible
 // case; it is set only for an approved dirty-worktree capture, where the
 // committed revision alone no longer describes what was seen.
-type State struct{ Head, Diff, Worktree string }
+// State is a repository snapshot. Staged is true when the index differs from
+// HEAD; it is read in the same call as the digest it accompanies, so the
+// digest (which binds the staged entries) vouches for it.
+type State struct {
+	Head, Diff, Worktree string
+	Staged               bool
+}
 
 // Trim removes the trailing newline git appends to single-value output.
 func Trim(s string) string { return strings.TrimSpace(s) }
@@ -61,7 +67,22 @@ var repositorySelectingEnv = []string{
 // It also sets GIT_NO_REPLACE_OBJECTS, so a Git command the evidence runs
 // reads the committed objects HMA snapshot, not replacement objects.
 func GitEnv(environ []string) []string {
-	return append(gitEnv(environ), "GIT_NO_REPLACE_OBJECTS=1")
+	// Configuration that can launch a program during a read-only command
+	// is overridden: no system or global file, no fsmonitor hook, no hooks
+	// path. (diff.external and textconv drivers cannot be unset this way;
+	// the argv validator requires --no-ext-diff and --no-textconv.)
+	env := make([]string, 0, len(environ)+8)
+	for _, e := range gitEnv(environ) {
+		if name, _, _ := strings.Cut(e, "="); !strings.HasPrefix(name, "GIT_CONFIG") {
+			env = append(env, e)
+		}
+	}
+	return append(env, "GIT_NO_REPLACE_OBJECTS=1", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_CONFIG_COUNT=5", "GIT_CONFIG_KEY_0=core.fsmonitor", "GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=core.hooksPath", "GIT_CONFIG_VALUE_1=/dev/null",
+		"GIT_CONFIG_KEY_2=log.showSignature", "GIT_CONFIG_VALUE_2=false",
+		"GIT_CONFIG_KEY_3=diff.ignoreSubmodules", "GIT_CONFIG_VALUE_3=all",
+		"GIT_CONFIG_KEY_4=status.ignoreSubmodules", "GIT_CONFIG_VALUE_4=all")
 }
 
 // SelectingVariableSet returns the name of the first repository-selecting
@@ -94,7 +115,9 @@ func gitEnv(environ []string) []string {
 			env = append(env, entry)
 		}
 	}
-	return env
+	// Read-only observation must not rewrite the index: the fingerprint of
+	// .git would otherwise change under our own reads.
+	return append(env, "GIT_OPTIONAL_LOCKS=0")
 }
 
 // observationConfig overrides every Git setting that can make status or diff
@@ -259,11 +282,18 @@ func Snapshot(ctx context.Context, root, baseRevision string, dirtyApproved bool
 	}
 	sum := sha256.Sum256([]byte(diff))
 	s := State{Head: Trim(head), Diff: hex.EncodeToString(sum[:])}
+	// The index is read once, and both the digest and the staged flag come
+	// from that one read, so they cannot describe two different indexes.
+	index, err := Output(ctx, root, "ls-files", "--stage", "-z", "--")
+	if err != nil {
+		return State{}, err
+	}
+	tree, err := Output(ctx, root, "ls-tree", "-r", "-z", "--full-tree", s.Head)
+	if err != nil {
+		return State{}, err
+	}
+	s.Staged = indexDiffersFromTree(index, tree)
 	if dirty {
-		index, err := Output(ctx, root, "ls-files", "--stage", "-z", "--")
-		if err != nil {
-			return State{}, err
-		}
 		s.Worktree, err = worktreeContentDigest(root, s.Head, paths, stagedEntries(index, paths))
 		if err != nil {
 			return State{}, err
@@ -455,4 +485,31 @@ func stagedEntries(index string, paths []string) map[string]string {
 		out[path] += meta
 	}
 	return out
+}
+
+// indexDiffersFromTree reports whether the index (ls-files --stage -z) holds
+// any entry that is not exactly the tree's (ls-tree -r -z): a different mode
+// or object, an added or removed path, or a conflict stage.
+func indexDiffersFromTree(index, tree string) bool {
+	want := map[string]string{}
+	for _, e := range strings.Split(tree, "\x00") {
+		meta, path, ok := strings.Cut(e, "\t")
+		f := strings.Fields(meta)
+		if ok && len(f) == 3 {
+			want[path] = f[0] + " " + f[2]
+		}
+	}
+	seen := 0
+	for _, e := range strings.Split(index, "\x00") {
+		if e == "" {
+			continue
+		}
+		meta, path, ok := strings.Cut(e, "\t")
+		f := strings.Fields(meta)
+		if !ok || len(f) != 3 || f[2] != "0" || want[path] != f[0]+" "+f[1] {
+			return true
+		}
+		seen++
+	}
+	return seen != len(want)
 }

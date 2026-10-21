@@ -29,6 +29,20 @@ type Request struct {
 	Argv           []string
 	WorkingDir     string
 	RepositoryRoot string
+	// GitRepository, when set, is the approved repository whose .git a git
+	// command reads while RepositoryRoot is a private copy of its worktree.
+	GitRepository string
+	// Sandbox runs the command in an operating-system sandbox that shows it
+	// only RepositoryRoot (read-write), the system's read-only program
+	// directories and a private scratch directory: no network, no other host
+	// path. PinnedHead is the commit a git command sees as HEAD, with no
+	// other ref. Capture fails if the sandbox cannot start.
+	Sandbox    bool
+	PinnedHead string
+	// StagedTarget says the reviewed target has staged changes, known from the
+	// bound snapshot and not read from the live index. A sandboxed git command
+	// is refused for it: the pinned view holds the reviewed commit's index.
+	StagedTarget   bool
 	Environment    []string
 	MaxOutputBytes int
 	// AllowedExecutables, when non-empty, restricts execution to these
@@ -109,10 +123,20 @@ func Capture(ctx context.Context, req Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	// Containment is judged on the filesystem, not lexically: a symlink
+	// component cannot move the check outside the repository. The check
+	// then runs in the resolved directory.
+	if root, err = filepath.EvalSymlinks(root); err != nil {
+		return Result{}, errors.New("working directory outside repository")
+	}
+	if wd, err = filepath.EvalSymlinks(wd); err != nil {
+		return Result{}, errors.New("working directory outside repository")
+	}
 	rel, err := filepath.Rel(root, wd)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return Result{}, errors.New("working directory outside repository")
 	}
+	req.WorkingDir = wd
 	resolved, err := resolveExecutable(req.Executable)
 	if err != nil {
 		return Result{}, err
@@ -120,6 +144,50 @@ func Capture(ctx context.Context, req Request) (Result, error) {
 	if reason := RejectShell(req.Executable, resolved, req.Argv); reason != "" {
 		return Result{}, fmt.Errorf("no-shell policy: %s", reason)
 	}
+	// Policy is applied to the program that runs, not the name it was
+	// given: a symlink to git is git. The canonical path is what runs and
+	// what the record shows.
+	var gitExec []string
+	var gitPriv, gitObjects string
+	canonical, err := filepath.EvalSymlinks(resolved)
+	if err != nil {
+		return Result{}, err
+	}
+	if IsGit(resolved) || IsGit(canonical) {
+		// A git command is one of the approved forms, runs only in the
+		// approved repository, under plain local configuration: no
+		// repository selector, alias or configured helper can apply.
+		if !GitFormAllowed(req.Argv) {
+			return Result{}, errors.New("git command form not approved")
+		}
+		repo := root
+		if req.GitRepository != "" {
+			if repo, err = filepath.EvalSymlinks(req.GitRepository); err != nil {
+				return Result{}, errors.New("git repository configuration refused")
+			}
+		}
+		pin := ""
+		if req.Sandbox {
+			if req.StagedTarget {
+				return Result{}, errors.New("staged changes are not supported for sandboxed git checks")
+			}
+			if req.PinnedHead == "" {
+				return Result{}, errors.New("sandboxed git command needs a pinned head")
+			}
+			pin = req.PinnedHead
+		}
+		priv, err := PrepareGitExecution(canonical, repo, root, wd, pin)
+		if err != nil {
+			return Result{}, err
+		}
+		defer os.RemoveAll(priv)
+		gitExec = []string{"GIT_DIR=" + priv, "GIT_WORK_TREE=" + root}
+		if req.Sandbox {
+			gitPriv, gitObjects = priv, filepath.Join(priv, "objects")
+			gitExec = append(gitExec, "GIT_OBJECT_DIRECTORY="+sandboxObjects)
+		}
+	}
+	resolved = canonical
 	if len(req.AllowedExecutables) > 0 {
 		permitted := false
 		for _, allowed := range req.AllowedExecutables {
@@ -145,7 +213,16 @@ func Capture(ctx context.Context, req Request) (Result, error) {
 	if env == nil {
 		env = os.Environ()
 	}
-	cmd.Env = repostate.GitEnv(env)
+	cmd.Env = append(repostate.GitEnv(env), gitExec...)
+	if req.Sandbox {
+		live := req.GitRepository
+		if live == "" {
+			live = root
+		}
+		if cmd, err = sandboxCommand(ctx, resolved, req.Argv, root, wd, live, gitPriv, gitObjects, cmd.Env); err != nil {
+			return Result{}, err
+		}
+	}
 	cmd.Stdout = out
 	cmd.Stderr = erout
 	runErr := cmd.Run()

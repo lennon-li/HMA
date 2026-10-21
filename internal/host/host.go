@@ -49,6 +49,10 @@ const (
 	// digest other than a lease's plan policy, at that time; launches of the
 	// lease from then on are unauthorized.
 	KindPolicyRevocation RecordKind = "policy_revocation"
+	// KindCriterionCredit records one HMA criterion check at an
+	// independently approved target (Gate D, D5): the review it relies on,
+	// the core evidence records HMA captured, and each criterion's result.
+	KindCriterionCredit RecordKind = "criterion_credit"
 
 	DecisionDelegate            DecisionMode = "DELEGATE"
 	DecisionDirectCostException DecisionMode = "DIRECT_COST_EXCEPTION"
@@ -103,6 +107,7 @@ const (
 	ReasonReconciliationRequired      = "HOST_RECONCILIATION_REQUIRED"
 	ReasonUnauthorizedDispatch        = "HOST_UNAUTHORIZED_DISPATCH"
 	ReasonPolicyNotCurrent            = "HOST_POLICY_NOT_CURRENT"
+	ReasonCreditRefused               = "HOST_CREDIT_REFUSED"
 	ReasonReservationConflict         = "HOST_RESERVATION_CONFLICT"
 	ReasonLeaseInactive               = "HOST_LEASE_INACTIVE"
 	ReasonAdmissionRefused            = "HOST_LOOP_ADMISSION_REFUSED"
@@ -257,6 +262,33 @@ type Record struct {
 	Reservation      *Reservation           `json:"reservation,omitempty"`
 	Reconciliation   *Reconciliation        `json:"launch_reconciliation,omitempty"`
 	PolicyRevocation *PolicyRevocation      `json:"policy_revocation,omitempty"`
+	CriterionCredit  *CriterionCredit       `json:"criterion_credit,omitempty"`
+}
+
+// CriterionCredit binds one criterion check: the imported review and report
+// it relies on, the reviewed artifact, the contract, and per criterion the
+// core evidence record HMA captured and the disposition it recorded.
+type CriterionCredit struct {
+	UnitID         string            `json:"unit_id"`
+	ReviewRecord   string            `json:"review_record"`
+	ReportDigest   string            `json:"report_digest"`
+	ArtifactDigest string            `json:"artifact_digest"`
+	ContractDigest string            `json:"contract_digest"`
+	Results        []CriterionResult `json:"results"`
+	CriteriaRecord string            `json:"criteria_record"`
+	// IssuerHeadAnchor is the unit's lease generation the review and the
+	// credit belong to.
+	IssuerHeadAnchor string `json:"issuer_head_anchor"`
+}
+
+// CriterionResult is one criterion's check: HMA's captured exit code, the
+// report's status for it, and the disposition HMA recorded.
+type CriterionResult struct {
+	CriterionID    string                     `json:"criterion_id"`
+	EvidenceRecord string                     `json:"evidence_record"`
+	ExitCode       int                        `json:"exit_code"`
+	ReportStatus   string                     `json:"report_status"`
+	Disposition    model.CriterionDisposition `json:"disposition"`
 }
 
 // PolicyRevocation is one observed policy change for a plan policy.
@@ -697,6 +729,9 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	if r.PolicyRevocation != nil {
 		set++
 	}
+	if r.CriterionCredit != nil {
+		set++
+	}
 	if set != 1 {
 		return errors.New(ReasonInvalidHostRecord)
 	}
@@ -743,6 +778,13 @@ func ValidateRecord(r *Record, requireAnchor bool) error {
 	case KindPolicyRevocation:
 		v := r.PolicyRevocation
 		if v == nil || v.PlanPolicyDigest == "" || v.ObservedPolicyDigest == "" || v.PlanPolicyDigest == v.ObservedPolicyDigest {
+			return errors.New(ReasonInvalidHostRecord)
+		}
+		return nil
+	case KindCriterionCredit:
+		c := r.CriterionCredit
+		if c == nil || c.UnitID == "" || c.ReviewRecord == "" || c.ReportDigest == "" || c.ArtifactDigest == "" || c.ContractDigest == "" ||
+			len(c.Results) == 0 || c.CriteriaRecord == "" || c.IssuerHeadAnchor == "" {
 			return errors.New(ReasonInvalidHostRecord)
 		}
 		return nil

@@ -474,9 +474,6 @@ func unsafeLoopArgv(argv []string) bool {
 	unsafe := map[string]bool{"sudo": true, "ssh": true, "scp": true, "sftp": true, "rsync": true, "shutdown": true, "reboot": true,
 		"poweroff": true, "halt": true, "mkfs": true, "mkfs.ext4": true, "dd": true, "fdisk": true, "mkswap": true, "swapon": true,
 		"swapoff": true, "curl": true, "wget": true, "nc": true, "ncat": true, "telnet": true, "ftp": true}
-	gitPublish := map[string]bool{"commit": true, "push": true, "merge": true, "rebase": true, "reset": true, "checkout": true,
-		"switch": true, "branch": true, "tag": true, "remote": true, "clean": true, "stash": true, "worktree": true,
-		"cherry-pick": true, "revert": true, "config": true, "submodule": true}
 	for i, a := range argv {
 		if a == "" {
 			return true
@@ -491,7 +488,7 @@ func unsafeLoopArgv(argv []string) bool {
 		}
 		switch base {
 		case "git", "git.exe":
-			if gitPublish[next] {
+			if !evidence.GitFormAllowed(argv[i+1:]) {
 				return true
 			}
 		case "gh":

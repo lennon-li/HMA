@@ -157,11 +157,36 @@ func TestCaptureDisablesGitReplaceObjects(t *testing.T) {
 	subID := run("hash-object", "-w", "b")
 	os.Remove(filepath.Join(repo, "b"))
 	run("replace", orig, subID)
-	res, err := Capture(context.Background(), Request{Executable: gitPath, Argv: []string{"show", "HEAD:a"}, WorkingDir: repo, RepositoryRoot: repo})
+	res, err := Capture(context.Background(), Request{Executable: gitPath, Argv: []string{"show", "--no-ext-diff", "--no-textconv", "HEAD:a"}, WorkingDir: repo, RepositoryRoot: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(res.Stdout) != "original" {
 		t.Fatalf("evidence command read replacement object: %q", res.Stdout)
+	}
+}
+
+// Liz D5a F03: a working directory whose symlink resolves outside the
+// repository is refused before the command runs; an internal one runs in
+// its resolved directory.
+func TestCaptureResolvesWorkingDirSymlinks(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "out")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "sub"), filepath.Join(root, "in")); err != nil {
+		t.Fatal(err)
+	}
+	req := func(dir string) Request {
+		return Request{Executable: "true", WorkingDir: filepath.Join(root, dir), RepositoryRoot: root, MaxOutputBytes: 1024, CapturingActor: "t"}
+	}
+	if _, err := Capture(context.Background(), req("out")); err == nil {
+		t.Fatal("external symlink working directory accepted")
+	}
+	if _, err := Capture(context.Background(), req("in")); err != nil {
+		t.Fatalf("internal symlink working directory: %v", err)
 	}
 }

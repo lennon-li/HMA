@@ -1,0 +1,868 @@
+{
+  "audit_id": "hma-gate-d-audit-20261019-d5ar20p",
+  "dispatch_id": "hma-gate-d-audit-20261019-d5ar20p",
+  "date": "2026-10-21T01:42:05.335466+00:00",
+  "modes": [
+    "code",
+    "outcome"
+  ],
+  "target": "git:5f6f765517987fae8a573ff8ef6a0f27c3651f29+diff-sha256:f8a1546f7c9dd8481b9be0632067102b8c52bd0db15fa247c281b4b1d095b32e+untracked:freeze-start.json",
+  "isolation": "isolated",
+  "isolation_details": "Fresh session with original requirements and neutral closure criteria. Requirement reconstruction preceded diff review. PHASE1.json was frozen before current implementer handoff and host-result unblinding. Independence is contextual isolation, not a separate OS or verified model-attestation claim.",
+  "verdict": "fix-required",
+  "requested_verdict": "FAIL",
+  "verdict_encoding": "One decision: FAIL. The report-contract encoding of that decision is fix-required.",
+  "phase1_frozen": true,
+  "phase1_sha256": "9e0b023cd16d8792d3dc30d887b3a4d9b4adb4808652c29d01cbd941394fa8e5",
+  "requirements": [
+    {
+      "id": "R1",
+      "requirement": "Credit requires HMA recapture passed AND isolated independent pass review listing criterion verified at exact approved target.",
+      "source": "gate-a-v3 \u00a74.3; gate-c-scope \u00a70.1",
+      "status": "fail",
+      "d5a_status": "NOT MET",
+      "observation": "The conjunction rule exists, but exact-target recapture is not assured. F01 admits transient materialized bytes. F02 leaves live inputs exposed for repositories in omitted mount roots.",
+      "evidence_refs": [
+        "auditor-gitfile.log",
+        "auditor-gitfile-race.log",
+        "auditor-negative.log",
+        "cmd/hma/credit.go:180"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "Credit and verified outcome bind current contract, lease generation, repository/base/head/diff/worktree; stale or mixed-target credit refused.",
+      "source": "outcome-consolidation \u00a71,\u00a75; architecture \u00a77,\u00a79,\u00a714",
+      "status": "unknown",
+      "d5a_status": "PARTIAL",
+      "observation": "Independent seeded guard controls pass. Target drift, mixed-target credit and CLI contract/lease reauthorization are refused. Fresh successful capture and fresh review after reauthorization remain unverified here.",
+      "evidence_refs": [
+        "auditor-credit-corrected.log",
+        "auditor-additional.log",
+        "cmd/hma/credit.go:451"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "Self reports, missing/partial/escalated/stale/other-target or other-contract reviews and substituted report bytes cannot grant credit.",
+      "source": "gate-a-v3 \u00a74.3; v5 \u00a73; v6 \u00a71",
+      "status": "pass",
+      "d5a_status": "MET",
+      "observation": "Before-capture refusals cover partial/compromised review, blocked/unknown/conditional/fix-required verdicts, substituted report bytes and changed contract/generation. Latest-review, target and receipt checks were traced.",
+      "evidence_refs": [
+        "auditor-credit-corrected.log",
+        "internal/host/review_import.go:158",
+        "internal/host/findings_import.go:129",
+        "cmd/hma/credit.go:100"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "Checks execute safe explicit argv at reviewed bytes; unreviewed inputs, git helpers/config/index/ref races, external paths, transient writes cannot manufacture PASSED.",
+      "source": "architecture \u00a77,\u00a714; trusted-host threat model",
+      "status": "fail",
+      "d5a_status": "NOT MET",
+      "observation": "Explicit Git forms, private validated config and pinned objects/index/ref controls pass. The gitfile copy-window and omitted mounted-directory cases fail.",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "auditor-race.log",
+        "auditor-gitfile.log",
+        "auditor-gitfile-race.log"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "Credit does not advance stages or broaden permission; outcome gate demands all current independently verified criteria and existing D1-D4/B/C safety.",
+      "source": "outcome-consolidation \u00a72,\u00a74,\u00a75; architecture \u00a77",
+      "status": "unknown",
+      "d5a_status": "PARTIAL",
+      "observation": "Selected full regression suite passes with explicit sandbox-dependent exclusions. Credit holds host then core lock and appends no stage approval. Verified terminal outcomes still fail closed in the core with OUTCOME_NOT_IMPLEMENTED. This audit does not prove full closure or filesystem-writer exclusion.",
+      "evidence_refs": [
+        "regressions.log",
+        "regressions-race.log",
+        "internal/engine/stage_state.go:216",
+        "cmd/hma/credit.go:85"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "Evidence records actual argv/cwd/results/identity/digests/changed paths and integrity, and response has exactly one next action.",
+      "source": "architecture \u00a714,\u00a718",
+      "status": "unknown",
+      "d5a_status": "PARTIAL",
+      "observation": "Direct Capture cwd/output consistency and pure disposition/action controls pass. ChangedFiles and private-directory assignments were inspected. Persisted successful sandboxed credit evidence could not be independently produced.",
+      "evidence_refs": [
+        "auditor-additional.log",
+        "auditor-credit-corrected.log",
+        "internal/evidence/capture.go:244",
+        "cmd/hma/credit.go:375"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "D5a claims only criterion-credit scope; findings disposition and full packet remain deferred; complexity justified by boundary.",
+      "source": "gate-c-scope \u00a70.1; architecture \u00a711",
+      "status": "pass",
+      "d5a_status": "MET",
+      "observation": "Code adds criterion credit and a closure guard. The handoff explicitly leaves D5b and D5c for later. It does not claim Gate D completed. No new dispatch or authority expansion is supplied.",
+      "evidence_refs": [
+        "implementer-handoff.md:1",
+        "cmd/hma/credit.go",
+        "internal/host/host.go:265"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D5AR20P-F01",
+      "title": "A .git file stops the fingerprint walk and admits transient copy bytes",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "requirement_ids": [
+        "R1",
+        "R4"
+      ],
+      "diagnosis": "Fingerprint returns filepath.SkipDir for .git without checking whether it is a directory. For a Git gitdir file, WalkDir skips the remaining entries in its parent directory. Gitfile repositories are accepted for non-git criterion checks. A writer can edit an existing tracked file after fpBefore, let Materialize copy that file, and restore it before the final Snapshot and Fingerprint. Both guards then equal their initial values while the private copy contains unreviewed bytes. This violates the exact-reviewed-target prerequisite for positive criterion credit. Host and core locks do not lock repository writers.",
+      "evidence": [
+        {
+          "source": "internal/repostate/fingerprint_linux.go:42",
+          "observation": "The .git case returns SkipDir for every file type."
+        },
+        {
+          "source": "cmd/hma/credit.go:173,180,191,198",
+          "observation": "The only live-copy consistency checks are before/after Snapshot and Fingerprint around captureOnTarget."
+        },
+        {
+          "source": "auditor-gitfile.log; auditor-gitfile-race.log",
+          "observation": "All 3 ordinary and all 5 race-enabled gitfile repetitions report snapshot_equal=true fingerprint_equal=true materialized=\"UNREVIEWED\\n\". Every .git-directory control reports fingerprint_equal=false."
+        },
+        {
+          "source": "auditor-gitfile-host.log",
+          "observation": "The real host fixture binds a gitfile repository, imports an isolated pass report, and reaches the sandbox probe for a non-git check."
+        }
+      ],
+      "observed_limit": "No criterion executable was run unconfined. Materialize and the acceptance guards were reproduced directly. A PASSED append exploiting this gap is inferred from caller wiring, not observed, because bubblewrap cannot start here.",
+      "fix": {
+        "action": "In Fingerprint, return filepath.SkipDir only when the .git entry is a directory. Return nil for the excluded .git file or symlink so traversal continues to its siblings. Add regression coverage for accepted gitdir-file repositories and transient changes during the materialization window.",
+        "why": "WalkDir uses SkipDir on a non-directory to skip its remaining siblings. Continuing the walk restores the file-metadata evidence on which credit relies.",
+        "verification": [
+          {
+            "method": "Run TestAuditorGitfileTransientCopy repeatedly and under -race after the change. Add a no-writer reviewed-byte copy control.",
+            "expected": "Every transient gitfile edit changes the fingerprint or refuses credit. The no-writer copy contains REVIEWED bytes and its guard remains equal."
+          },
+          {
+            "method": "On a host with bubblewrap, bind a gitfile repository and import a pass review for a check that only succeeds on transient unreviewed tracked bytes. Schedule the writer around Materialize.",
+            "expected": "No run records PASSED. An unchanged reviewed target can still credit."
+          }
+        ],
+        "tradeoffs": "The minimal fix preserves Git gitdir-file support. Metadata-based detection still depends on the supported filesystem semantics. It does not prevent writers.",
+        "alternative": "Refuse non-directory .git entries before all criterion checks, including non-git commands. This is a simpler containment policy but rejects linked worktrees and separate-git-dir checkouts. A content-verified immutable materialization would provide a stronger boundary at greater implementation cost.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D5AR20P-F02",
+      "title": "Overlap refusal omits directory mounts in systemFiles",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "requirement_ids": [
+        "R1",
+        "R4"
+      ],
+      "diagnosis": "sandboxCommand rejects live roots under systemDirs, then binds all existing systemFiles entries without that check. systemFiles contains directories: /etc/ssl, /etc/alternatives, and /etc/ld.so.conf.d. A repository rooted within one of these directories would remain readable beside the private target. A read-only bind prevents writes but still exposes ignored or other unreviewed live inputs. The generic live-path string check does not cover aliases or computed paths.",
+      "evidence": [
+        {
+          "source": "internal/evidence/sandbox.go:27,30,52,57,67",
+          "observation": "The overlap list is systemDirs, while the bind list also includes systemFiles directories."
+        },
+        {
+          "source": "auditor-negative.log; auditor-race.log",
+          "observation": "/usr/share is rejected as a system-directory overlap. Each of the 3 /etc directory cases reaches the probe instead; all 3 race-enabled repetitions reproduce the omission."
+        }
+      ],
+      "observed_limit": "The policy function was tested against existing directory paths. No repository was created in /etc and no system file was changed. Actual mount visibility and false credit on a functioning sandbox are inferred from bind arguments and remain unverified here.",
+      "fix": {
+        "action": "Validate repository overlap against the resolved source of every planned bind mount before the probe. Include systemFiles entries that are directories. Reject a mount whose directory contains the live root or exposes a subtree of it. Keep the executable-tree overlap check and test symlink spellings.",
+        "why": "All host paths exposed by the sandbox must be subject to the same live-repository separation rule; the variable name systemFiles is not a filesystem-type check.",
+        "verification": [
+          {
+            "method": "Extend TestAuditorMountedDirectoryOverlap with the existing /etc directories, a live /etc ancestor case, and symlink aliases. Keep /usr/share and an ordinary home/tmp checkout control.",
+            "expected": "Every live-directory overlap is refused before the bubblewrap probe. The ordinary checkout reaches the probe."
+          },
+          {
+            "method": "On a functioning sandbox host, create an isolated fixture under an approved writable mounted-source directory and attempt to read an ignored live input through an alias.",
+            "expected": "Policy refuses before any criterion starts. No ignored live input produces PASSED."
+          }
+        ],
+        "tradeoffs": "Refusal limits repositories in runtime dependency directories. Replacing whole-directory binds with a minimal runtime image is broader and may affect toolchain compatibility.",
+        "alternative": "Use a fixed minimal runtime image or selectively hide the live subtree after binding dependencies. This avoids some location restrictions but adds mount-order and dependency complexity. Fail-closed overlap refusal is the smaller change.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    }
+  ],
+  "prior_finding_closures": [
+    {
+      "id": "D5A-F01",
+      "title": "Credit must bind to the current contract and lease generation",
+      "status": "PARTIAL",
+      "observation": "CLI changed-contract reauthorization refuses old review and seeded old credit. Fresh-review credit control remains unverified.",
+      "evidence_refs": [
+        "auditor-credit-corrected.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Re-authorize the unit under a changed contract through the transition CLI, then request credit with the earlier review",
+          "expected": "No credit; the outcome check refuses earlier credit. A fresh matching review then credits; the unchanged-contract control credits."
+        }
+      ]
+    },
+    {
+      "id": "D5A-F02",
+      "title": "The verified-outcome check must compare credit with the current target and contract",
+      "status": "PARTIAL",
+      "observation": "Seeded unchanged guard passes; stale target and mixed-target criteria refuse. Full capture controls remain unverified.",
+      "evidence_refs": [
+        "auditor-credit-corrected.log",
+        "auditor-additional.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Change the target or contract after credit; credit different criteria at two targets and ask the outcome check about the later target",
+          "expected": "Stale credit is refused; the unchanged control passes; an earlier criterion needs a fresh capture and review at the later target."
+        }
+      ]
+    },
+    {
+      "id": "D5A-F03",
+      "title": "The check must run inside the reviewed repository",
+      "status": "FIXED",
+      "observation": "Resolved-directory containment refuses external/dangling links and accepts internal/plain directories; direct cwd matches pwd.",
+      "evidence_refs": [
+        "auditor-additional.log",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Use working directories that resolve outside the root (link, dangling link), inside through a link, and a plain subdirectory",
+          "expected": "Outside and dangling are refused before the check runs; inside and plain succeed."
+        }
+      ]
+    },
+    {
+      "id": "D5A-F04",
+      "title": "The credit response must carry one next action",
+      "status": "PARTIAL",
+      "observation": "Pure passing/failing/unlisted disposition and one-action rules pass. Successful persisted credit response remains unverified.",
+      "evidence_refs": [
+        "auditor-credit-corrected.log",
+        "cmd/hma/credit.go:270"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Credit passing, failing and unlisted criteria",
+          "expected": "One nonempty action consistent with the results; none claims stage approval or Gate D completion."
+        }
+      ]
+    },
+    {
+      "id": "D5AR2-F05",
+      "title": "Git checks are judged by their real subcommand",
+      "status": "FIXED",
+      "observation": "Only harmless exact global options precede a listed Git form; repository/config selectors refuse.",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Check git invocations with leading global options (-C, repeated -C, -c, --git-dir, --work-tree, equals forms)",
+          "expected": "Only plainly harmless options are skipped; anything else is refused before the check runs; safe invocations still succeed."
+        }
+      ]
+    },
+    {
+      "id": "D5AR3-F06",
+      "title": "Git checks are limited to approved forms",
+      "status": "FIXED",
+      "observation": "Aliases, mutating and unlisted subcommands refuse. Safe listed built-ins retain controls.",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Check git invocations by configured alias name, by repository-creating or configuration-writing subcommands, and by read-only built-ins",
+          "expected": "Alias names and every unlisted subcommand are refused before the check runs; read-only built-ins (status, diff, log, rev-parse) still succeed; credit and loop-evidence share the rule."
+        }
+      ]
+    },
+    {
+      "id": "D5AR4-F07",
+      "title": "Git long options are matched as git matches them",
+      "status": "FIXED",
+      "observation": "Exact option spellings reject abbreviations, write/program options and unlisted bundles.",
+      "evidence_refs": [
+        "internal/evidence/gitforms.go",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Check git subcommand options spelled in full, as unambiguous prefixes, with = and with a separate operand, plus short bundles",
+          "expected": "Options that write a file or start a program are refused in every spelling before the check runs; safe invocations still succeed."
+        }
+      ]
+    },
+    {
+      "id": "D5AR4-F08",
+      "title": "Patch-printing git checks do not start configured helpers",
+      "status": "FIXED",
+      "observation": "Patch forms require both helper-disabling flags; private config/env also remove launchers.",
+      "evidence_refs": [
+        "internal/evidence/gitforms.go",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Check diff, log and show with and without the helper-disabling flags, and with helper settings in the repository configuration",
+          "expected": "A check without both flags is refused; with both flags no configured helper starts; the environment for every captured command drops caller configuration."
+        }
+      ]
+    },
+    {
+      "id": "D5-GITFORMS",
+      "title": "Git check forms are an explicit approved set (design change after round 4)",
+      "status": "FIXED",
+      "observation": "One approved-form implementation is shared by Capture, host credit and loop evidence.",
+      "evidence_refs": [
+        "cmd/hma/loop.go:491",
+        "internal/evidence/capture.go:163",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Review gitFormAllowed, gitForms and gitSubcommand in cmd/hma/loop.go and run the form tests",
+          "expected": "Only the listed subcommands with exact-spelling options pass; patch subcommands require both helper-disabling options; aliases, unlisted subcommands, abbreviated or unlisted options and non-harmless global options are refused before execution; credit and loop-evidence share the rule."
+        }
+      ]
+    },
+    {
+      "id": "D5AR5-F09",
+      "title": "Repository-local git configuration can start a helper under an approved check form",
+      "status": "PARTIAL",
+      "observation": "Direct unsafe-config refusal and helper prevention pass. Successful host credit control is unverified.",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Change the repository's local git configuration after the independent review to name a signature program; credit with log/show checks; direct capture; loop evidence",
+          "expected": "The helper never starts; credit is refused with no PASSED criterion; standard configuration still credits."
+        }
+      ]
+    },
+    {
+      "id": "D5AR6-F10",
+      "title": "git -C selects an unchecked repository",
+      "status": "FIXED",
+      "observation": "All -C check forms refuse; canonical direct-capture controls and nested-repo refusal pass.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Run a check with -C naming another repository (absolute, relative, nested, symlink alias) whose configuration names a helper",
+          "expected": "Refused before any helper starts; same-repository checks still pass."
+        }
+      ]
+    },
+    {
+      "id": "D5AR6-F11",
+      "title": "Config comment backslashes hide executable settings",
+      "status": "FIXED",
+      "observation": "Git itself parses copied config key names; comment-backslash attacks refuse, with standard config controls.",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Place helper settings after backslash-ended comment lines; add quoted, escaped, CRLF and ordinary controls",
+          "expected": "Unsafe configuration refused for credit, loop evidence and direct capture; ordinary configuration works."
+        }
+      ]
+    },
+    {
+      "id": "D5AR6-F12",
+      "title": "Direct evidence capture runs repository clean filters",
+      "status": "FIXED",
+      "observation": "Direct Capture rejects filter configuration before the filter runs.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:35"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Run evidence.Capture directly with git diff and the helper-disabling flags in a repository with a clean filter",
+          "expected": "Refused before the filter starts."
+        }
+      ]
+    },
+    {
+      "id": "AUD-D5A-01",
+      "title": "Transient worktree changes during a criterion check",
+      "status": "PARTIAL",
+      "observation": "Directory-.git transient controls detect edits; gitfile transient materialization bypasses both guards (new F01).",
+      "evidence_refs": [
+        "auditor-gitfile.log",
+        "auditor-gitfile-race.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Run a check that reads a tracked file while a concurrent writer replaces it and restores it before the second snapshot; run the no-writer control",
+          "expected": "The credit is refused or records the reviewed-bytes result; transient bytes never record PASSED; the control credits."
+        }
+      ]
+    },
+    {
+      "id": "AUD-D5A-02",
+      "title": "Direct evidence capture validates one repository but git -C runs in another",
+      "status": "FIXED",
+      "observation": "Direct Capture applies approved forms and refuses -C, --git-dir and -c.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:116"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Call evidence.Capture directly with -C, --git-dir and -c selecting another or configured repository",
+          "expected": "Refused before any helper starts; same-repository forms pass."
+        }
+      ]
+    },
+    {
+      "id": "AUD-D5A-03",
+      "title": "Direct evidence capture misses git invoked through a symlink alias",
+      "status": "FIXED",
+      "observation": "Canonical Git detection, form/config enforcement and recorded canonical executable are exercised by direct alias tests.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:116"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Call evidence.Capture through a symlink to git (absolute and bare PATH name) in a repository with a configured helper",
+          "expected": "Refused before any helper starts; the recorded executable is the canonical path."
+        }
+      ]
+    },
+    {
+      "id": "D5AR9-F01",
+      "title": "A transient new root file can supply PASSED credit",
+      "status": "PARTIAL",
+      "observation": "Root entry create/remove detection exists. Empty-directory changes below a gitfile root are not covered because traversal stops (new F01).",
+      "evidence_refs": [
+        "internal/repostate/fingerprint_linux.go:42",
+        "regressions.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Run a check that reads a file created in the root during the check and removed before it returns; also create/remove under an existing empty directory; add the no-writer control and an unchanged-target passing control",
+          "expected": "No transient-input run records PASSED; the no-writer run records the reviewed-target result; normal clean and approved-dirty captures work."
+        }
+      ]
+    },
+    {
+      "id": "D5AR9-F02",
+      "title": "Git configuration can change between validation and command execution",
+      "status": "FIXED",
+      "observation": "The config bytes checked are the private config bytes used; direct race-hook and control tests pass.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:175"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Edit the repository's local git configuration to add a helper between validation and the command; repeat for direct capture, host credit and loop evidence; add static unsafe and no-writer controls",
+          "expected": "No helper marker is created at any entry point; standard approved git checks still capture and credit."
+        }
+      ]
+    },
+    {
+      "id": "D5AR10P-F01",
+      "title": "Host-local ignore rules remove an in-scope directory from the fingerprint",
+      "status": "PARTIAL",
+      "observation": "Ignore rules do not narrow the walk in normal repos. The gitfile traversal defect still skips ignored and unignored subtrees (new F01).",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "auditor-gitfile.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "With an empty directory listed in .git/info/exclude (and variants: core.excludesFile, .gitignore, changed or untracked .gitignore; clean and approved-dirty), run a check while a writer creates and removes a file there",
+          "expected": "Credit is refused in every repeat; the no-writer run records the reviewed-target result; the unchanged-target pass control credits."
+        }
+      ]
+    },
+    {
+      "id": "D5AR11P-F01",
+      "title": "Ignored input not bound to the review lets a check pass",
+      "status": "PARTIAL",
+      "observation": "Materialize omits ignored inputs and preserves dirty bytes. Actual sandbox behavior is unverified; mounted-root omission still allows ignored live inputs (new F02).",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "auditor-race.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Commit a .gitignore hiding scratch/; approve a contract whose C1 check is /usr/bin/test -f scratch/input; import an isolated pass review listing C1 verified with the file absent; credit (C1 FAILED); create the ignored file; credit again with the same review. Add variants: ignored file replaced or removed, approved-dirty target, check that writes into the worktree, git-form checks, working directory in a subdirectory, and the unchanged-target pass control.",
+          "expected": "An ignored or otherwise unreviewed input never changes the result: C1 stays FAILED with the file present; normal clean and approved-dirty captures still credit; checks cannot modify the live worktree."
+        }
+      ]
+    },
+    {
+      "id": "D5AR12P-F01",
+      "title": "Private target copy does not contain criterion-check inputs or writes",
+      "status": "PARTIAL",
+      "observation": "Absolute/climbing links and literal live-root argv refuse. General sandbox read/write containment remains unverified, with new F02.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/repostate/materialize.go",
+        "auditor-negative.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Committed-ignored scratch/ input absent at review, created after; checks reaching it through a committed symlink (absolute, relative climbing, chained, dangling), an absolute argv path, and a write through a link; approved-dirty and subdirectory variants; relative-ignored-input control and ordinary reviewed-target pass control",
+          "expected": "Unreviewed inputs never produce PASSED and no live write occurs; unsupported forms fail before execution; controls still work."
+        }
+      ]
+    },
+    {
+      "id": "D5AR12P-F02",
+      "title": "Criterion evidence misreports execution directory and omits changed paths",
+      "status": "PARTIAL",
+      "observation": "Actual private cwd and ChangedFiles assignments exist; direct evidence cwd checks pass. Persisted sandbox-credit pwd/subdirectory/dirty variants remain unverified.",
+      "evidence_refs": [
+        "auditor-additional.log",
+        "cmd/hma/credit.go:375"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Credit /usr/bin/pwd; compare persisted working_dir with observed pwd; repeat in a tracked subdirectory and approved-dirty target",
+          "expected": "Persisted working directory equals where the command ran; changed_files lists all changed paths of the reviewed target."
+        }
+      ]
+    },
+    {
+      "id": "D5AR13P-F01",
+      "title": "Absolute path aliases bypass private-target execution",
+      "status": "PARTIAL",
+      "observation": "Sandbox design addresses aliases but runtime remains unverified; new F02 is a live-root exposure case.",
+      "evidence_refs": [
+        "internal/evidence/sandbox.go",
+        "auditor-negative.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Committed-ignored live input created after review; checks reaching it via an absolute symlink alias, /./ spellings, absolute operands; a write through an alias; approved-dirty and subdirectory variants; relative controls",
+          "expected": "No unreviewed file yields PASSED; no live write; controls pass."
+        }
+      ]
+    },
+    {
+      "id": "D5AR13P-F02",
+      "title": "Chained relative symlinks escape the target copy",
+      "status": "PARTIAL",
+      "observation": "Composed symlink containment relies on the OS sandbox; actual sandbox behavior is unverified. Absolute/climbing links have static refusal.",
+      "evidence_refs": [
+        "internal/repostate/materialize.go",
+        "internal/evidence/sandbox.go"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Two-link and longer chains, internal symlink plus .., dangling links, write attempts; ordinary internal-link control",
+          "expected": "No composed path reaches a file outside the copy."
+        }
+      ]
+    },
+    {
+      "id": "D5AR13P-F03",
+      "title": "Git checks consume mutable refs outside the reviewed target",
+      "status": "FIXED",
+      "observation": "Pinned view has detached HEAD and empty refs; an added live branch is absent in independently queried private view.",
+      "evidence_refs": [
+        "auditor-negative.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Git check on a ref created or moved in the live repository after review; loose and packed refs; index and object variants; ordinary reviewed-head git check control",
+          "expected": "A live ref change never changes the result; reviewed-head checks still credit."
+        }
+      ]
+    },
+    {
+      "id": "D5AR14P-F01",
+      "title": "Pinned git view exposes objects added after review",
+      "status": "FIXED",
+      "observation": "Private object store contains only objects reachable from the pinned commit; independently added unrelated object is absent while HEAD:a succeeds.",
+      "evidence_refs": [
+        "auditor-negative.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Add an unrelated object to the live repository after review; run cat-file -e on it through the check; HEAD:a and approved-dirty controls",
+          "expected": "Result unchanged; reviewed-object controls pass."
+        }
+      ]
+    },
+    {
+      "id": "D5AR14P-F02",
+      "title": "Private index preserves a transient unreviewed entry",
+      "status": "FIXED",
+      "observation": "Private index comes from reviewed HEAD; live staged phantom is absent while reviewed path succeeds.",
+      "evidence_refs": [
+        "auditor-negative.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Stage a phantom entry live then restore the index around the copy; ls-files --error-unmatch phantom; reviewed-path control",
+          "expected": "Phantom is never visible; control passes."
+        }
+      ]
+    },
+    {
+      "id": "D5AR14P-F03",
+      "title": "Unix metadata fields break the Darwin build",
+      "status": "FIXED",
+      "observation": "Both baseline and target compile for darwin/arm64 and linux/amd64. Non-Linux Fingerprint returns an explicit unsupported error in source.",
+      "evidence_refs": [
+        "cross-darwin-baseline.json",
+        "cross-darwin-target.json",
+        "cross-linux-baseline.json",
+        "cross-linux-target.json",
+        "internal/repostate/fingerprint_other.go"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Cross-build darwin/arm64 and linux/amd64 for baseline and target",
+          "expected": "Both compile; unsupported platforms return an explicit credit error."
+        }
+      ]
+    },
+    {
+      "id": "D5AR15P-F01",
+      "title": "Pinned view rebuilds the index from HEAD, changing check semantics for staged targets",
+      "status": "FIXED",
+      "observation": "Sandboxed Git refuses StagedTarget before preparation or probe. Snapshot binds staged entries. Unsupported staged checks fail closed.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/capture.go:178"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Approved staged-dirty target; git diff --cached --quiet check; clean-index control; later phantom entry control",
+          "expected": "Staged target never records PASSED from a different index; clean controls behave as approved."
+        }
+      ]
+    },
+    {
+      "id": "D5AR15P-F02",
+      "title": "Mutable allowed git config changes a check result without invalidating the review",
+      "status": "FIXED",
+      "observation": "Pinned config is fixed; filemode-mode-change control remains different after local config changes.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:269"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Approved-dirty mode change; set core.filemode=false locally after review; git diff --quiet check",
+          "expected": "Result unchanged by local config."
+        }
+      ]
+    },
+    {
+      "id": "D5AR16P-F01",
+      "title": "A git helper named in live config starts before the sandbox",
+      "status": "FIXED",
+      "observation": "Preparation uses private config and no live-index preparation command; post-validation live-helper mutation test passes.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/evidence/gitsafe_test.go:305"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Edit live .git/config to add core.fsmonitor (and hooks) concurrently with preparation, direct Capture and host credit, repeated",
+          "expected": "No helper marker at any entry point; clean controls still capture."
+        }
+      ]
+    },
+    {
+      "id": "D5AR17P-F01",
+      "title": "A transient live-index swap bypasses the staged-target refusal",
+      "status": "FIXED",
+      "observation": "Capture uses the bound snapshot Staged flag, not a preparation-time live index read. Direct staged-target refusal is tested.",
+      "evidence_refs": [
+        "regressions.log",
+        "cmd/hma/credit.go:180",
+        "internal/evidence/capture.go:178"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Approved staged target; swap the live index to a clean one around preparation and restore it; git diff --cached --quiet check; repeat under -race; clean-index and unstaged-dirty controls",
+          "expected": "The staged target is refused every repeat from the bound snapshot, never recorded PASSED; controls behave as approved."
+        }
+      ]
+    },
+    {
+      "id": "D5AR18P-F01",
+      "title": "Staged flag and digest come from two reads",
+      "status": "FIXED",
+      "observation": "Staged and staged digest entries use one final index output. Added/removed/mode/object/conflict cases and snapshot controls pass. Earlier path discovery still has separate reads; no new index bypass was demonstrated.",
+      "evidence_refs": [
+        "regressions.log",
+        "internal/repostate/snapshot.go:285",
+        "internal/repostate/materialize_test.go:111"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Swap the live index between the digest read and the flag read; staged target; repeat under -race; unit cases for added, removed, mode, object, conflict entries",
+          "expected": "The flag and digest describe one index; a staged target is never reported unstaged; a changed index changes the digest and refuses credit."
+        }
+      ]
+    },
+    {
+      "id": "D5AR19P-F01",
+      "title": "Sandbox shows system directories whole, so a repository inside one stays visible",
+      "status": "PARTIAL",
+      "observation": "Listed /usr,/bin,/lib directory roots are refused, but directory sources in systemFiles are omitted (new F02).",
+      "evidence_refs": [
+        "auditor-negative.log",
+        "auditor-race.log"
+      ],
+      "closure_criteria": [
+        {
+          "method": "Overlap-policy test with repositories under /usr/local/src, /usr/share, /bin, /lib and links into them; ordinary home checkout control",
+          "expected": "Repositories inside a shown system directory are refused before the sandbox starts; the ordinary checkout is not affected."
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Sandbox runtime behavior is UNVERIFIED BY YOU. Bubblewrap fails closed: NETLINK_ROUTE socket Operation not permitted. No sandbox was removed and no sandboxed criterion was rerun unconfined.",
+    "No complete successful host-credit capture, false-PASSED exploit, or approved verified terminal outcome was produced by this auditor. The core currently refuses verified terminal outcomes with OUTCOME_NOT_IMPLEMENTED.",
+    "The gitfile reproduction deterministically schedules a writer during the real Materialize window, outside a complete sandboxed Capture. It demonstrates unreviewed copied bytes and equal actual guards. The resulting false credit is an inference from caller wiring.",
+    "Mounted-directory overlap tests call the real sandbox policy with existing /etc directories as hypothetical live roots. They do not create or mutate /etc repositories or observe a successful mount namespace.",
+    "Outcome-guard positive controls seed trusted credit metadata. They test the guard, not recapture provenance. Synthetic approval actors are fixture data, not human approvals.",
+    "The initial full test/race runs failed. Besides bubblewrap refusals, copied-source builds lacked VCS metadata and GOTMPDIR differed from TMPDIR. Corrected regression runs use GOFLAGS=-buildvcs=false and matching temp directories. The logs retain initial failures.",
+    "One initial auditor fixture supplied head/diff fields at a stage that forbids them. The fixture was corrected. auditor-credit.log retains that failure; auditor-credit-corrected.log is the valid result.",
+    "The host evidence was read only after Phase 1 was frozen. It is implementer evidence, not this auditor's result and not proof. It lacks a command, target digest and environment manifest in the supplied text.",
+    "No external service, agent CLI, model API or nested reviewer was invoked. Jev was unavailable. The configured prof / gpt-6.1-sol / high route is user-supplied dispatch metadata, not independently introspected provider provenance.",
+    "The ignored .serena directory and architecture-amendment handoffs were not semantically audited. Their untracked hashes are recorded for state verification. The current D5a handoff was withheld until controlled unblinding."
+  ],
+  "scope": {
+    "included": "D5a criterion credit, verified-outcome guard, shared evidence/repostate effects and D1-D4/Gate B/Gate C regressions.",
+    "excluded": [
+      ".serena/",
+      "docs/handoffs/2026-10-16-arch-amendment-*.md",
+      "D5b disposition and registry implementation",
+      "D5c full review packet implementation"
+    ]
+  },
+  "sandbox_runtime": "UNVERIFIED BY YOU",
+  "environment": {
+    "go": "go1.27.1 linux/amd64",
+    "git": "2.43.0; /usr/bin/git",
+    "go_binary": "/home/yeli/.local/go/bin/go",
+    "test_cwd": "/tmp/hma-gate-d-20261019-d5ar20p/worktree",
+    "GOCACHE": "/tmp/hma-gate-d-20261019-d5ar20p/gocache",
+    "corrected_TMPDIR": "/tmp/hma-gate-d-20261019-d5ar20p/tmp",
+    "corrected_GOTMPDIR": "/tmp/hma-gate-d-20261019-d5ar20p/tmp",
+    "corrected_HOME": "/tmp/hma-gate-d-20261019-d5ar20p/home",
+    "corrected_GOFLAGS": "-buildvcs=false",
+    "PATH": "/home/yeli/.local/go/bin:/usr/bin:/bin"
+  },
+  "jev": "Unavailable; direct auditor decision path used.",
+  "controlled_unblinding": {
+    "phase1_path": "PHASE1.json",
+    "phase1_sha256": "9e0b023cd16d8792d3dc30d887b3a4d9b4adb4808652c29d01cbd941394fa8e5",
+    "sources": [
+      "implementer-handoff.md",
+      "implementer-host-sandbox-results.txt"
+    ],
+    "observation": "The handoff explicitly defers D5b and D5c. Host text lists test passes, but does not exercise the new gitfile or omitted-/etc-directory cases. Neither source changes the blind findings or FAIL decision.",
+    "claims_adopted_as_proof": false
+  },
+  "improvement_opportunities": [],
+  "remediation_roadmap": [
+    {
+      "priority": 1,
+      "finding": "D5AR20P-F01",
+      "action": "Restore fingerprint sibling traversal or explicitly refuse gitfile credit; retain the adversarial copy-window regression."
+    },
+    {
+      "priority": 2,
+      "finding": "D5AR20P-F02",
+      "action": "Apply overlap policy to all actual mount sources and test resolved aliases."
+    },
+    {
+      "priority": 3,
+      "action": "Freeze the corrected target and obtain independent retest, including a functioning sandbox host, before requesting any D5a acceptance."
+    }
+  ],
+  "next_action": {
+    "action": "RETURN_D5A_FOR_REMEDIATION",
+    "owner": "HMA implementer / human coordinator",
+    "rationale": "Two observed high defects violate exact-target criterion credit. This audit grants no Gate D completion or stage approval.",
+    "proposed_route": "Use the existing human-approved implementation route. Resolve worker/provider/model/effort/access service and run the exact-route hi preflight before any later dispatch; no new dispatch is authorized or performed by this audit.",
+    "permission_envelope": "A later implementer may change only the approved D5a scope and add regressions. Preserve the deterministic kernel, approval binding, route coherence and independent review. This audit itself remains repository-read-only.",
+    "exact_approval_required": "No transition, commit, push, release or scope expansion approval is requested. Human authorization is required for any change beyond the existing implementation envelope.",
+    "stop_and_escalation_conditions": "Stop any out-of-envelope change or unavailable exact route. After correction, require an independent retest of the frozen new target. Do not claim Gate D complete while D5b/D5c remain deferred."
+  },
+  "repository_freeze_verification": {
+    "unchanged": true,
+    "fields": {
+      "head": true,
+      "status": true,
+      "diff_sha256": true,
+      "untracked_sha256": true
+    }
+  },
+  "verification_summary": {
+    "full_test": "FAIL; original raw failures retained",
+    "full_race": "FAIL; original raw failures retained; no data race warnings observed",
+    "vet": "PASS",
+    "selected_regressions": "PASS; regressions.json records exact exclusion expression",
+    "selected_race_regressions": "PASS; regressions-race.json records exact exclusion expression",
+    "final_selected_regressions": "PASS",
+    "cross_builds": "PASS baseline and target, darwin/arm64 and linux/amd64",
+    "adversarial_gitfile": "FAIL 3/3 ordinary and 5/5 race-enabled gitfile cases; normal directory controls detect the edit",
+    "adversarial_mount_policy": "FAIL three omitted /etc directories, repeated three times under -race",
+    "sandbox_fail_closed": "PASS refusal; actual sandbox runtime UNVERIFIED BY YOU"
+  },
+  "source_artifact_hashes": {
+    "PHASE1.json": "9e0b023cd16d8792d3dc30d887b3a4d9b4adb4808652c29d01cbd941394fa8e5",
+    "implementer-handoff.md": "d652a71008dc4f54e24c083beb23c89c314cdf431ed9637d4396f7829bde6840",
+    "implementer-host-sandbox-results.txt": "e995c81d8d73b8926adf5efb329640dede276946e14f4a68d211b97931dfac6f",
+    "worktree/internal/repostate/auditor_negative_test.go": "07580ae5aa46892fe0e4670927c846f7bb7a0e52103bd461693b2e87f47fd0af",
+    "worktree/internal/evidence/auditor_negative_test.go": "2f74a44ed3d63236935eb52ddb27454a55d6e0c89d93d18159aff49b87d9287b",
+    "worktree/cmd/hma/auditor_negative_test.go": "1947530d17e7faa0a9c796b77c2c80a73b35a38647bb3a6c4ee98760b50f6632"
+  },
+  "auditor_route": {
+    "worker": "prof",
+    "provider": "OpenAI (inferred from requested model; not host-attested)",
+    "model": "gpt-6.1-sol (requested dispatch metadata)",
+    "reasoning_effort": "high (requested dispatch metadata)",
+    "access_service": "This Codex host session; no nested CLI or API",
+    "task": "Independent D5a code and outcome audit",
+    "permission_envelope": "Read-only audited repository. Write audit artifacts, copies and disposable test fixtures only under the specified /tmp audit directory. No commit, push, publication or external dispatch.",
+    "preflight": "No new worker was dispatched by this auditor. An exact-route hi result was not supplied and is not claimed."
+  }
+}

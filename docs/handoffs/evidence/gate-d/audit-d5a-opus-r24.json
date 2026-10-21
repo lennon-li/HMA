@@ -1,0 +1,60 @@
+{
+  "dispatch_id": "hma-gate-d-audit-20261021-d5ar24m",
+  "auditor": {"agent": "ming", "model": "claude-opus-5-5", "effort": "high"},
+  "implementer_model": "claude-sonnet-5-5",
+  "same_vendor_family": true,
+  "isolation": "partial",
+  "isolation_notes": "fresh context; shared OS; read-only on /home/yeli/repos by conduct; tests on copies under output dir",
+  "phase1_frozen": true,
+  "phase1_sha256": "6a96aa34f04ad6fed16a4a5b0812f4b708ce5b7f094c6a8b610a6be296ca0153",
+  "target": {
+    "repo": "/home/yeli/repos/HMA",
+    "head": "5f6f765517987fae8a573ff8ef6a0f27c3651f29",
+    "tracked_diff_sha256_start": "f8a1546f7c9dd8481b9be0632067102b8c52bd0db15fa247c281b4b1d095b32e",
+    "tracked_diff_sha256_end": "f8a1546f7c9dd8481b9be0632067102b8c52bd0db15fa247c281b4b1d095b32e",
+    "untracked_and_status_unchanged": true
+  },
+  "sandbox_runtime": "bubblewrap 0.9.0 started; runtime behavior verified by auditor",
+  "verdict": "FAIL",
+  "regression_verdict": "PASS",
+  "regression": {
+    "go_vet": 0,
+    "go_test_all": 0,
+    "go_test_race_cmd_hma_evidence_repostate": 0,
+    "skipped_tests": []
+  },
+  "questions": {
+    "Q1_pinned_store": "no bypass found",
+    "Q2_fingerprint": "FAIL (F2; F1 .git swap-restore unseen)",
+    "Q3_sandbox_exposure": "no exposure found (runtime verified)",
+    "Q4_regressions": "FAIL (F1 copy unverified); no test regressions"
+  },
+  "findings": [
+    {
+      "id": "F1", "severity": "high", "certainty": "observed (Materialize); inferred (credit end-to-end)",
+      "title": "Private copy built from unverified live .git state, never compared with reviewed target",
+      "locations": ["internal/repostate/materialize.go:22-26", "internal/repostate/raw.go:48,80,89,102", "internal/repostate/fingerprint_linux.go:42-48", "cmd/hma/credit.go:356-378"],
+      "reproduction": "repro/repostate_audit_d5ar24m_test.go TestAuditForgedSubtreeInjectsUnreviewedFile; scripts/forge_subtree.sh",
+      "fix": "Derive Materialize path list from fsck-verified pinned store and the index bytes digested by the before Snapshot; digest the copy and require equality with before/rv.ArtifactDigest before Capture; compute ChangedFiles from verified store",
+      "alternative": "Fingerprint .git too (detects, noisy)",
+      "effort": "medium", "fix_status": "proposed"
+    },
+    {
+      "id": "F2", "severity": "high", "certainty": "observed (Fingerprint); inferred (credit)",
+      "title": "Fingerprint walks nothing when project root is a symlink",
+      "locations": ["internal/repostate/fingerprint_linux.go:30", "cmd/hma/credit.go:173,198", "cmd/hma/loop.go:308"],
+      "reproduction": "repro/repostate_audit_d5ar24m_test.go TestAuditFingerprintSymlinkedRoot",
+      "fix": "EvalSymlinks root in Fingerprint and refuse non-directory root; credit passes resolved root",
+      "effort": "small", "fix_status": "proposed"
+    },
+    {
+      "id": "F3", "severity": "low", "certainty": "hypothesis",
+      "title": "Preparation git calls lack context/timeout; config --get inherits host env",
+      "locations": ["internal/evidence/gitsafe.go:88,131,179,192,200,206"],
+      "reproduction": "not executed (FIFO alternates -> blocked rev-list)",
+      "fix": "exec.CommandContext with Capture ctx; fixed env at line 131",
+      "effort": "small", "fix_status": "proposed"
+    }
+  ],
+  "next_action": "Implementer fixes F2 then F1 with auditor repro tests as regression tests; fresh independent re-audit of those fixes"
+}

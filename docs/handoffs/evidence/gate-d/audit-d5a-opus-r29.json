@@ -1,0 +1,18 @@
+{
+  "dispatch": "hma-gate-d-audit-20261021-d5ar29m",
+  "target": {"repo": "/home/yeli/repos/HMA", "branch": "main", "head": "5f6f765517987fae8a573ff8ef6a0f27c3651f29", "tracked_diff_sha256": "408bd8ab02380cfd25f9e63a647dc59b5e91ed0153afbdb9a15378fbf89974e3", "freeze_unchanged": true},
+  "independence": {"implementer": "Claude Sonnet 5.5", "auditor": "Claude Opus 5.5", "same_vendor_family": true, "isolation": "partial", "notes": "auditor wrote prior round; code read before PHASE1; session partly interrupted by a safety classifier, H-1 not executed"},
+  "phase1_frozen": true,
+  "verdict": "PASS",
+  "verdict_scope": "C1 config allowlist fix; excludes unexecuted hypothesis H-1",
+  "prior_findings": {"S1": "closed (observed)", "S2": "closed (observed)"},
+  "findings": [
+    {"id": "L-1", "severity": "low", "certainty": "observed", "location": "internal/evidence/verify.go:65,97-98", "summary": "config refusal does not name the offending key", "reproduction": "TestAudit29FreshCloneAccepted (pull.rebase=true)", "fix": "include first refused canonical key name (not value) in the error", "status": "proposed"},
+    {"id": "H-1", "severity": "unrated", "certainty": "hypothesis", "location": "internal/evidence/gitsafe.go:182-224; internal/repostate/snapshot.go:144-155", "summary": "default-on auxiliary .git data (e.g. commit-graph) may still split live reads from the verified store; not executed", "reproduction": null, "fix": "independent fixture probe, or single verified store for all HMA reads", "status": "open"},
+    {"id": "I-1", "severity": "info", "certainty": "inferred", "location": "internal/repostate/snapshot.go:46-47,149", "summary": "host-level git config reaches live reads only; out of threat model", "fix": "single verified store", "status": "open"}
+  ],
+  "false_refusals": {"accepted": ["fresh clone with tags and branches", "core.fileMode=false"], "refused_observed": ["pull.rebase=true"], "refused_by_name": ["push.default", "gc.auto", "color.ui", "init.defaultbranch", "receive.*", "remote.*.pushurl", "branch.*.rebase", "core.hookspath", "filter.lfs.*", "maintenance.*", "commit.gpgsign", "user.signingkey"], "judgement": "acceptable fail-closed cost for v1 if L-1 fixed"},
+  "structural_option_needed": "recommended as durable hardening; not required to close S1/S2",
+  "regression": {"vet": "exit 0", "test": {"pass": 1061, "fail": 0, "skip": 2, "skipped": ["internal/host.TestGateBR2HostChild", "internal/host.TestGateBR2HostPowerLossImage"]}, "race": {"pass": 508, "fail": 0, "skip": 0, "data_race": 0}, "bwrap": "starts; sandbox tests ran and passed"},
+  "next_action": "Probe H-1 independently or implement the single verified store; fix L-1 in the same pass."
+}

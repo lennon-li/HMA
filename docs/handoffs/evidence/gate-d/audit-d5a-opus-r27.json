@@ -1,0 +1,47 @@
+{
+  "dispatch": "hma-gate-d-audit-20261021-d5ar27m",
+  "date": "2026-10-21",
+  "mode": "code",
+  "target": {"repo": "/home/yeli/repos/HMA", "head": "5f6f765517987fae8a573ff8ef6a0f27c3651f29", "tracked_diff_sha256": "408bd8ab02380cfd25f9e63a647dc59b5e91ed0153afbdb9a15378fbf89974e3", "freeze_unchanged_at_end": true},
+  "independence": {"implementer": "Claude Sonnet 5.5", "auditor": "Claude Opus 5.5", "same_vendor_family": true, "isolation": "partial", "phase1_frozen": true, "phase1_sha256": "42970e80fa2635c4ea48910318337b29aba2c6dbd53c3f9628d7e68facd87cc4"},
+  "sandbox_runtime": "bubblewrap 0.9.0 starts; credit repros ran checks in the sandbox",
+  "verdict": "FAIL",
+  "prior_closure": {
+    "N1": "repro closed (fsck refuses forged pack object); class open via R1",
+    "N2": "repro closed for .git/objects/info/alternates; alternates in a commondir store accepted (R1)",
+    "N3": "repro closed for non-directory .git; commondir (R1) and symlinks inside .git (R2) accepted; core.worktree refused",
+    "N4": "git subprocesses bounded; one context-free read remains (R3); boundedCtx redundant timer (R4)"
+  },
+  "findings": [
+    {"id": "R1", "severity": "high", "certainty": "observed", "title": ".git/commondir redirects object store outside verification and fingerprint; forged target credited PASSED",
+     "locations": ["internal/evidence/verify.go:16-25", "internal/evidence/verify.go:82", "internal/repostate/snapshot.go:144-150", "internal/repostate/fingerprint_linux.go:39", "cmd/hma/credit.go:130,144,155,158,203"],
+     "reproduction": "repro/credit_audit_d5ar27m_test.go TestAudit27CommonDirForgeryNonGitCheck (C1=PASSED, outcome gate accepts); also TestAudit27CommonDirForgeryGitCheck, TestAudit27CommonDirAlternatesNotRefused, TestAudit27CommonDirFingerprintBlind",
+     "fix": "Containment: refuse .git/commondir and any resolved git-common-dir/objects path other than <root>/.git[/objects]; check alternates on the resolved path. Durable: run all Snapshot/changedPaths/Materialize git reads against the verified private store with a private index copy and GIT_WORK_TREE=root.",
+     "fix_status": "proposed", "effort": "small (containment) / medium (durable)"},
+    {"id": "R2", "severity": "medium", "certainty": "observed (fingerprint blindness, acceptance); inferred (end-to-end in-window swap)", "title": "Symlinks inside .git accepted; fingerprint does not follow them",
+     "locations": ["internal/evidence/verify.go:18", "internal/repostate/fingerprint_linux.go:39-75"],
+     "reproduction": "TestAudit27SymlinkedObjectsDir: fingerprint equal after change in target; credit C1=PASSED",
+     "fix": "Refuse symlinks and non-regular non-directory entries under .git in Fingerprint or RequireSelfContainedRepository.", "fix_status": "proposed", "effort": "small"},
+    {"id": "R3", "severity": "low", "certainty": "observed (function); inferred (credit reachability via swap after rev-parse HEAD)", "title": "os.ReadFile(.git/config) in VerifyRepositoryObjects ignores ctx; FIFO blocks with run locks held",
+     "locations": ["internal/evidence/verify.go:64", "internal/repostate/materialize.go:44,73", "internal/repostate/raw.go:145,167"],
+     "reproduction": "repro/evidence_audit_d5ar27m_test.go TestAudit27VerifyFIFOConfigIgnoresContext: blocked 8s past a 2s ctx",
+     "fix": "Open O_NONBLOCK + fstat regular before reading, or read via git config --file under ctx.", "fix_status": "proposed", "effort": "small"},
+    {"id": "R4", "severity": "low", "certainty": "observed (static)", "title": "boundedCtx adds redundant AfterFunc; context held up to 10 min per call, no permanent leak",
+     "locations": ["cmd/hma/review.go:622-626"], "reproduction": "static",
+     "fix": "Return cancel and defer it at the call site.", "fix_status": "proposed", "effort": "trivial"}
+  ],
+  "negative_results": [
+    "Prior N1 forged subtree refused by fsck (non-git and git check)",
+    "HEAD != reviewed head refused (credit.go:162, artifact digest binds head)",
+    "Replace refs, grafts, shallow not consulted by private-store verification",
+    "core.worktree elsewhere refused by requireTopLevel",
+    "HMA's own reads keep the fingerprint stable across a full credit (non-git and git check)"
+  ],
+  "regression": {
+    "go_vet": "exit 0",
+    "go_test_all": "1041 pass, 2 fail (environmental: VCS stamping found stray /tmp/.git; both pass with -buildvcs=false), 2 skip (TestGateBR2HostChild, TestGateBR2HostPowerLossImage)",
+    "go_test_race": "488 pass, same 2 environmental fails (pass on rerun with -buildvcs=false, -race), 0 skip, no data race"
+  },
+  "limitations": ["R2 end-to-end swap not executed", "midx/core.multiPackIndex divergence not tested (skipped probe)", "same vendor family; partial isolation"],
+  "next_action": "Implement R1 containment (refuse .git/commondir and non-canonical resolved common/objects dir) and R2 (refuse symlinks under .git), then move Snapshot/Materialize reads onto the verified private store, fix R3, and request independent re-audit using repro/*_d5ar27m_test.go."
+}

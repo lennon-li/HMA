@@ -1,0 +1,86 @@
+{
+ "dispatch": "hma-gate-d-audit-20261021-d5ar28m",
+ "target": {
+  "repo": "/home/yeli/repos/HMA",
+  "head": "5f6f765517987fae8a573ff8ef6a0f27c3651f29",
+  "tracked_diff_sha256": "408bd8ab02380cfd25f9e63a647dc59b5e91ed0153afbdb9a15378fbf89974e3",
+  "freeze_verified_at_end": true
+ },
+ "verdict": "FAIL",
+ "independence": {
+  "implementer": "Claude Sonnet 5.5",
+  "auditor": "Claude Opus 5.5",
+  "same_vendor_family": true,
+  "isolation": "partial",
+  "phase1_frozen": true,
+  "phase1_deviation": "PHASE1.json written after reading verify.go, credit.go, fingerprint_linux.go and part of snapshot.go; before the tracked diff and implementer handoff"
+ },
+ "sandbox": {
+  "bwrap": "0.9.0",
+  "starts": true
+ },
+ "prior_closure": {
+  "R1": "closed",
+  "R2": "closed",
+  "R3": "repro closed; residual S3",
+  "R4": "open (informational)"
+ },
+ "findings": [
+  {
+   "id": "S1",
+   "severity": "high",
+   "certainty": "observed",
+   "title": "Live git reads use live config (core.multiPackIndex=false) and read a forged pack copy that object verification never read",
+   "locations": [
+    "internal/repostate/snapshot.go:144-155",
+    "internal/repostate/raw.go:48",
+    "internal/repostate/materialize.go:26",
+    "internal/evidence/gitsafe.go:188-216",
+    "cmd/hma/credit.go:155,158,203"
+   ],
+   "reproduction": "repro/credit_audit_d5ar28m_test.go TestAudit28MidxDivergenceNonGitCheck -> credit err=nil, C1=PASSED, outcome gate accepts; control TestAudit28MidxControl refused; git check refused by config allowlist",
+   "fix": "Route Snapshot/changedPaths/Materialize/rev-parse HEAD through the verified private store with fixed config (GIT_DIR=priv, GIT_OBJECT_DIRECTORY=priv/objects, private index copy, GIT_WORK_TREE=root, no global/system config). Containment: refuse live .git/config keys outside an allowlist (no include*, core.multipackindex, pack.*).",
+   "effort": "containment small; preferred medium"
+  },
+  {
+   "id": "S2",
+   "severity": "medium",
+   "certainty": "observed",
+   "title": "Exempt .git/agent-dispatch can hold an include.path config file read by HMA's git reads but neither walked nor fingerprinted",
+   "locations": [
+    "internal/evidence/verify.go:37-44",
+    "internal/repostate/fingerprint_linux.go:56-58"
+   ],
+   "reproduction": "TestAudit28LedgerIncludeInvisible (change during check undetected, C1=PASSED); TestAudit28MidxViaLedgerInclude (C1=PASSED)",
+   "fix": "Refuse include*/includeIf* in live config (S1 containment) or use fixed config for all reads; optionally move the ledger out of .git",
+   "effort": "small"
+  },
+  {
+   "id": "S3",
+   "severity": "low",
+   "certainty": "inferred",
+   "title": "Lstat-then-ReadFile windows without context remain (FIFO swap)",
+   "locations": [
+    "internal/evidence/verify.go:90",
+    "internal/evidence/gitsafe.go:76,111",
+    "internal/repostate/materialize.go:73",
+    "internal/repostate/raw.go:167",
+    "internal/repostate/snapshot.go:230"
+   ],
+   "reproduction": "TestAudit28SwapRaceWorktree: no hang in 60 attempts; TestAudit28SwapRaceConfig: blocks >15s but in ctx-bounded git VerifyBase (10 min)",
+   "fix": "open O_NONBLOCK|O_NOFOLLOW, fstat regular, then read; shorter bound for VerifyBase in credit",
+   "effort": "small"
+  }
+ ],
+ "false_refusals": "none observed (TestAudit28NoFalseRefusalMaintained PASSED; TestAudit27OwnReadsKeepFingerprint PASSED)",
+ "regression": {
+  "vet": "exit 0",
+  "test_all": "1043 pass, 2 fail (environmental: stray /tmp/.git VCS stamping), 2 skip; with -buildvcs=false 1045 pass, 0 fail, 2 skip",
+  "skipped": [
+   "internal/host.TestGateBR2HostChild",
+   "internal/host.TestGateBR2HostPowerLossImage"
+  ],
+  "race": "492 pass, 0 fail, 0 skip, no DATA RACE (cmd/hma, internal/evidence, internal/repostate)"
+ },
+ "next_action": "Route all credit-time git reads through the verified private store under fixed config (S1), with a live-config allowlist as containment (closes S2); then independent re-audit with repro/credit_audit_d5ar28m_test.go."
+}

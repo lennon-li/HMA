@@ -314,7 +314,8 @@ func TestCICapturesRealEvidence(t *testing.T) {
 	if e == nil {
 		t.Fatal("no evidence recorded")
 	}
-	if e.Executable != "/bin/true" {
+	// The record shows the program that ran: the canonical path.
+	if want, err := filepath.EvalSymlinks("/bin/true"); err != nil || e.Executable != want {
 		t.Fatalf("executable = %q", e.Executable)
 	}
 	if e.OutputDigest == "" {
