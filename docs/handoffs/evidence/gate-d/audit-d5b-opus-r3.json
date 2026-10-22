@@ -1,0 +1,467 @@
+{
+ "audit_id": "hma-gate-d-audit-20261021-d5b3m",
+ "modes": [
+  "code"
+ ],
+ "target": "git:7c555f67006e4ced6e76f060d74b3a100a76d363+diff:8f13c4e7fedc7865a818cae65a90a5b15c57ffecf93887ec6f73540da704a3e0",
+ "isolation": "partial",
+ "verdict": "fix-required",
+ "requirements": [
+  {
+   "id": "R1",
+   "description": "R1 severity never sets disposition",
+   "status": "pass",
+   "evidence_refs": [
+    "TestDispositionFollowsSection9",
+    "TestAuditD5bShapesEach"
+   ]
+  },
+  {
+   "id": "R2",
+   "description": "R2 BLOCK only for an HMA-reproduced kernel violation; unwaivable",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditD5bApproveClearsHeldBlock",
+    "TestAuditD5bEvidenceCurrentReachable",
+    "TestAuditD5bNoShellMissingTool",
+    "N5"
+   ]
+  },
+  {
+   "id": "R3",
+   "description": "R3 WAIVABLE only for a measured budget excess",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditD5bGitattributesHidesLines",
+    "TestAuditB7PrefixShapes",
+    "N6"
+   ]
+  },
+  {
+   "id": "R4",
+   "description": "R4 report cannot create, suppress or clear BLOCK/WAIVABLE",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditD5bMeasuredIDSquat",
+    "TestAuditB7PrefixShapes",
+    "TestAuditB8DuplicateKeys"
+   ]
+  },
+  {
+   "id": "R5",
+   "description": "R5 failed criterion check creates no finding",
+   "status": "pass",
+   "evidence_refs": [
+    "code inspection"
+   ]
+  },
+  {
+   "id": "R6",
+   "description": "R6 snapshot semantics",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditB5StaleBudgetClears",
+    "full suite"
+   ]
+  },
+  {
+   "id": "R7",
+   "description": "R7 unresolved BLOCK/WAIVABLE blocks gate and closure",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditD5bWaivableReachesGate",
+    "TestAuditB11ClosureThroughTransition",
+    "TestAuditB6Ownership"
+   ]
+  },
+  {
+   "id": "R8",
+   "description": "R8 waiver scoped to the exact finding and artifact",
+   "status": "fail",
+   "evidence_refs": [
+    "N1",
+    "N4"
+   ]
+  },
+  {
+   "id": "R9",
+   "description": "R9 facts truthful and bounded",
+   "status": "fail",
+   "evidence_refs": [
+    "N3",
+    "N5",
+    "N6"
+   ]
+  },
+  {
+   "id": "R10",
+   "description": "R10 no_shell is the 7.1/14 rule",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditB9ShellResolution",
+    "N5"
+   ]
+  },
+  {
+   "id": "R11",
+   "description": "R11 no new false refusal",
+   "status": "fail",
+   "evidence_refs": [
+    "N2"
+   ]
+  },
+  {
+   "id": "R12",
+   "description": "R12 no regressions",
+   "status": "pass",
+   "evidence_refs": [
+    "go vet",
+    "go test ./... 1056 PASS 0 FAIL",
+    "go test -race 4 packages"
+   ]
+  },
+  {
+   "id": "R13",
+   "description": "R13 D5c/D6 not claimed",
+   "status": "pass",
+   "evidence_refs": [
+    "handoff"
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "id": "N1",
+   "title": "A finding waiver survives a change of the measured artifact",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "high",
+   "confidence": "observed",
+   "diagnosis": "requireFindingsResolved looks up ActiveWaivers by finding id only; HMA re-raises HMA-BUDGET-<name> under the same id for every new artifact; no waiver ever expires automatically. A waiver granted for a 4-file change passed the review->verification gate for a 25-file change after a new implementation and approving review.",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:187",
+     "observation": "ActiveWaivers[{finding, f.ID}] only"
+    },
+    {
+     "source": "internal/host/findings_import.go:110-121",
+     "observation": "stable id MeasuredFindingPrefix+name"
+    },
+    {
+     "source": "TestAuditB3WaiverSurvivesNewArtifact",
+     "observation": "gate passes: 25 files vs budget 3 under the 4-file waiver"
+    }
+   ],
+   "fix": {
+    "action": "Bind a waiver of an HMA-established finding to the reviewed artifact: require the waiver operation to carry head and diff_digest and compare them (or the review artifact digest) with the current reviewed artifact in requireFindingsResolved; otherwise treat the WAIVABLE as unwaived.",
+    "why": "Architecture 7.2: a waiver expires when its scoped artifacts change; a human must see a new excess.",
+    "verification": [
+     {
+      "method": "Run B3",
+      "expected": "gate refuses HOST_FINDINGS_UNRESOLVED"
+     },
+     {
+      "method": "Run B1 re-review path with a bound waiver on the same artifact",
+      "expected": "gate passes"
+     }
+    ],
+    "tradeoffs": "Waivers for HMA findings must then always bind head/diff; every new artifact needs a new waiver.",
+    "alternative": "Put the review artifact digest into the established finding (id suffix or a field) so a new artifact is a new finding.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N2",
+   "title": "A waiver cannot take effect at the review gate without a fresh independent review",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "observed",
+   "diagnosis": "The waiver operation is a core record after the review; requireOnlyOwnSnapshotsSince accepts only findings snapshots, so the gate refuses HOST_CORE_BINDING_STALE. Only a new packet, review and import (which re-raises the same id) lets the waiver count. Shipped tests check requireFindingsResolved only, never the gate after a waiver.",
+   "evidence": [
+    {
+     "source": "cmd/hma/transition.go:364-367",
+     "observation": "any non-snapshot record after the review is stale"
+    },
+    {
+     "source": "TestAuditB1WaiverThenGate",
+     "observation": "gate after waiver: HOST_CORE_BINDING_STALE; after re-review: pass"
+    },
+    {
+     "source": "cmd/hma/disposition_test.go:186-189",
+     "observation": "only requireFindingsResolved checked"
+    }
+   ],
+   "fix": {
+    "action": "Allow KindWaiverOperation GRANT records scoped to a finding of this unit after the review in requireOnlyOwnSnapshotsSince, or document and test the re-review requirement as the waiver path.",
+    "why": "A human waiver is the architecture's resolution of a WAIVABLE (5.2); it should not cost a second independent review.",
+    "verification": [
+     {
+      "method": "Run B1",
+      "expected": "gate passes after the waiver without re-review"
+     },
+     {
+      "method": "Gate C stale-binding tests",
+      "expected": "still refuse other core records"
+     }
+    ],
+    "tradeoffs": "Accepting waiver records after the review widens the stale-binding allowlist; with N1 fixed the waiver is artifact-bound, so the risk is bounded.",
+    "alternative": "Keep the refusal and make the re-review the documented path, with a gate-level test.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N3",
+   "title": "Dirty-target measurement follows untracked symlinks: FIFO hang, outside files read",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "observed",
+   "diagnosis": "measureChange reads every untracked path with os.ReadFile, which follows symlinks and has no size or time bound. An untracked symlink to a FIFO blocks findings import indefinitely while the host run lock is held; a symlink to a 5000-line file outside the repository counts 5000 lines (git counts the committed symlink as 1 line). A symlink to /dev/zero would grow memory without bound (inferred, not run).",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:146-159",
+     "observation": "os.ReadFile(filepath.Join(root, path))"
+    },
+    {
+     "source": "TestAuditB10Measure/untracked_symlink_to_fifo",
+     "observation": "blocked >5s"
+    },
+    {
+     "source": "TestAuditB10Measure/untracked_symlink_to_large_file",
+     "observation": "dirty 5002 lines vs committed 3"
+    }
+   ],
+   "fix": {
+    "action": "Lstat each untracked path: count a symlink as git does (its link text, one line), skip or refuse non-regular files, and stream-count newlines from regular files with a byte cap (stop once the budget is exceeded).",
+    "why": "The measurement must be bounded, repository-local and consistent with the committed-path count.",
+    "verification": [
+     {
+      "method": "Run B10 fifo and symlink cases",
+      "expected": "returns promptly; symlink counts 1 line"
+     }
+    ],
+    "tradeoffs": "A capped count reports 'exceeded' rather than an exact number.",
+    "alternative": "Refuse findings import when an untracked non-regular path exists.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N4",
+   "title": "Human override can downgrade an HMA-measured WAIVABLE to ADVISORY",
+   "kind": "risk",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "inferred",
+   "diagnosis": "EvaluateResolution refuses overrides of BLOCK only. hma resolve accepted WAIVABLE->ADVISORY for U1/HMA-BUDGET-max_files; the closure-form findings check then passes with no waiver, so a run could close VERIFIED_SUCCESS with a measured excess. The review gate is not bypassable (stale binding, then re-raise). Closure is latent: the core refuses verified outcomes today.",
+   "evidence": [
+    {
+     "source": "internal/engine/resolution.go:240-256",
+     "observation": "only BLOCK refused"
+    },
+    {
+     "source": "TestAuditB4OverrideDowngradesWaivable",
+     "observation": "override accepted; closure-form check passes"
+    }
+   ],
+   "fix": {
+    "action": "Decide (Lennon) whether a WAIVABLE may be overridden. Recommended: refuse FindingOverride for ids whose source part starts with HMA- (new reason), so an HMA fact is resolved only by waiver or correction.",
+    "why": "Architecture 7.2 keeps waivers visible and forbids VERIFIED_SUCCESS with one; an override hides the excess.",
+    "verification": [
+     {
+      "method": "Run B4",
+      "expected": "override refused, or closure check still refuses"
+     }
+    ],
+    "tradeoffs": "Removes a human shortcut for HMA findings only.",
+    "alternative": "Have requireFindingsResolved ignore overrides for HMA- findings.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N5",
+   "title": "no_shell resolves the plan executable differently from the capture",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "observed",
+   "diagnosis": "lookPathAbs ignores the executable bit and joins names containing '/' with PATH entries; capture's resolveExecutable uses exec.LookPath and refuses relative paths. A non-executable '#!/bin/sh' file named true earlier on PATH makes plan command 'true' an unwaivable BLOCK although the capture runs /usr/bin/true.",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:58-66",
+     "observation": "os.Stat only"
+    },
+    {
+     "source": "internal/evidence/capture.go:100-112",
+     "observation": "exec.LookPath"
+    },
+    {
+     "source": "TestAuditB9ShellResolution",
+     "observation": "true -> no_shell=true; ./script resolved via PATH"
+    }
+   ],
+   "fix": {
+    "action": "Export and reuse the capture's resolveExecutable; on a resolution error apply RejectShell to the name only.",
+    "why": "The kernel fact must be the capture's own policy decision.",
+    "verification": [
+     {
+      "method": "Run B9",
+      "expected": "true -> false; /bin/sh -c still true"
+     }
+    ],
+    "tradeoffs": "None material.",
+    "alternative": "Call exec.LookPath directly.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N6",
+   "title": "Live config can over-count (and run a clean filter) in the dirty measurement",
+   "kind": "gap",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "observed",
+   "diagnosis": "With .git/info/attributes '* filter=x' and filter.x.clean in .git/config, the dirty measurement went from 4 to 2001 lines (and to 1 with an emptying filter); the filter command runs. The handoff says this exposure can only under-count; it can also over-count, giving a false WAIVABLE (never a BLOCK).",
+   "evidence": [
+    {
+     "source": "TestAuditB12CleanFilter",
+     "observation": "4 -> 2001 lines; 1 with emptying filter"
+    },
+    {
+     "source": "docs/handoffs/2026-10-21-gate-d-d5b.md Limits",
+     "observation": "'can only under-count'"
+    }
+   ],
+   "fix": {
+    "action": "Correct the stated limit, or measure dirty content without filters (hash worktree files with hash-object --no-filters into a temporary index and diff base against that tree).",
+    "why": "Truthful limits; same D5a live-config class.",
+    "verification": [
+     {
+      "method": "Run B12",
+      "expected": "counts unchanged by the filter"
+     }
+    ],
+    "tradeoffs": "The temporary-index approach is more code.",
+    "alternative": "Accept under the trusted-host model with corrected wording.",
+    "effort": "medium",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N7",
+   "title": "Closure findings check allows VERIFIED_SUCCESS while a waiver is active",
+   "kind": "gap",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "observed",
+   "diagnosis": "After a waiver, VERIFIED_SUCCESS passes requireFindingsResolved. Model validation checks only the terminal record's own Waivers, not the chain's active waiver operations. Latent: core refuses verified outcomes today.",
+   "evidence": [
+    {
+     "source": "TestAuditB11ClosureThroughTransition",
+     "observation": "VERIFIED_SUCCESS waived passes the findings check"
+    },
+    {
+     "source": "internal/model/validate.go:329-333",
+     "observation": "record-local activeWaiver"
+    }
+   ],
+   "fix": {
+    "action": "In the closure branch refuse VERIFIED_SUCCESS when ProjectResolutionState(core).ActiveWaivers is non-empty.",
+    "why": "Architecture 7.2.",
+    "verification": [
+     {
+      "method": "Run B11",
+      "expected": "VERIFIED_SUCCESS refused after a waiver; VERIFIED_WITH_WAIVERS reaches credit"
+     }
+    ],
+    "tradeoffs": "None.",
+    "alternative": "Defer to the closure gate work, recorded explicitly.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N8",
+   "title": "A native (legacy-manual) review never computes HMA facts",
+   "kind": "gap",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "inferred",
+   "diagnosis": "findingFacts runs only in findings import. In a run with no review packet, EvaluateReview accepts a native APPROVE and the review gate checks only recorded findings, so a budget excess or shell plan command passes review->verification. Credit still needs an imported review, so verified closure stays blocked.",
+   "evidence": [
+    {
+     "source": "internal/host/host.go:1018",
+     "observation": "native review allowed when no packet exists"
+    },
+    {
+     "source": "cmd/hma/review.go:466-475",
+     "observation": "facts only at import"
+    }
+   ],
+   "fix": {
+    "action": "Refuse native review in a run with a lease plan, or compute the facts at the review gate.",
+    "why": "The D5b guarantees should not depend on the review mode.",
+    "verification": [
+     {
+      "method": "Native-review control in a plan run",
+      "expected": "gate refuses"
+     }
+    ],
+    "tradeoffs": "May break legacy hosts that hold plans.",
+    "alternative": "Record as a scoped limit.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "N9",
+   "title": "Measurement definitions under- and over-count by design",
+   "kind": "opportunity",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "observed",
+   "diagnosis": "A pure 60-line rename counts 2 files and 120 lines; a 1 MiB binary or one-line file counts 1 line; untracked files ignored only via .git/info/exclude are counted (consistent with repostate). Wrappers such as find or timeout in a plan command are an unwaivable no_shell BLOCK, consistent with the capture policy.",
+   "evidence": [
+    {
+     "source": "TestAuditB10Measure",
+     "observation": "rename 2/120; binary 3 files/3 lines"
+    },
+    {
+     "source": "TestAuditB9ShellResolution",
+     "observation": "find, timeout -> true"
+    }
+   ],
+   "fix": {
+    "action": "Document the definitions in the plan contract, or count renames once.",
+    "why": "Planners need to know what the budget measures.",
+    "verification": [
+     {
+      "method": "Doc review",
+      "expected": "definitions stated"
+     }
+    ],
+    "tradeoffs": "None.",
+    "alternative": "None.",
+    "effort": "small",
+    "status": "proposed"
+   }
+  }
+ ],
+ "limitations": [
+  "Same vendor family as implementer (Claude Sonnet 5.5; auditor Claude Opus 5.5); no provider separation",
+  "Isolation partial: fresh context, but the closure input is the auditor's own prior report and the dispatch describes the fixes",
+  "Closure path checked only up to the findings check; the core refuses verified outcomes (OUTCOME_NOT_IMPLEMENTED)",
+  "N8 not run: no native-review fixture with a lease plan exists",
+  "/dev/zero symlink case inferred, not run (would exhaust memory)",
+  "Merges and submodules checked by code reading only",
+  "Proposed fixes not validated"
+ ],
+ "phase1_frozen": true,
+ "phase1_sha256": "12869d40de96b50ec36661d6c5e010290367c751bc2129ff9afa62c681f1e42e",
+ "dispatch_verdict": "FAIL"
+}

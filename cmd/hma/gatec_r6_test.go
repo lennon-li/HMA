@@ -378,10 +378,10 @@ func TestGateCR11ClonePacketRefused(t *testing.T) {
 // Jax final8j J8-02: an imported finding id containing "/" is refused, so
 // unit "U1" with "sub/B" cannot collide with unit "U1/sub" with "B".
 func TestGateCR11SlashFindingIDRefused(t *testing.T) {
-	if _, err := hoststate.MapAuditFindings([]byte(`[{"id":"sub/B"}]`)); err == nil {
+	if _, err := hoststate.MapAuditFindings([]byte(`[{"id":"sub/B"}]`), hoststate.FindingFacts{}); err == nil {
 		t.Fatal("slash id accepted")
 	}
-	if _, err := hoststate.MapAuditFindings([]byte(`[{"id":"B"}]`)); err != nil {
+	if _, err := hoststate.MapAuditFindings([]byte(`[{"id":"B"}]`), hoststate.FindingFacts{}); err != nil {
 		t.Fatal(err)
 	}
 }

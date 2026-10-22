@@ -1,0 +1,367 @@
+{
+ "audit_id": "hma-gate-d-audit-20261021-d5b1m",
+ "modes": [
+  "code"
+ ],
+ "target": "git:7c555f67006e4ced6e76f060d74b3a100a76d363+diff:0e80b3fc779a280ddd4751625c4a4b00b2986654e9110f4f0a5aee8d2e0c46ff",
+ "isolation": "isolated",
+ "verdict": "fix-required",
+ "requirements": [
+  {
+   "id": "R1",
+   "status": "pass",
+   "evidence_refs": [
+    "TestDispositionFollowsSection9",
+    "TestAuditD5bShapesEach"
+   ]
+  },
+  {
+   "id": "R2",
+   "status": "fail",
+   "evidence_refs": [
+    "F2",
+    "F4",
+    "F5"
+   ]
+  },
+  {
+   "id": "R3",
+   "status": "fail",
+   "evidence_refs": [
+    "F1",
+    "F6"
+   ]
+  },
+  {
+   "id": "R4",
+   "status": "pass",
+   "evidence_refs": [
+    "TestAuditD5bShapesEach"
+   ]
+  },
+  {
+   "id": "R5",
+   "status": "pass",
+   "evidence_refs": [
+    "code inspection"
+   ]
+  },
+  {
+   "id": "R6",
+   "status": "pass",
+   "evidence_refs": [
+    "findings_import.go:133-158",
+    "TestAuditD5bCitingPassEscalates"
+   ]
+  },
+  {
+   "id": "R7",
+   "status": "fail",
+   "evidence_refs": [
+    "F3"
+   ]
+  },
+  {
+   "id": "R8",
+   "status": "unknown",
+   "evidence_refs": [
+    "F6",
+    "F7",
+    "review.go:458-466"
+   ]
+  },
+  {
+   "id": "R9",
+   "status": "pass",
+   "evidence_refs": [
+    "TestDispositionFollowsSection9 -race"
+   ]
+  },
+  {
+   "id": "R10",
+   "status": "pass",
+   "evidence_refs": [
+    "handoff",
+    "code"
+   ]
+  },
+  {
+   "id": "R11",
+   "status": "pass",
+   "evidence_refs": [
+    "vet.log",
+    "test.log",
+    "race.log",
+    "verbose.log"
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "title": "Report id squats HMA-BUDGET-<name> and suppresses the measured WAIVABLE",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "high",
+   "confidence": "observed",
+   "diagnosis": "AddMeasuredFindings skips when the imported list has the same id; MapAuditFindings does not reserve the HMA- prefix; host test disposition_test.go:47-51 encodes it.",
+   "evidence": [
+    {
+     "source": "internal/host/findings_import.go:104",
+     "observation": "!have[id] guard"
+    },
+    {
+     "source": "TestAuditD5bMeasuredIDSquat",
+     "observation": "U1/HMA-BUDGET-max_files: ADVISORY with 4 files over a 3-file budget"
+    }
+   ],
+   "fix": {
+    "action": "Refuse imported ids with prefix HMA- in MapAuditFindings; in AddMeasuredFindings raise any same-id entry to WAIVABLE; invert host test",
+    "why": "Report text must not change an HMA-measured fact (§4.1, §9)",
+    "verification": [
+     {
+      "method": "Run A1 and A6",
+      "expected": "A1 WAIVABLE or import refused; A6 WAIVABLE"
+     }
+    ],
+    "tradeoffs": "Reports using HMA- ids become invalid",
+    "alternative": "Namespace HMA findings outside the auditor id space",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F2",
+   "title": "Approving review clears a unit BLOCK while HMA's kernel predicate still holds",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "high",
+   "confidence": "observed",
+   "diagnosis": "SnapshotFindings replaces unit findings on approve; kernel facts become findings only when cited; gate then passes with no_shell still holding.",
+   "evidence": [
+    {
+     "source": "internal/host/findings_import.go:133-158; cmd/hma/disposition.go:51-57",
+     "observation": "no HMA-raised kernel BLOCK"
+    },
+    {
+     "source": "TestAuditD5bApproveClearsHeldBlock",
+     "observation": "round-2 findings map[]; gate() passes"
+    }
+   ],
+   "fix": {
+    "action": "Raise HMA-owned HMA-KERNEL-<rule> BLOCK for every holding registered rule regardless of citation; escalate approve while any holds",
+    "why": "BLOCK is unwaivable; human downgrade is refused, so auditor omission must not clear it",
+    "verification": [
+     {
+      "method": "Run A3",
+      "expected": "Round 2 keeps BLOCK; gate refuses"
+     }
+    ],
+    "tradeoffs": "Redundant BLOCK beside UNAUTHORIZED_DISPATCH",
+    "alternative": "Keep prior BLOCK on approve when its rule still holds",
+    "effort": "medium",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F3",
+   "title": "BLOCK/WAIVABLE dispositions reach no gate",
+   "kind": "gap",
+   "mode": "code",
+   "severity": "high",
+   "confidence": "observed",
+   "diagnosis": "Review->verification gate and closure credit check ignore finding dispositions except UNAUTHORIZED_DISPATCH; architecture §5.2 and lines 670-671 require unresolved BLOCK/WAIVABLE to block closure.",
+   "evidence": [
+    {
+     "source": "cmd/hma/transition.go:37-116,299-307; internal/model/validate.go:329-347",
+     "observation": "no findings check"
+    },
+    {
+     "source": "TestAuditD5bWaivableReachesGate",
+     "observation": "gate() and outcomeGate() pass with unwaived U1/HMA-BUDGET-max_files WAIVABLE"
+    }
+   ],
+   "fix": {
+    "action": "Refuse review->verification and VERIFIED_* closure while any BLOCK, or any WAIVABLE without an active ScopeFinding waiver, is in current core findings",
+    "why": "Disposition must change behaviour per §5.2/§7.2/§9",
+    "verification": [
+     {
+      "method": "Run A2, then grant a waiver",
+      "expected": "Refused; passes after waiver; closure only VERIFIED_WITH_WAIVERS"
+     }
+    ],
+    "tradeoffs": "Touches gate code paths shared with Gate C/D4 tests",
+    "alternative": "Enforce only at closure",
+    "effort": "medium",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F4",
+   "title": "evidence_current registered contrary to handoff and fires on routine repair",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "observed",
+   "diagnosis": "KernelRules includes evidence_current; predicate uses the latest credit from any earlier implementation; stale credit is already void (D5a), so this is not a kernel violation.",
+   "evidence": [
+    {
+     "source": "internal/host/findings_import.go:30",
+     "observation": "KernelRules = authority, no_shell, evidence_current"
+    },
+    {
+     "source": "TestAuditD5bEvidenceCurrentReachable",
+     "observation": "U1/E1: BLOCK after credit, re-implementation, repair commit"
+    }
+   ],
+   "fix": {
+    "action": "Remove evidence_current from KernelRules",
+    "why": "Matches the handoff and §4.1 (stale evidence is not credited, not a blocker)",
+    "verification": [
+     {
+      "method": "Run A8",
+      "expected": "ADVISORY"
+     }
+    ],
+    "tradeoffs": "None",
+    "alternative": "Restrict predicate to the current implementation's credit",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F5",
+   "title": "no_shell predicate holds for non-shell, environment-dependent reasons",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "observed",
+   "diagnosis": "unsafeLoopArgv returns true on LookPath failure and for network/publication tools.",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:53-57; cmd/hma/loop.go:463",
+     "observation": "broad predicate"
+    },
+    {
+     "source": "TestAuditD5bNoShellMissingTool",
+     "observation": "absent executable -> U1/F1 BLOCK"
+    }
+   ],
+   "fix": {
+    "action": "Use evidence.RejectShell for no_shell; refuse import on resolution failure; register external_effect separately if wanted",
+    "why": "Rule name must match the §7.1 rule it reproduces",
+    "verification": [
+     {
+      "method": "Run A4 and the /bin/sh control",
+      "expected": "A4 not BLOCK; /bin/sh -c still BLOCK"
+     }
+    ],
+    "tradeoffs": "Fewer BLOCKs for curl/ssh plans unless a new rule is added",
+    "alternative": "Keep predicate, rename the rule",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F6",
+   "title": "Repository attributes and config hide lines from the budget measurement",
+   "kind": "defect",
+   "mode": "code",
+   "severity": "medium",
+   "confidence": "observed",
+   "diagnosis": "git diff --numstat honours -diff/binary attributes and core.bigFileThreshold; binary rows count zero lines.",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:79-95",
+     "observation": "numstat without --text"
+    },
+    {
+     "source": "TestAuditD5bGitattributesHidesLines vs TestAuditD5bLinesControl",
+     "observation": "500 lines over 100 budget: ADVISORY with '* -diff', WAIVABLE without"
+    }
+   ],
+   "fix": {
+    "action": "Add --text and neutralise attributes/bigFileThreshold for the numstat call",
+    "why": "Measurement must not be steerable by worker-controlled content",
+    "verification": [
+     {
+      "method": "Run A5 and A6",
+      "expected": "Both WAIVABLE"
+     }
+    ],
+    "tradeoffs": "True binaries get line counts",
+    "alternative": "--attr-source=<empty tree> plus core.attributesFile=/dev/null",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F7",
+   "title": "Dirty content of a dirty-approved review target is not measured",
+   "kind": "gap",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "inferred",
+   "diagnosis": "Measurement is base..HEAD only; disclosed in handoff.",
+   "evidence": [
+    {
+     "source": "cmd/hma/disposition.go:75-79",
+     "observation": "committed range only"
+    }
+   ],
+   "fix": {
+    "action": "When WorktreeDigest is set, diff base against the worktree and include untracked paths",
+    "why": "Budget must cover the reviewed artifact",
+    "verification": [
+     {
+      "method": "Dirty-target fixture over budget",
+      "expected": "WAIVABLE raised"
+     }
+    ],
+    "tradeoffs": "More git calls",
+    "alternative": "Refuse findings import for dirty targets",
+    "effort": "small",
+    "status": "proposed"
+   }
+  },
+  {
+   "id": "F8",
+   "title": "Stale comment, run-wide authority, plan-less runs cannot import findings, rename/merge/submodule counting undocumented",
+   "kind": "risk",
+   "mode": "code",
+   "severity": "low",
+   "confidence": "observed",
+   "diagnosis": "review_import.go:85-87 comment stale; authority not unit-scoped; currentPlanUnit refuses runs without a lease plan.",
+   "evidence": [
+    {
+     "source": "internal/host/review_import.go:85-87; cmd/hma/disposition.go:17-46",
+     "observation": "as described"
+    }
+   ],
+   "fix": {
+    "action": "Update comment; document counting and the plan requirement; consider unit-scoping authority",
+    "why": "Accuracy of claims",
+    "verification": [
+     {
+      "method": "Code review",
+      "expected": "Comments match behaviour"
+     }
+    ],
+    "tradeoffs": "None",
+    "alternative": "Leave as is with documentation",
+    "effort": "small",
+    "status": "proposed"
+   }
+  }
+ ],
+ "limitations": [
+  "Same vendor family as implementer (Claude Sonnet 5.5 vs auditor Claude Opus 5.5); fresh context only",
+  "authority BLOCK not run end to end",
+  "Renames, merges and submodules assessed by code reading",
+  "Proposed fixes not validated",
+  "D5b handoff read after PHASE1.json and controls A1-A7; it prompted A8"
+ ],
+ "phase1_frozen": true,
+ "phase1_sha256": "28ad4374f245a30c18b330c7711eedb5530b1a44826c77c919a2fc7bd1a18bf4",
+ "dispatch_verdict": "FAIL"
+}

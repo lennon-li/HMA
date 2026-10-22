@@ -97,7 +97,11 @@ func writeDigestSection(h hash.Hash, name string, data []byte) {
 // resolves a bare name against the parent process PATH rather than cmd.Env,
 // so an unresolved name does not identify what actually ran; recording the
 // resolved path keeps the evidence record self-describing.
-func resolveExecutable(name string) (string, error) {
+func resolveExecutable(name string) (string, error) { return ResolveExecutable(name) }
+
+// ResolveExecutable is the capture's own resolution of a command name to one
+// absolute path, exported so a kernel-rule fact judges the same program.
+func ResolveExecutable(name string) (string, error) {
 	if filepath.IsAbs(name) {
 		return filepath.Clean(name), nil
 	}

@@ -103,6 +103,7 @@ const (
 	ReasonReviewReportMismatch        = "HOST_REVIEW_REPORT_MISMATCH"
 	ReasonReviewIsolationInsufficient = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
 	ReasonFindingsSnapshotMissing     = "HOST_FINDINGS_SNAPSHOT_MISSING"
+	ReasonFindingsUnresolved          = "HOST_FINDINGS_UNRESOLVED"
 	ReasonReviewTargetChanged         = "HOST_REVIEW_TARGET_CHANGED"
 	ReasonReconciliationRequired      = "HOST_RECONCILIATION_REQUIRED"
 	ReasonUnauthorizedDispatch        = "HOST_UNAUTHORIZED_DISPATCH"

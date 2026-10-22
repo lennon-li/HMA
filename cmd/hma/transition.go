@@ -72,6 +72,11 @@ func requireHostTransitionGateIn(storePath string, in transition.Input, history 
 	if err := hoststate.RequireApprovedReview(history, in.ExpectedApproval.UnitID); err != nil {
 		return err
 	}
+	// A BLOCK finding, or a WAIVABLE one without an active human waiver,
+	// keeps the unit in review.
+	if err := requireFindingsResolved(storePath, in.RunID, in.ExpectedApproval.UnitID); err != nil {
+		return err
+	}
 	// The route that produced the reviewed work must still be the approved
 	// one at this second gate, not only at implementation authorization.
 	if err := requireApprovedHostRouteIn(storePath, in.RunID, in.ExpectedApproval.UnitID, history); err != nil {
@@ -304,6 +309,18 @@ func runTransition(args []string) error {
 				return err
 			}
 			artifact := hoststate.ReviewArtifactDigest(snap.Head, snap.Diff, snap.Worktree)
+			if err := requireFindingsResolved(*storePath, in.RunID, ""); err != nil {
+				return err
+			}
+			if o == model.OutcomeVerifiedSuccess {
+				core, err := store.New(*storePath).Load(in.RunID)
+				if err != nil {
+					return err
+				}
+				if len(engine.ProjectResolutionState(core).ActiveWaivers) > 0 {
+					return errors.New(hoststate.ReasonFindingsUnresolved)
+				}
+			}
 			if err := requireIndependentCredit(*storePath, in.RunID, artifact, history); err != nil {
 				return err
 			}

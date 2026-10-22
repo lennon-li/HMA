@@ -437,10 +437,6 @@ func runHostFindingsImport(args []string) error {
 		if err := hoststate.UnmarshalExact(report, &rep); err != nil {
 			return errors.New(hoststate.ReasonReviewReportMismatch)
 		}
-		imported, err := hoststate.MapAuditFindings(rep.Findings)
-		if err != nil {
-			return err
-		}
 		s := store.New(storePath)
 		core, err := s.Load(in.RunID)
 		if err != nil {
@@ -467,6 +463,16 @@ func runHostFindingsImport(args []string) error {
 		} else if err := requireApprovedRepository(history, core, in.RunID, rr.Review.UnitID, p); err != nil {
 			return err
 		}
+		p := packetFor(history, rr.Review.ReviewDispatchDigest)
+		facts, err := findingFacts(boundedCtx(), storePath, core, rr.Review.UnitID, p, p.WorktreeDigest != "")
+		if err != nil {
+			return err
+		}
+		imported, err := hoststate.MapAuditFindings(rep.Findings, facts)
+		if err != nil {
+			return err
+		}
+		imported = hoststate.AddEstablishedFindings(imported, facts, rr.Review.ArtifactDigest)
 		prior := hoststate.AssignLegacyOwners(core, engine.ProjectResolutionState(core).Findings)
 		rec := model.Record{
 			Kind: model.KindFinding, Version: 1, UnitID: rr.Review.UnitID,

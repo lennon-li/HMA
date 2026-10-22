@@ -1,0 +1,57 @@
+{
+  "dispatch": "hma-gate-d-audit-20261021-d5b4m",
+  "auditor": {"name": "ming", "model": "claude-opus-5-5", "effort": "high"},
+  "implementer_model": "claude-sonnet-5-5",
+  "same_vendor_family": true,
+  "isolation": "partial",
+  "isolation_note": "Same vendor family. The auditor wrote rounds 1-2. The dispatch carried the implementer's fix summaries. Fresh session.",
+  "target": {"repo": "/home/yeli/repos/HMA", "head": "7c555f67006e4ced6e76f060d74b3a100a76d363",
+    "tracked_diff_sha256": "ed85aadde0ff036a3833d527544800136f79a047e3d22c741e4482c2f74f0261",
+    "freeze_verified_unchanged": true},
+  "phase1": {"file": "PHASE1.json", "sha256": "ae5a186b9e48ebce260c572f7916511516495d53a774645e7bd996613e3a7553", "frozen_before_handoff_read": true},
+  "verdict": "PASS",
+  "regression": {
+    "vet": "exit 0",
+    "test_all": "pass (GOFLAGS=-buildvcs=false; the first run failed 2 D5 hook tests only because the copy has no .git for VCS stamping)",
+    "race": "pass: cmd/hma, internal/evidence, internal/repostate, internal/host, internal/engine; 0 data races",
+    "skipped": ["TestGateBR2HostChild", "TestGateBR2HostPowerLossImage"]
+  },
+  "closure": {
+    "N1": {"status": "closed", "evidence": "TestD4N1EndToEnd: same artifact keeps the id and the waiver works after re-review; a new artifact gets a new id and the gate refuses HOST_FINDINGS_UNRESOLVED; the stale finding is dropped and its waiver lingers (P1)"},
+    "N2": {"status": "accepted-open", "reason": "Fail-closed, documented, walked at the gate by TestWaivableNeedsHumanWaiver; cost is one extra review per waiver"},
+    "N3": {"status": "closed", "evidence": "TestD4N3Untracked, TestD4UnreadableUntracked"},
+    "N4": {"status": "closed", "evidence": "TestD4N4Override via hma resolve; see P2 for a false refusal"},
+    "N5": {"status": "closed", "evidence": "TestD4N5Resolution"},
+    "N6": {"status": "accepted-open", "requirement": "neutralise clean filters and live config before Gate D is claimed passed"},
+    "N7": {"status": "closed", "evidence": "TestD4N7Closure (latent: core OUTCOME_NOT_IMPLEMENTED)"},
+    "N8": {"status": "accepted-open", "requirement": "fix with P3 before verified closure is enabled"},
+    "N9": {"status": "accepted-open", "reason": "documented definitions; failures lean to WAIVABLE, not to BLOCK"}
+  },
+  "findings": [
+    {"id": "P1", "severity": "low", "certainty": "observed", "latent": true,
+     "title": "A waiver for a superseded artifact stays active and blocks VERIFIED_SUCCESS",
+     "location": ["internal/engine/resolution.go:55-75", "cmd/hma/transition.go:315-322"],
+     "reproduction": "copy2 TestD4StaleWaiverAtClosure",
+     "fix": "Findings import appends an HMA EXPIRE waiver_operation for a finding-scoped waiver whose id leaves the snapshot",
+     "effort": "small", "fix_status": "proposed"},
+    {"id": "P2", "severity": "low", "certainty": "observed", "latent": false,
+     "title": "Override refused for report findings of a unit whose id starts with HMA- or contains /HMA-",
+     "location": ["internal/engine/resolution.go:258", "internal/model/contract.go:456"],
+     "reproduction": "copy2 TestD4N4Override (HMA-1/F1, proj/HMA-2/F1 rejected)",
+     "fix": "Test the source part after UnitID+'/' or add a structural source marker; alternatively refuse such unit ids",
+     "effort": "small", "fix_status": "proposed"},
+    {"id": "P3", "severity": "low", "certainty": "inferred", "latent": true,
+     "title": "Closure credit does not require the credited review's findings import; with N8, closure can proceed without HMA facts",
+     "location": ["cmd/hma/credit.go:474", "cmd/hma/transition.go:304-327"],
+     "reproduction": "copy2 TestD4NoFindingsImport: the gate refuses SNAPSHOT_MISSING, while outcomeGate returns nil and the closure passes the findings and credit stages",
+     "fix": "At closure, require a findings snapshot sourced from the credited review, or compute findingFacts for the closure artifact",
+     "effort": "small", "fix_status": "proposed"}
+  ],
+  "opportunities": [
+    {"id": "O1", "text": "Use the full digest in the budget finding id (removes the 2^32 pre-computed-pair margin)"},
+    {"id": "O2", "text": "Let a same-unit finding GRANT pass the stale-binding allowlist, saving one review per waiver"}
+  ],
+  "controls": {"zz_audit_d5b4_test.go": "3ce19e660c6e44db4f80e477b02a732d680d320207141b8dfdbca36ec92f984f",
+    "zz_audit_d5b4_helper_test.go": "aadf9d83c06dc2a4f637ea8341a8200b8c0e7aa9c380a162f4a899b55f860507"},
+  "next_action": "Ming fixes P1, P2 and P3 together with the N8 condition, and adds D2, D4 (unit HMA-1) and D7 as permanent tests before verified outcomes are enabled. D5b can be committed now."
+}

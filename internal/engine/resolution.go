@@ -2,23 +2,25 @@ package engine
 
 import (
 	"github.com/lennon-li/HMA/internal/model"
+	"strings"
 )
 
 const (
-	ReasonResolutionMultipleOperations Reason = "MULTIPLE_OPERATIONS_PROVIDED"
-	ReasonResolutionMissingOperation   Reason = "MISSING_OPERATION"
-	ReasonResolutionTargetNotFound     Reason = "TARGET_NOT_FOUND"
-	ReasonResolutionWaiveBlockFinding  Reason = "CANNOT_WAIVE_BLOCK_FINDING"
-	ReasonResolutionOverrideBlock      Reason = "CANNOT_OVERRIDE_BLOCK_FINDING"
-	ReasonResolutionAlreadyWaived      Reason = "SCOPE_ALREADY_WAIVED"
-	ReasonResolutionNoActiveWaiver     Reason = "NO_ACTIVE_WAIVER_FOR_SCOPE"
-	ReasonResolutionReusedNonce        Reason = "REUSED_RESOLUTION_NONCE"
-	ReasonResolutionStalePosition      Reason = "STALE_CHAIN_POSITION"
-	ReasonResolutionInvalidOperation   Reason = "INVALID_WAIVER_OPERATION"
-	ReasonResolutionStaleRepository    Reason = "STALE_REPOSITORY_BINDING"
-	ReasonResolutionStaleRevision      Reason = "STALE_REVISION_BINDING"
-	ReasonResolutionStaleHead          Reason = "STALE_HEAD_BINDING"
-	ReasonResolutionStaleDiff          Reason = "STALE_DIFF_BINDING"
+	ReasonResolutionMultipleOperations  Reason = "MULTIPLE_OPERATIONS_PROVIDED"
+	ReasonResolutionMissingOperation    Reason = "MISSING_OPERATION"
+	ReasonResolutionTargetNotFound      Reason = "TARGET_NOT_FOUND"
+	ReasonResolutionWaiveBlockFinding   Reason = "CANNOT_WAIVE_BLOCK_FINDING"
+	ReasonResolutionOverrideBlock       Reason = "CANNOT_OVERRIDE_BLOCK_FINDING"
+	ReasonResolutionOverrideEstablished Reason = "CANNOT_OVERRIDE_HMA_ESTABLISHED_FINDING"
+	ReasonResolutionAlreadyWaived       Reason = "SCOPE_ALREADY_WAIVED"
+	ReasonResolutionNoActiveWaiver      Reason = "NO_ACTIVE_WAIVER_FOR_SCOPE"
+	ReasonResolutionReusedNonce         Reason = "REUSED_RESOLUTION_NONCE"
+	ReasonResolutionStalePosition       Reason = "STALE_CHAIN_POSITION"
+	ReasonResolutionInvalidOperation    Reason = "INVALID_WAIVER_OPERATION"
+	ReasonResolutionStaleRepository     Reason = "STALE_REPOSITORY_BINDING"
+	ReasonResolutionStaleRevision       Reason = "STALE_REVISION_BINDING"
+	ReasonResolutionStaleHead           Reason = "STALE_HEAD_BINDING"
+	ReasonResolutionStaleDiff           Reason = "STALE_DIFF_BINDING"
 )
 
 // ResolutionState is the projection of a run's committed chain that human
@@ -252,6 +254,12 @@ func EvaluateResolution(req ResolutionRequest) ResolutionResult {
 		}
 		if currentDisposition == model.FindingBlock {
 			return rejectResolution(ReasonResolutionOverrideBlock)
+		}
+		// A finding HMA raised itself from a fact it measured (id source
+		// part starts "HMA-") is resolved by a waiver or a correction, never
+		// by changing its disposition: an override would hide the excess.
+		if id := f.FindingID; strings.HasPrefix(id, "HMA-") || strings.Contains(id, "/HMA-") {
+			return rejectResolution(ReasonResolutionOverrideEstablished)
 		}
 	}
 

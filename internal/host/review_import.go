@@ -83,8 +83,8 @@ type auditReport struct {
 }
 
 // citesHMARule reports whether any finding carries an hma_ref citation. HMA
-// cannot yet reproduce a cited kernel rule or measure a cited budget, so a
-// pass that carries one is escalated, never approved.
+// believes no citation: a pass that carries one is escalated, never approved,
+// and a finding's disposition comes only from what HMA itself established.
 func citesHMARule(raw json.RawMessage) bool {
 	var fs []struct {
 		HMARef json.RawMessage `json:"hma_ref"`
@@ -209,7 +209,7 @@ func EvaluateReviewImport(records []Record, in ReviewImport) (IndependentReview,
 	// A report that breaks the independent-audit report contract is recorded
 	// but escalated: it cannot approve or clear findings.
 	contractValid := len(ValidateAuditReport(in.ReportBytes)) == 0
-	if _, err := MapAuditFindings(rep.Findings); err != nil {
+	if _, err := MapAuditFindings(rep.Findings, FindingFacts{}); err != nil {
 		return IndependentReview{}, err
 	}
 	// The nonce is fresh per packet: a previous report, rewritten or not,
