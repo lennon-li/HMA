@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -34,6 +35,12 @@ type hostReviewPacketInput struct {
 	// bytes are then part of the artifact.
 	DirtyWorktreeApproved bool   `json:"dirty_worktree_approved"`
 	Task                  string `json:"task"`
+	// ContractPath is the approved acceptance contract. When the run has a
+	// bound contract it is required and its digest must equal the bound one;
+	// the packet carries it so the reviewer sees what was approved.
+	ContractPath string `json:"contract_path,omitempty"`
+	PolicyPath   string `json:"policy_path,omitempty"`
+	PlanPath     string `json:"plan_path,omitempty"`
 	// LedgerDir is the agent-dispatch ledger the reviewer will launch in;
 	// review import reads the receipt only from it, and reconciliation
 	// scans it.
@@ -78,47 +85,186 @@ func randomHex(n int) (string, error) {
 type packetCoreState struct {
 	CoreHeadAnchor     string                `json:"core_head_anchor"`
 	AcceptedPlanDigest string                `json:"accepted_plan_digest"`
+	PlanSourceRecord   string                `json:"plan_source_record,omitempty"`
 	RouteApproval      string                `json:"route_approval_digest"`
 	Criteria           []model.Criterion     `json:"criteria"`
 	Findings           []model.Finding       `json:"findings"`
 	ActiveWaivers      []model.ScopeSelector `json:"active_waivers"`
+	// The fixed validator packet of architecture §16: the approved request,
+	// criteria and non-goals, the plan unit and its budgets, the evidence
+	// bundle and the applicable policy. Absent only for a run with no bound
+	// acceptance contract.
+	Contract     *packetContract              `json:"contract,omitempty"`
+	Unit         *packetUnit                  `json:"unit,omitempty"`
+	Evidence     []packetEvidence             `json:"evidence,omitempty"`
+	PolicyDigest string                       `json:"policy_digest,omitempty"`
+	RequestBasis string                       `json:"request_basis,omitempty"`
+	Request      string                       `json:"request,omitempty"`
+	Policy       *model.RoutePolicyProjection `json:"policy,omitempty"`
+	Manifest     []packetFile                 `json:"changed_files,omitempty"`
+	// LineCounts names how added/deleted are counted: the minimal edit
+	// distance between the two sides (not git's heuristic numstat, which can
+	// be higher). Present with the manifest, i.e. for contract-bound packets.
+	LineCounts  string         `json:"line_counts,omitempty"`
+	WaiverTerms []packetWaiver `json:"waiver_terms,omitempty"`
 }
+
+type packetContract struct {
+	Digest string `json:"digest"`
+	model.AcceptanceContract
+}
+
+type packetUnit struct{ model.PlanUnit }
+
+type packetEvidence struct {
+	Record  string `json:"record"`
+	Current bool   `json:"current"`
+	model.EvidenceRef
+}
+
+type packetWaiver struct {
+	Selector  model.ScopeSelector    `json:"selector"`
+	Record    string                 `json:"record"`
+	Operation *model.WaiverOperation `json:"waiver_operation,omitempty"`
+	Waiver    *model.Waiver          `json:"waiver,omitempty"`
+	Legacy    bool                   `json:"legacy,omitempty"`
+}
+type packetFile struct {
+	Path           string `json:"path"`
+	Status         string `json:"status"`
+	Added          int    `json:"added"`
+	Deleted        int    `json:"deleted"`
+	SHA256         string `json:"sha256"`
+	OldMode        string `json:"old_mode,omitempty"`
+	NewMode        string `json:"new_mode,omitempty"`
+	Binary         bool   `json:"binary,omitempty"`
+	Staged         bool   `json:"staged,omitempty"`
+	LinesTruncated bool   `json:"lines_truncated,omitempty"`
+	// LinesUpperBound: the edit-distance work or line cap was hit; added and
+	// deleted are an upper bound (every line of both sides). LinesTruncated:
+	// a side exceeded the 16 MiB window; the counts are a lower bound.
+	LinesUpperBound bool `json:"lines_upper_bound,omitempty"`
+}
+
+// reviewPacketBeforeManifestHook lets tests model a target mutation between
+// the packet snapshot and manifest collection.
+var reviewPacketBeforeManifestHook func()
 
 // corePacketState assembles the packet's bound core state for unit. It
 // refuses when a mandatory input is missing: no approved route for the unit,
 // or no accepted plan digest on that approval.
-func corePacketState(core []model.Record, runID, unit string) (packetCoreState, error) {
+func corePacketState(storePath string, core []model.Record, runID, unit, contractPath, policyPath, planPath string, binding hoststate.ReviewPacketBinding) (packetCoreState, error) {
+	state, _, _, err := corePacketStateWithPlan(storePath, core, runID, unit, contractPath, policyPath, planPath, binding, "")
+	return state, err
+}
+
+func corePacketStateWithPlan(storePath string, core []model.Record, runID, unit, contractPath, policyPath, planPath string, binding hoststate.ReviewPacketBinding, repositoryIdentity string) (packetCoreState, *model.Plan, string, error) {
 	route, err := approvedCoreRouteDigestIn(core, runID, unit)
 	if err != nil {
-		return packetCoreState{}, err
+		return packetCoreState{}, nil, "", err
 	}
-	var plan string
-	for _, r := range core {
-		if r.UnitID == unit && r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
-			r.Approval.ProposedTargetStage == model.StageImplementationAuthorization && r.Approval.TransitionDigest == route {
-			plan = r.Approval.AcceptedPlanDigest
-		}
-	}
-	if plan == "" {
-		return packetCoreState{}, errors.New("HOST_REVIEW_PACKET_INPUT_MISSING")
+	plan := leasePlanDigest(core, unit)
+	planRecord := leasePlanSourceRecord(core, unit)
+	if plan == "" || planRecord == "" {
+		return packetCoreState{}, nil, "", errors.New("HOST_REVIEW_PACKET_INPUT_MISSING")
 	}
 	res := engine.ProjectResolutionState(core)
-	st := packetCoreState{CoreHeadAnchor: core[len(core)-1].Metadata.HeadAnchor, AcceptedPlanDigest: plan, RouteApproval: route,
-		Criteria: res.Criteria, Findings: []model.Finding{}, ActiveWaivers: []model.ScopeSelector{}}
+	st := packetCoreState{CoreHeadAnchor: core[len(core)-1].Metadata.HeadAnchor, AcceptedPlanDigest: plan, PlanSourceRecord: planRecord, RouteApproval: route, Criteria: res.Criteria, Findings: []model.Finding{}, ActiveWaivers: []model.ScopeSelector{}}
 	for _, f := range hoststate.AssignLegacyOwners(core, res.Findings) {
 		if f.UnitID == unit || f.UnitID == "" {
 			st.Findings = append(st.Findings, f)
 		}
+	}
+	suppliedPlan, suppliedPlanDigest, err := addContractStateWithPlan(&st, storePath, core, unit, contractPath, policyPath, planPath)
+	if err != nil {
+		return packetCoreState{}, nil, "", err
+	}
+	if st.Contract == nil {
+		// A run without a bound contract keeps the packet exactly as before
+		// D5c: the plan digest the unit's route approval carries.
+		st.AcceptedPlanDigest = routeApprovalPlanDigest(core, unit, route)
+		st.PlanSourceRecord = ""
 	}
 	for w, on := range res.ActiveWaivers {
 		if on {
 			st.ActiveWaivers = append(st.ActiveWaivers, w)
 		}
 	}
-	sort.Slice(st.ActiveWaivers, func(i, j int) bool {
-		return fmt.Sprint(st.ActiveWaivers[i]) < fmt.Sprint(st.ActiveWaivers[j])
+	if st.Contract != nil {
+		st.WaiverTerms, err = packetWaiverTerms(core, res.ActiveWaivers)
+		if err != nil {
+			return packetCoreState{}, nil, "", err
+		}
+	}
+	sort.Slice(st.ActiveWaivers, func(i, j int) bool { return fmt.Sprint(st.ActiveWaivers[i]) < fmt.Sprint(st.ActiveWaivers[j]) })
+	if st.Contract != nil {
+		st.Evidence = packetEvidenceForTarget(core, unit, binding, repositoryIdentity)
+	}
+	return st, suppliedPlan, suppliedPlanDigest, nil
+}
+
+func packetWaiverTerms(core []model.Record, active map[model.ScopeSelector]bool) ([]packetWaiver, error) {
+	latest := make(map[model.ScopeSelector]packetWaiver)
+	for _, rec := range core {
+		for i := range rec.Waivers {
+			w := rec.Waivers[i]
+			if w.Active {
+				copy := w
+				latest[w.Scope] = packetWaiver{Selector: w.Scope, Record: rec.Metadata.HeadAnchor, Waiver: &copy, Legacy: true}
+			} else {
+				delete(latest, w.Scope)
+			}
+		}
+		if w := rec.WaiverOperation; w != nil {
+			switch w.Operation {
+			case model.WaiverOperationGrant:
+				copy := *w
+				latest[w.Scope] = packetWaiver{Selector: w.Scope, Record: rec.Metadata.HeadAnchor, Operation: &copy}
+			case model.WaiverOperationExpire, model.WaiverOperationWithdraw:
+				delete(latest, w.Scope)
+			}
+		}
+	}
+	terms := make([]packetWaiver, 0, len(active))
+	for selector, on := range active {
+		if !on {
+			continue
+		}
+		term, ok := latest[selector]
+		if !ok {
+			return nil, errors.New(hoststate.ReasonReviewPacketWaiverIncomplete)
+		}
+		terms = append(terms, term)
+	}
+	sort.Slice(terms, func(i, j int) bool {
+		if terms[i].Selector.Kind != terms[j].Selector.Kind {
+			return terms[i].Selector.Kind < terms[j].Selector.Kind
+		}
+		return terms[i].Selector.Target < terms[j].Selector.Target
 	})
-	return st, nil
+	return terms, nil
+}
+
+func packetEvidenceForTarget(core []model.Record, unit string, binding hoststate.ReviewPacketBinding, repositoryIdentity ...string) []packetEvidence {
+	identity := ""
+	if len(repositoryIdentity) > 0 {
+		identity = repositoryIdentity[0]
+	}
+	evidence := []packetEvidence{}
+	for _, r := range core {
+		if r.Kind == model.KindEvidence && r.Evidence != nil && (r.UnitID == unit || r.UnitID == "") {
+			e := *r.Evidence
+			current := e.RepositoryIdentity == identity && e.BaseRevision == binding.BaseRevision && e.HeadRevision == binding.ProducedHead && e.DiffDigest == binding.DiffDigest && e.WorktreeDigest == binding.WorktreeDigest
+			evidence = append(evidence, packetEvidence{Record: r.Metadata.HeadAnchor, Current: current, EvidenceRef: e})
+		}
+	}
+	sort.SliceStable(evidence, func(i, j int) bool {
+		if evidence[i].Current != evidence[j].Current {
+			return evidence[i].Current
+		}
+		return evidence[i].Record < evidence[j].Record
+	})
+	return evidence
 }
 
 func buildReviewPacket(in hostReviewPacketInput, binding hoststate.ReviewPacketBinding, state packetCoreState) []byte {
@@ -199,7 +345,7 @@ func runHostReviewPacket(args []string) error {
 	}
 	// HMA observes the artifact itself; the host may name the digest it
 	// expects, but never supplies it.
-	snap, err := repostate.Snapshot(context.Background(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+	snap, err := repostate.Snapshot(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
 	if err != nil {
 		return err
 	}
@@ -237,19 +383,43 @@ func runHostReviewPacket(args []string) error {
 	if len(core) == 0 {
 		return errors.New(hoststate.ReasonCoreRunMissing)
 	}
-	state, err := corePacketState(core, in.RunID, in.Dispatch.UnitID)
-	if err != nil {
-		return err
-	}
 	history, err := hoststate.NewStore(*storePath).Load(in.RunID)
 	if err != nil {
 		return err
+	}
+	repositoryIdentity := ""
+	if repository := hoststate.RunRepository(history); repository != nil {
+		repositoryIdentity = repository.RepositoryIdentity
+	}
+	state, suppliedPlan, suppliedPlanDigest, err := corePacketStateWithPlan(*storePath, core, in.RunID, in.Dispatch.UnitID, in.ContractPath, in.PolicyPath, in.PlanPath, binding, repositoryIdentity)
+	if err != nil {
+		return err
+	}
+	if state.Contract != nil {
+		if reviewPacketBeforeManifestHook != nil {
+			reviewPacketBeforeManifestHook()
+		}
+		state.Manifest, err = buildChangedFileManifest(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+		if err != nil {
+			return err
+		}
+		state.LineCounts = "minimal-lcs"
+		second, err := repostate.Snapshot(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+		if err != nil {
+			return err
+		}
+		if second.Head != binding.ProducedHead || second.Diff != binding.DiffDigest || second.Worktree != binding.WorktreeDigest {
+			return errors.New(hoststate.ReasonReviewTargetChanged)
+		}
 	}
 	// Checked before the packet file is written, and again under the locks.
 	if err := requireApprovedRepository(history, core, in.RunID, in.Dispatch.UnitID, &binding); err != nil {
 		return err
 	}
 	packet := buildReviewPacket(in, binding, state)
+	if err := validateReviewPacketSize(packet, state); err != nil {
+		return err
+	}
 	sum := sha256.Sum256(packet)
 	in.Dispatch.Packet = &binding
 	in.Dispatch.ReviewPacketDigest = hex.EncodeToString(sum[:])
@@ -284,7 +454,13 @@ func runHostReviewPacket(args []string) error {
 		if err := requireApprovedRepository(history, core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Packet); err != nil {
 			return err
 		}
-		return hoststate.EvaluateDispatch(history, in.Dispatch, at)
+		if err := hoststate.EvaluateDispatch(history, in.Dispatch, at); err != nil {
+			return err
+		}
+		if suppliedPlan != nil {
+			return retainPlan(*storePath, *suppliedPlan, suppliedPlanDigest)
+		}
+		return nil
 	})
 	if err != nil {
 		os.Remove(*out)
@@ -296,6 +472,13 @@ func runHostReviewPacket(args []string) error {
 		hostResult: result, PacketPath: *out, PacketSHA256: in.Dispatch.ReviewPacketDigest,
 		ReviewDispatchID: binding.ReviewDispatchID, DispatchRunID: binding.DispatchRunID,
 	})
+}
+
+func validateReviewPacketSize(packet []byte, state packetCoreState) error {
+	if state.Contract != nil && (len(packet) > 2<<20 || len(state.Evidence) > 2000 || len(state.Manifest) > 2000) {
+		return errors.New(hoststate.ReasonReviewPacketTooLarge)
+	}
+	return nil
 }
 
 func runHostReviewImport(args []string) error {
@@ -629,4 +812,44 @@ func boundedCtx() context.Context {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	time.AfterFunc(10*time.Minute, cancel)
 	return ctx
+}
+
+func buildChangedFileManifest(ctx context.Context, root, base string, dirty bool) ([]packetFile, error) {
+	entries, err := observeTarget(ctx, root, base, dirty)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]packetFile, 0, len(entries))
+	for _, e := range entries {
+		files = append(files, packetFile{Path: e.Path, Status: e.Status, Added: e.Added, Deleted: e.Deleted, SHA256: e.SHA256, OldMode: e.OldMode, NewMode: e.NewMode, Binary: e.Binary, Staged: e.Staged, LinesTruncated: e.LinesTruncated, LinesUpperBound: e.LinesUpperBound})
+	}
+	return files, nil
+}
+
+func exists(path string) bool { _, err := os.Lstat(path); return err == nil }
+
+// countLines counts the lines of b (a final line without a newline counts).
+// It is used by tests; the live code counts through observedCountLines.
+func countLines(b []byte) int {
+	if len(b) == 0 {
+		return 0
+	}
+	n := bytes.Count(b, []byte{'\n'})
+	if b[len(b)-1] != '\n' {
+		n++
+	}
+	return n
+}
+
+// routeApprovalPlanDigest is the accepted plan digest carried by the unit's
+// approved route-selection transition (the value packets held before D5c).
+func routeApprovalPlanDigest(core []model.Record, unit, route string) string {
+	var plan string
+	for _, r := range core {
+		if r.UnitID == unit && r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
+			r.Approval.ProposedTargetStage == model.StageImplementationAuthorization && r.Approval.TransitionDigest == route {
+			plan = r.Approval.AcceptedPlanDigest
+		}
+	}
+	return plan
 }

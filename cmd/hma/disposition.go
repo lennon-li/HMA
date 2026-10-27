@@ -3,36 +3,50 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"io"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/evidence"
 	hoststate "github.com/lennon-li/HMA/internal/host"
 	"github.com/lennon-li/HMA/internal/model"
-	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 )
 
 // currentPlanUnit is the unit's entry in the plan of its current lease
 // generation.
-func currentPlanUnit(storePath string, core []model.Record, unit string) (model.PlanUnit, error) {
+func currentPlanUnit(storePath string, core []model.Record, unit string, supplied ...*model.Plan) (model.PlanUnit, error) {
 	digest := ""
 	for _, r := range core {
 		if engine.IssuesLease(r, unit) {
 			digest = r.Approval.AcceptedPlanDigest
 		}
 	}
-	plans, err := loadPlans(storePath, core)
-	if err != nil {
-		return model.PlanUnit{}, err
-	}
-	plan, ok := plans[digest]
-	if !ok {
-		return model.PlanUnit{}, errors.New(hoststate.ReasonFindingsImportInvalid)
+	var plan model.Plan
+	if len(supplied) > 0 && supplied[0] != nil {
+		plan = *supplied[0]
+		b, err := json.Marshal(plan)
+		if err != nil {
+			return model.PlanUnit{}, err
+		}
+		sum := sha256.Sum256(b)
+		if hex.EncodeToString(sum[:]) != digest {
+			return model.PlanUnit{}, errors.New(hoststate.ReasonFindingsImportInvalid)
+		}
+	} else {
+		plans, err := loadPlans(storePath, core)
+		if err != nil {
+			return model.PlanUnit{}, err
+		}
+		var ok bool
+		plan, ok = plans[digest]
+		if !ok {
+			return model.PlanUnit{}, errors.New(hoststate.ReasonFindingsImportInvalid)
+		}
 	}
 	for _, u := range plan.Units {
 		if u.ID == unit {
@@ -82,118 +96,60 @@ func findingFacts(ctx context.Context, storePath string, core []model.Record, un
 // from the approved base to the target: the committed change, and for a
 // dirty-approved target also the uncommitted tracked change and the
 // untracked, non-ignored files. Repository attributes and diff settings are
-// neutralised and every file is read as text, so neither a -diff attribute
-// nor a binary label can hide lines. A rename counts as a deletion and an
+// neutralised. Git-marked binary entries use bounded raw-byte line counts.
+// A rename counts as a deletion and an
 // addition; a merge is measured as the base-to-target tree difference.
 func measureChange(ctx context.Context, root, base string, dirty bool) (int, int, error) {
-	empty, err := repostate.Output(ctx, root, "hash-object", "-t", "tree", "/dev/null")
+	entries, err := observeTarget(ctx, root, base, dirty)
 	if err != nil {
 		return 0, 0, err
-	}
-	numstat := func(args ...string) (map[string]int, error) {
-		full := append([]string{"-c", "core.attributesFile=/dev/null", "-c", "core.bigFileThreshold=2g", "--attr-source=" + repostate.Trim(empty),
-			"diff", "--numstat", "--text", "--no-renames", "--no-ext-diff", "--no-textconv"}, args...)
-		out, err := repostate.Output(ctx, root, full...)
-		if err != nil {
-			return nil, err
-		}
-		rows := map[string]int{}
-		for _, row := range strings.Split(out, "\n") {
-			f := strings.SplitN(row, "\t", 3)
-			if len(f) < 3 {
-				continue
-			}
-			n := 0
-			for _, v := range f[:2] {
-				if c, err := strconv.Atoi(v); err == nil {
-					n += c
-				}
-			}
-			rows[f[2]] = n
-		}
-		return rows, nil
-	}
-	var rows map[string]int
-	if dirty {
-		// Base against the worktree: committed, staged and unstaged tracked changes.
-		rows, err = numstat(base, "--")
-	} else {
-		head, herr := repostate.Output(ctx, root, "rev-parse", "HEAD")
-		if herr != nil {
-			return 0, 0, herr
-		}
-		rows, err = numstat(base+".."+repostate.Trim(head), "--")
-	}
-	if err != nil {
-		return 0, 0, err
-	}
-	if dirty {
-		others, err := repostate.Output(ctx, root, "ls-files", "--others", "--exclude-per-directory=.gitignore", "-z")
-		if err != nil {
-			return 0, 0, err
-		}
-		for _, path := range strings.Split(others, "\x00") {
-			if path == "" {
-				continue
-			}
-			rows[path] = untrackedLines(filepath.Join(root, filepath.FromSlash(path)))
-		}
 	}
 	lines := 0
-	for _, n := range rows {
-		lines += n
+	for _, e := range entries {
+		if e.LinesTruncated {
+			return len(entries), int(^uint(0) >> 1), nil
+		}
+		lines += e.Added + e.Deleted
 	}
-	return len(rows), lines, nil
+	return len(entries), lines, nil
 }
 
-// maxCountedBytes bounds the bytes read from one untracked file; a file past
-// it counts the lines of its first part, which already exceeds any sane budget.
 const maxCountedBytes = 16 << 20
 
-// untrackedLines counts the lines git would count for an untracked path: a
-// symlink is its link text (one line), a regular file its lines (read with a
-// bound), and anything else (a FIFO, a device, a socket) one line without
-// being opened.
-func untrackedLines(path string) int {
+// untrackedLines remains a bounded helper for its focused regression tests.
+// Production manifests and budget facts use observeTarget.
+func untrackedLines(path string) (int, bool) {
 	fi, err := os.Lstat(path)
 	if err != nil {
-		return 0
+		return 0, false
 	}
-	switch {
-	case fi.Mode()&os.ModeSymlink != 0:
-		return 1
-	case !fi.Mode().IsRegular():
-		return 1
+	if fi.Mode()&os.ModeSymlink != 0 || !fi.Mode().IsRegular() {
+		return 1, false
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	defer f.Close()
-	buf := make([]byte, 64<<10)
-	n, total := 0, 0
-	var last byte = '\n'
-	for total < maxCountedBytes {
-		r, err := f.Read(buf)
-		n += bytes.Count(buf[:r], []byte{'\n'})
-		if r > 0 {
-			last = buf[r-1]
-			total += r
-		}
-		if err != nil {
-			break
-		}
+	const limit = 16 << 20
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return 0, false
 	}
-	if last != '\n' {
+	overflow := len(data) > limit
+	if overflow {
+		data = data[:limit]
+	}
+	n := bytes.Count(data, []byte{'\n'})
+	if len(data) > 0 && data[len(data)-1] != '\n' {
 		n++
 	}
-	return n
+	if len(data) > 0 && n == 0 {
+		n = 1
+	}
+	return n, overflow
 }
 
-// requireFindingsResolved refuses while a recorded finding stays unresolved:
-// any BLOCK finding (unwaivable), and any WAIVABLE finding without an active
-// human waiver (architecture §5.2, §9). unit limits the check to that unit's
-// findings and unowned ones; an empty unit checks every finding (closure).
 func requireFindingsResolved(storePath, runID, unit string) error {
 	core, err := store.New(storePath).Load(runID)
 	if err != nil {

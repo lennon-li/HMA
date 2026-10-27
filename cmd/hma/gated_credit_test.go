@@ -74,6 +74,7 @@ func newCreditFixtureArgs(t *testing.T, exe string, argv []string, c2 model.Crit
 			t.Fatal(err)
 		}
 		cf.contractPath = filepath.Join(t.TempDir(), "contract.json")
+		f.contractPath = cf.contractPath
 		if err := os.WriteFile(cf.contractPath, cb, 0o600); err != nil {
 			t.Fatal(err)
 		}

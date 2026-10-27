@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -311,7 +313,7 @@ func TestUntrackedLinesBounded(t *testing.T) {
 	outside := filepath.Join(t.TempDir(), "big")
 	os.WriteFile(outside, []byte(strings.Repeat("x\n", 5000)), 0o600)
 	os.Symlink(outside, filepath.Join(dir, "link"))
-	if n := untrackedLines(filepath.Join(dir, "link")); n != 1 {
+	if n, _ := untrackedLines(filepath.Join(dir, "link")); n != 1 {
 		t.Errorf("symlink counted %d lines", n)
 	}
 	fifo := filepath.Join(dir, "fifo")
@@ -319,7 +321,7 @@ func TestUntrackedLinesBounded(t *testing.T) {
 		t.Skip("mkfifo")
 	}
 	done := make(chan int, 1)
-	go func() { done <- untrackedLines(fifo) }()
+	go func() { n, _ := untrackedLines(fifo); done <- n }()
 	select {
 	case n := <-done:
 		if n != 1 {
@@ -329,7 +331,7 @@ func TestUntrackedLinesBounded(t *testing.T) {
 		t.Fatal("a FIFO blocked the measurement")
 	}
 	os.WriteFile(filepath.Join(dir, "reg"), []byte("a\nb\nc"), 0o600)
-	if n := untrackedLines(filepath.Join(dir, "reg")); n != 3 {
+	if n, _ := untrackedLines(filepath.Join(dir, "reg")); n != 3 {
 		t.Errorf("regular file counted %d lines, want 3", n)
 	}
 }
@@ -350,5 +352,52 @@ func TestOverrideRefusedForEstablishedFinding(t *testing.T) {
 	}
 	if r := req("U1/F1"); r.Decision == engine.DecisionRejected {
 		t.Errorf("report-sourced WAIVABLE no longer overridable: %+v", r)
+	}
+}
+
+// A modified tracked file in a dirty target counts only its changed lines (one
+// added, one deleted), never the whole file as if it were untracked; a new
+// untracked file counts its lines. Both the budget measurement and the packet
+// manifest must agree.
+func TestDirtyMeasureCountsTrackedChangesByDiff(t *testing.T) {
+	root := gitRepo(t)
+	ten := strings.Repeat("line\n", 10)
+	os.WriteFile(filepath.Join(root, "tracked"), []byte(ten), 0o600)
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-qm", "ten lines")
+	baseOut, _ := exec.Command("git", "-C", root, "rev-parse", "HEAD").Output()
+	base := strings.TrimSpace(string(baseOut))
+	os.WriteFile(filepath.Join(root, "tracked"), []byte(strings.Replace(ten, "line", "LINE", 1)), 0o600)
+	os.WriteFile(filepath.Join(root, "fresh"), []byte("a\nb\nc\n"), 0o600)
+	files, lines, err := measureChange(context.Background(), root, base, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Against the base: "tracked" differs in one line (one added, one deleted)
+	// and "fresh" is new with 3 lines. Compute the tracked part from git itself.
+	out, _ := exec.Command("git", "-C", root, "diff", "--numstat", "--text", "--no-renames", base, "--").Output()
+	want := 3
+	for _, row := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		f := strings.Fields(row)
+		a, _ := strconv.Atoi(f[0])
+		d, _ := strconv.Atoi(f[1])
+		want += a + d
+	}
+	if lines != want {
+		t.Fatalf("lines = %d, want %d (tracked changes by diff, untracked by content)", lines, want)
+	}
+	manifest, err := buildChangedFileManifest(context.Background(), root, base, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest) != files {
+		t.Fatalf("manifest has %d entries, measurement counts %d files", len(manifest), files)
+	}
+	sum := 0
+	for _, f := range manifest {
+		sum += f.Added + f.Deleted
+	}
+	if sum != lines {
+		t.Fatalf("manifest lines %d, measurement lines %d", sum, lines)
 	}
 }

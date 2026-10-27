@@ -34,6 +34,9 @@ type reviewFixture struct {
 	importTS                  string
 	base, packetTS            string
 	policy, planDigest        string
+	// contractPath is the approved contract a fixture binds, passed to the
+	// review packet; empty for fixtures that bind none.
+	contractPath string
 }
 
 // step runs one host command with v as input and returns the new host head.
@@ -76,7 +79,7 @@ func (f *reviewFixture) packet(preflightTS, packetTS, expires, runID string) {
 		UnitID: "U1", Role: hoststate.RoleReview, Route: f.reviewer, PreflightRecordDigest: rpf,
 		BoundedTask: "review fixed packet", WorkContextDigest: "ctx-ming", ImplementationRecordDigest: f.implementation,
 		ArtifactDigest: hoststate.ReviewArtifactDigest(f.head, f.diff, ""), Risk: model.RouteRiskHigh, FinalValidation: f.final,
-	}, DispatchRunID: runID, IssuingReason: f.reason, RepositoryRoot: f.root, BaseRevision: f.base, Task: "Review the change.", LedgerDir: f.ledger})
+	}, DispatchRunID: runID, IssuingReason: f.reason, RepositoryRoot: f.root, BaseRevision: f.base, Task: "Review the change.", ContractPath: f.contractPath, PolicyPath: f.policy, LedgerDir: f.ledger})
 	f.packetTS = packetTS
 	if err := run([]string{"host", "review-packet", "--input", input, "--store", f.store, "--out", f.packetPath}); err != nil {
 		f.t.Fatalf("review-packet: %v", err)
