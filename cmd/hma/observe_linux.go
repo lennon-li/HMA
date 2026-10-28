@@ -20,6 +20,11 @@ const observeOpenFlags = syscall.O_RDONLY | syscall.O_NOFOLLOW | syscall.O_NONBL
 // writer would swap a parent.
 var worktreeWalkHook func(rel string)
 
+// errDirtyObservationUnsupported is nil on Linux: the hardened per-entry
+// reader below is available, so dirty observation is supported and
+// observeTargetLimit's platform check always passes.
+var errDirtyObservationUnsupported error
+
 // anchored names name inside the already-open directory dir through
 // /proc/self/fd, so the lookup starts at that directory's inode whatever
 // happens to its path afterwards.

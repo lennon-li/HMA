@@ -35,8 +35,11 @@ func observeTarget(ctx context.Context, root, base string, dirty bool) ([]observ
 }
 
 // observeTargetLimit is observeTarget with an entry limit: more changed paths
-// than limit refuse before any bytes are read. A limit of 0 means none (the
-// budget measurement must stay exact for a large change).
+// than limit refuse before this observation reads any per-path bytes (blob or
+// worktree content). That excludes repostate.ChangedPaths's own, earlier
+// reads, which discover the changed set for a dirty target (see below) and
+// are not bounded by this cap. A limit of 0 means none (the budget
+// measurement must stay exact for a large change).
 func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limit int) ([]observedEntry, error) {
 	headOut, err := repostate.Output(ctx, root, "rev-parse", "HEAD")
 	if err != nil {
@@ -68,6 +71,14 @@ func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limi
 		}
 	}
 	if dirty {
+		// A platform without the hardened per-entry reader must refuse before
+		// repostate.ChangedPaths ever runs: that call reads every tracked
+		// file's worktree bytes by plain pathname (Gate B, unchanged, and not
+		// anchored), so letting it run first would defeat the Linux-only
+		// restriction below instead of enforcing it.
+		if errDirtyObservationUnsupported != nil {
+			return nil, errDirtyObservationUnsupported
+		}
 		changed, e := repostate.ChangedPaths(ctx, root, head)
 		if e != nil {
 			return nil, e

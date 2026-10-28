@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -121,6 +122,44 @@ func TestWorktreeParentSwapCannotRedirectLookup(t *testing.T) {
 	}
 	if string(data) != "inside\n" {
 		t.Fatalf("read %q, want the original directory's file", data)
+	}
+}
+
+// Audit d5c15p F01: on a build without the hardened per-entry reader,
+// observeTargetLimit must refuse a dirty target before repostate.ChangedPaths
+// ever runs, because that call reads tracked worktree files by plain
+// pathname. This test cannot build for a non-Linux GOOS, so it simulates the
+// unsupported-platform condition on Linux by overriding the same package
+// variable the real !linux build sets, and uses inotify to prove the dirty
+// file was never opened or read before the refusal.
+func TestDirtyObservationRefusesBeforeChangedPathsOnUnsupportedPlatform(t *testing.T) {
+	repo := gitRepo(t)
+	auditWrite(t, filepath.Join(repo, "f"), "one\n")
+	auditGit(t, repo, "add", ".")
+	auditGit(t, repo, "commit", "-qm", "base")
+	base := auditGit(t, repo, "rev-parse", "HEAD")
+	auditWrite(t, filepath.Join(repo, "f"), "two\n") // dirty: differs from the committed blob
+
+	fd, err := syscall.InotifyInit1(syscall.IN_CLOEXEC | syscall.IN_NONBLOCK)
+	if err != nil {
+		t.Skipf("inotify unavailable: %v", err)
+	}
+	defer syscall.Close(fd)
+	if _, err := syscall.InotifyAddWatch(fd, filepath.Join(repo, "f"), syscall.IN_OPEN|syscall.IN_ACCESS); err != nil {
+		t.Fatalf("InotifyAddWatch: %v", err)
+	}
+
+	sentinel := errors.New("test: dirty observation unsupported on this platform")
+	errDirtyObservationUnsupported = sentinel
+	defer func() { errDirtyObservationUnsupported = nil }()
+
+	if _, err := observeTargetLimit(context.Background(), repo, base, true, 0); !errors.Is(err, sentinel) {
+		t.Fatalf("observeTargetLimit error = %v, want the platform-unsupported sentinel", err)
+	}
+
+	buf := make([]byte, 4096)
+	if n, rerr := syscall.Read(fd, buf); rerr == nil && n > 0 {
+		t.Fatalf("the dirty file was opened or read before the platform refusal (%d bytes of inotify events)", n)
 	}
 }
 

@@ -367,8 +367,10 @@ func TestD5C5PManifestLargeChangeCap(t *testing.T) {
 	for i := 0; i < 2001; i++ {
 		auditWrite(t, filepath.Join(repo, fmt.Sprintf("file-%04d", i)), "x\n")
 	}
-	// The cap applies to the path count before any bytes are read (audit d5c11m
-	// F3): building the manifest itself refuses, with the named reason.
+	// The cap applies to the path count before this observation reads any
+	// per-path bytes (audit d5c11m F3): building the manifest itself refuses,
+	// with the named reason. repostate.ChangedPaths's own earlier scan, which
+	// discovers this dirty target's changed set, is not bounded by this cap.
 	files, err := buildChangedFileManifest(context.Background(), repo, base, true)
 	if err == nil || err.Error() != hoststate.ReasonReviewPacketTooLarge || files != nil {
 		t.Fatalf("manifest of 2001 entries = %d files, %v; want %s", len(files), err, hoststate.ReasonReviewPacketTooLarge)
