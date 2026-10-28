@@ -5,10 +5,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -31,6 +31,13 @@ type treeEntry struct{ mode, typ, oid string }
 // manifest and disposition budgets. Counts use a bounded Go Myers line diff;
 // this avoids Git attributes and pathspec interpretation entirely.
 func observeTarget(ctx context.Context, root, base string, dirty bool) ([]observedEntry, error) {
+	return observeTargetLimit(ctx, root, base, dirty, maxObservedEntries)
+}
+
+// observeTargetLimit is observeTarget with an entry limit: more changed paths
+// than limit refuse before any bytes are read. A limit of 0 means none (the
+// budget measurement must stay exact for a large change).
+func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limit int) ([]observedEntry, error) {
 	headOut, err := repostate.Output(ctx, root, "rev-parse", "HEAD")
 	if err != nil {
 		return nil, err
@@ -75,6 +82,16 @@ func observeTarget(ctx context.Context, root, base string, dirty bool) ([]observ
 	}
 	sort.Strings(ordered)
 	out := make([]observedEntry, 0, len(ordered))
+	// The packet refuses more than maxObservedEntries entries. Refuse on the
+	// path count before this observation reads any per-path bytes (blob or
+	// worktree content), so a very large change fails fast with the named
+	// reason. Reads that come earlier are not covered: for a dirty target,
+	// repostate.ChangedPaths (the Gate B snapshot logic) reads tracked worktree
+	// files to find what changed, and the packet command takes the artifact
+	// snapshot before it builds the manifest.
+	if limit > 0 && len(ordered) > limit {
+		return nil, errors.New(hoststate.ReasonReviewPacketTooLarge)
+	}
 	for _, p := range ordered {
 		if !utf8.ValidString(p) {
 			return nil, fmt.Errorf(hoststate.ReasonReviewPacketPathUnsupported)
@@ -228,49 +245,38 @@ func blobBytes(ctx context.Context, root, oid string) ([]byte, string, bool, err
 	return repostate.BlobWindow(ctx, root, oid, maxCountedBytes)
 }
 
+// entryKind classifies a worktree path found without following any symlink.
+type entryKind int
+
+const (
+	entryAbsent entryKind = iota
+	entryDir
+	entrySymlink
+	entryRegular
+	entrySpecial
+)
+
+// worktreeEntry is what openWorktreeEntry found. For a regular file, file is
+// open and the caller closes it.
+type worktreeEntry struct {
+	kind entryKind
+	link string
+	file *os.File
+	exec bool
+}
+
 func worktreeBytes(ctx context.Context, root, p string) ([]byte, string, bool, string, bool, error) {
-	rootAbs, err := filepath.Abs(root)
+	ent, err := openWorktreeEntry(root, p)
 	if err != nil {
 		return nil, "", false, "", false, err
 	}
-	parts := strings.Split(filepath.FromSlash(p), string(os.PathSeparator))
-	current := rootAbs
-	for i, part := range parts {
-		current = filepath.Join(current, part)
-		fi, e := os.Lstat(current)
-		if os.IsNotExist(e) {
-			return nil, "", false, "", false, nil
-		}
-		if e != nil {
-			return nil, "", false, "", false, e
-		}
-		if i < len(parts)-1 && (fi.Mode()&os.ModeSymlink != 0 || !fi.IsDir()) {
-			return nil, "", false, "", false, nil
-		}
-		if i != len(parts)-1 {
-			continue
-		}
-		if fi.Mode()&os.ModeSymlink != 0 {
-			link, e := os.Readlink(current)
-			data := []byte(link)
-			return data, "120000", true, hashBytes(data), false, e
-		}
-		if fi.IsDir() {
-			// A directory at a path that is a file in the tree means the
-			// file is gone from the target (foo.go replaced by foo/): there is
-			// no file entry here. A nested untracked repository is refused
-			// earlier (its listed path ends in "/").
-			return nil, "", false, "", false, nil
-		}
-		if !fi.Mode().IsRegular() {
-			return nil, "", true, "", false, nil
-		}
-		f, e := os.Open(current)
-		if e != nil {
-			return nil, "", false, "", false, e
-		}
-		data, sum, truncated, e := streamWindow(f)
-		closeErr := f.Close()
+	switch ent.kind {
+	case entrySymlink:
+		data := []byte(ent.link)
+		return data, "120000", true, hashBytes(data), false, nil
+	case entryRegular:
+		data, sum, truncated, e := streamWindow(ctx, ent.file)
+		closeErr := ent.file.Close()
 		if e != nil {
 			return nil, "", false, "", false, e
 		}
@@ -278,18 +284,39 @@ func worktreeBytes(ctx context.Context, root, p string) ([]byte, string, bool, s
 			return nil, "", false, "", false, closeErr
 		}
 		mode := "100644"
-		if fi.Mode().Perm()&0100 != 0 {
+		if ent.exec {
 			mode = "100755"
 		}
 		return data, mode, true, sum, truncated, nil
+	case entrySpecial:
+		// A FIFO, socket or device is not part of the target (git does not
+		// track it and the digest does not cover it); it is never opened.
+		return nil, "", true, "", false, nil
+	default:
+		// Absent, or a directory at a path that is a file in the tree (foo.go
+		// replaced by foo/): there is no file entry here. A nested untracked
+		// repository is refused earlier (its listed path ends in "/").
+		return nil, "", false, "", false, nil
 	}
-	return nil, "", false, "", false, nil
 }
 
-func streamWindow(r io.Reader) ([]byte, string, bool, error) {
+// ctxReader fails a read once the context is done.
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (c ctxReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
+}
+
+func streamWindow(ctx context.Context, r io.Reader) ([]byte, string, bool, error) {
 	h := sha256.New()
 	var window limitedObservationWindow
-	if _, err := io.Copy(io.MultiWriter(h, &window), r); err != nil {
+	if _, err := io.Copy(io.MultiWriter(h, &window), ctxReader{ctx, r}); err != nil {
 		return nil, "", false, err
 	}
 	return window.data, hex.EncodeToString(h.Sum(nil)), window.overflow, nil
@@ -318,39 +345,10 @@ func (w *limitedObservationWindow) Write(p []byte) (int, error) {
 
 func hashBytes(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
 
-// dirtyPathDigest is retained for package-level adversarial probes. Production
-// callers use observeTarget so hashes and counts share one observation.
-func dirtyPathDigest(path string) (string, int, error) {
-	fi, err := os.Lstat(path)
-	if err != nil {
-		return "", 0, err
-	}
-	var b []byte
-	if fi.Mode()&os.ModeSymlink != 0 {
-		link, e := os.Readlink(path)
-		if e != nil {
-			return "", 0, e
-		}
-		b = []byte(link)
-	} else if fi.Mode().IsRegular() {
-		b, err = os.ReadFile(path)
-		if err != nil {
-			return "", 0, err
-		}
-	} else {
-		return "", 1, nil
-	}
-	sum := sha256.Sum256(b)
-	const limit = 16 << 20
-	truncated := len(b) > limit
-	if truncated {
-		b = b[:limit]
-	}
-	return hex.EncodeToString(sum[:]), observedCountLines(b), nil
-}
-
 // lineCounts is the result of a line diff. Truncated: a side exceeded the
-// 16 MiB observation window, so the counts are a LOWER bound. UpperBound: the
+// 16 MiB observation window; the counts are those of the first 16 MiB of each
+// side and are NOT a bound on the whole change (the budget treats the entry as
+// exceeded, and the packet says so). UpperBound: the
 // edit-distance work or the line cap was hit, so (Added, Deleted) is a sound
 // UPPER bound (every line of the two sides counted as changed).
 type lineCounts struct {
@@ -359,22 +357,13 @@ type lineCounts struct {
 }
 
 const (
-	observationWindow = 16 << 20
-	maxObservedLines  = 1_000_000
-	maxEditDepth      = 20000
-	maxEditWork       = 50_000_000
+	// maxObservedEntries is the manifest cap (also applied to the packet).
+	maxObservedEntries = 2000
+	observationWindow  = 16 << 20
+	maxObservedLines   = 1_000_000
+	maxEditDepth       = 20000
+	maxEditWork        = 50_000_000
 )
-
-// lineDiff returns standard minimal-edit line counts and folds both bound
-// flags into one "truncated" result for callers that only need that.
-func lineDiff(a, b []byte) (added, deleted int, truncated bool) {
-	return lineDiffContext(context.Background(), a, b)
-}
-
-func lineDiffContext(ctx context.Context, a, b []byte) (added, deleted int, truncated bool) {
-	c := lineDiffCounts(ctx, a, b)
-	return c.Added, c.Deleted, c.Truncated || c.UpperBound
-}
 
 // lineIndex holds a side's lines as offsets and 64-bit hashes (12 bytes per
 // line) instead of one slice header per line.

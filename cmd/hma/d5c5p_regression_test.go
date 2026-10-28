@@ -56,7 +56,7 @@ func TestD5C5PDirtyManifestTargetCoverage(t *testing.T) {
 				t.Fatal(err)
 			}
 			files, err := buildChangedFileManifest(context.Background(), repo, base, true)
-			n, l, me := measureChange(context.Background(), repo, base, true)
+			n, l, _, me := measureChange(context.Background(), repo, base, true)
 			t.Logf("kind=%s snapshot=%+v manifest=%+v manifestErr=%v measure=(%d,%d,%v)", kind, snap, files, err, n, l, me)
 			if err != nil {
 				t.Fatalf("valid dirty target refuses manifest: %v", err)
@@ -367,16 +367,16 @@ func TestD5C5PManifestLargeChangeCap(t *testing.T) {
 	for i := 0; i < 2001; i++ {
 		auditWrite(t, filepath.Join(repo, fmt.Sprintf("file-%04d", i)), "x\n")
 	}
+	// The cap applies to the path count before any bytes are read (audit d5c11m
+	// F3): building the manifest itself refuses, with the named reason.
 	files, err := buildChangedFileManifest(context.Background(), repo, base, true)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || err.Error() != hoststate.ReasonReviewPacketTooLarge || files != nil {
+		t.Fatalf("manifest of 2001 entries = %d files, %v; want %s", len(files), err, hoststate.ReasonReviewPacketTooLarge)
 	}
-	st := packetCoreState{Manifest: files, Contract: &packetContract{}}
-	p := buildReviewPacket(hostReviewPacketInput{Task: "review"}, hoststate.ReviewPacketBinding{}, st)
-	err = validateReviewPacketSize(p, st)
-	t.Logf("entries=%d packetBytes=%d result=%v", len(files), len(p), err)
-	if len(files) != 2001 || err == nil {
-		t.Fatal("cap/truncation unexpected")
+	// The packet-level cap still refuses an over-long manifest handed to it.
+	st := packetCoreState{Manifest: make([]packetFile, 2001), Contract: &packetContract{}}
+	if err := validateReviewPacketSize(buildReviewPacket(hostReviewPacketInput{Task: "review"}, hoststate.ReviewPacketBinding{}, st), st); err == nil {
+		t.Fatal("an over-long manifest passed the packet size check")
 	}
 }
 
@@ -392,10 +392,10 @@ func TestD5C5PLargeFileCountsSilentlyTruncated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, l, e := measureChange(context.Background(), repo, base, true)
+	n, l, trunc, e := measureChange(context.Background(), repo, base, true)
 	b, _ := json.Marshal(files)
-	t.Logf("manifest=%s measured=(%d,%d,%v) actualLines=%d", b, n, l, e, countLines([]byte(body)))
-	if len(files) != 1 || !files[0].LinesTruncated || l != int(^uint(0)>>1) {
+	t.Logf("manifest=%s measured=(%d,%d,%v) actualLines=%d", b, n, l, e, observedCountLines([]byte(body)))
+	if len(files) != 1 || !files[0].LinesTruncated || !trunc || e != nil {
 		t.Error("truncated line count must be explicit and must exceed every line budget")
 	}
 }
@@ -443,7 +443,7 @@ func TestD5C5PCommandStagedDeletionAndEOL(t *testing.T) {
 				t.Fatal(err)
 			}
 			st := packetState(t, out)
-			n, l, e := measureChange(context.Background(), cf.root, cf.base, true)
+			n, l, _, e := measureChange(context.Background(), cf.root, cf.base, true)
 			total := 0
 			for _, f := range st.Manifest {
 				total += f.Added + f.Deleted

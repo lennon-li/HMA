@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io"
-	"os"
 
 	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/evidence"
@@ -83,12 +80,11 @@ func findingFacts(ctx context.Context, storePath string, core []model.Record, un
 			facts.RuleHolds["no_shell"] = true
 		}
 	}
-	files, lines, err := measureChange(ctx, p.ProjectRoot, p.BaseRevision, dirty)
+	files, lines, truncated, err := measureChange(ctx, p.ProjectRoot, p.BaseRevision, dirty)
 	if err != nil {
 		return facts, err
 	}
-	facts.BudgetExceeded["max_files"] = files > u.Budgets.MaxFiles
-	facts.BudgetExceeded["max_diff_lines"] = lines > u.Budgets.MaxDiffLines
+	budgetFacts(&facts, files, lines, truncated, u.Budgets)
 	return facts, nil
 }
 
@@ -99,56 +95,24 @@ func findingFacts(ctx context.Context, storePath string, core []model.Record, un
 // neutralised. Git-marked binary entries use bounded raw-byte line counts.
 // A rename counts as a deletion and an
 // addition; a merge is measured as the base-to-target tree difference.
-func measureChange(ctx context.Context, root, base string, dirty bool) (int, int, error) {
-	entries, err := observeTarget(ctx, root, base, dirty)
+func measureChange(ctx context.Context, root, base string, dirty bool) (files, lines int, truncated bool, err error) {
+	entries, err := observeTargetLimit(ctx, root, base, dirty, 0)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false, err
 	}
-	lines := 0
 	for _, e := range entries {
+		// A truncated entry's counts cover only the first 16 MiB of each side
+		// and are not a bound: report the truncation as its own fact, so the
+		// caller treats the line budget as exceeded without a sentinel number.
 		if e.LinesTruncated {
-			return len(entries), int(^uint(0) >> 1), nil
+			truncated = true
 		}
 		lines += e.Added + e.Deleted
 	}
-	return len(entries), lines, nil
+	return len(entries), lines, truncated, nil
 }
 
 const maxCountedBytes = 16 << 20
-
-// untrackedLines remains a bounded helper for its focused regression tests.
-// Production manifests and budget facts use observeTarget.
-func untrackedLines(path string) (int, bool) {
-	fi, err := os.Lstat(path)
-	if err != nil {
-		return 0, false
-	}
-	if fi.Mode()&os.ModeSymlink != 0 || !fi.Mode().IsRegular() {
-		return 1, false
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, false
-	}
-	defer f.Close()
-	const limit = 16 << 20
-	data, err := io.ReadAll(io.LimitReader(f, limit+1))
-	if err != nil {
-		return 0, false
-	}
-	overflow := len(data) > limit
-	if overflow {
-		data = data[:limit]
-	}
-	n := bytes.Count(data, []byte{'\n'})
-	if len(data) > 0 && data[len(data)-1] != '\n' {
-		n++
-	}
-	if len(data) > 0 && n == 0 {
-		n = 1
-	}
-	return n, overflow
-}
 
 func requireFindingsResolved(storePath, runID, unit string) error {
 	core, err := store.New(storePath).Load(runID)
@@ -171,4 +135,12 @@ func requireFindingsResolved(storePath, runID, unit string) error {
 		}
 	}
 	return nil
+}
+
+// budgetFacts sets the measured plan-budget facts. A truncated measurement (a
+// side past the 16 MiB window) makes the line budget exceeded whatever the
+// budget is, including the largest integer a plan may declare.
+func budgetFacts(facts *hoststate.FindingFacts, files, lines int, truncated bool, b model.UnitBudgets) {
+	facts.BudgetExceeded["max_files"] = files > b.MaxFiles
+	facts.BudgetExceeded["max_diff_lines"] = truncated || lines > b.MaxDiffLines
 }

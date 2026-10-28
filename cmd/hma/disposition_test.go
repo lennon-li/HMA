@@ -243,7 +243,7 @@ func TestMeasureChangeIgnoresAttributesAndCountsDirty(t *testing.T) {
 	os.WriteFile(filepath.Join(root, "big"), big, 0o600)
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-qm", "big")
-	files, lines, err := measureChange(context.Background(), root, base, false)
+	files, lines, _, err := measureChange(context.Background(), root, base, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestMeasureChangeIgnoresAttributesAndCountsDirty(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(root, "untracked"), []byte("a\nb\n"), 0o600)
 	os.WriteFile(filepath.Join(root, "big"), append(big, []byte("more\n")...), 0o600)
-	f2, l2, err := measureChange(context.Background(), root, base, true)
+	f2, l2, _, err := measureChange(context.Background(), root, base, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,33 +306,35 @@ func TestBudgetWaiverDoesNotSurviveNewArtifact(t *testing.T) {
 	}
 }
 
-// N3: an untracked symlink counts one line and is not followed; a FIFO is not
-// opened; a regular file is counted with a bound.
-func TestUntrackedLinesBounded(t *testing.T) {
+// N3: the live reader counts an untracked symlink as its link text (one line,
+// not followed), never opens a FIFO, and counts a regular file's lines.
+func TestWorktreeLinesBounded(t *testing.T) {
 	dir := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "big")
 	os.WriteFile(outside, []byte(strings.Repeat("x\n", 5000)), 0o600)
 	os.Symlink(outside, filepath.Join(dir, "link"))
-	if n, _ := untrackedLines(filepath.Join(dir, "link")); n != 1 {
-		t.Errorf("symlink counted %d lines", n)
+	data, mode, _, _, _, err := worktreeBytes(context.Background(), dir, "link")
+	if err != nil || mode != "120000" || observedCountLines(data) != 1 {
+		t.Errorf("symlink = %q %q %v; want one line of link text", data, mode, err)
 	}
 	fifo := filepath.Join(dir, "fifo")
 	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
 		t.Skip("mkfifo")
 	}
-	done := make(chan int, 1)
-	go func() { n, _ := untrackedLines(fifo); done <- n }()
+	done := make(chan string, 1)
+	go func() { _, m, _, _, _, _ := worktreeBytes(context.Background(), dir, "fifo"); done <- m }()
 	select {
-	case n := <-done:
-		if n != 1 {
-			t.Errorf("fifo counted %d lines", n)
+	case m := <-done:
+		if m != "" {
+			t.Errorf("fifo mode %q, want none", m)
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("a FIFO blocked the measurement")
 	}
 	os.WriteFile(filepath.Join(dir, "reg"), []byte("a\nb\nc"), 0o600)
-	if n, _ := untrackedLines(filepath.Join(dir, "reg")); n != 3 {
-		t.Errorf("regular file counted %d lines, want 3", n)
+	data, _, _, _, _, err = worktreeBytes(context.Background(), dir, "reg")
+	if err != nil || observedCountLines(data) != 3 {
+		t.Errorf("regular file counted %d lines, %v; want 3", observedCountLines(data), err)
 	}
 }
 
@@ -369,7 +371,7 @@ func TestDirtyMeasureCountsTrackedChangesByDiff(t *testing.T) {
 	base := strings.TrimSpace(string(baseOut))
 	os.WriteFile(filepath.Join(root, "tracked"), []byte(strings.Replace(ten, "line", "LINE", 1)), 0o600)
 	os.WriteFile(filepath.Join(root, "fresh"), []byte("a\nb\nc\n"), 0o600)
-	files, lines, err := measureChange(context.Background(), root, base, true)
+	files, lines, _, err := measureChange(context.Background(), root, base, true)
 	if err != nil {
 		t.Fatal(err)
 	}

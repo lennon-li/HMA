@@ -101,22 +101,35 @@ func TestBuildChangedFileManifestDirtyKindsAndNoFIFOBlock(t *testing.T) {
 	}
 }
 
-func TestDirtyPathDigestLineCountCapAndSpecialFiles(t *testing.T) {
+// worktreeBytes is the live reader of the dirty target. A file larger than the
+// 16 MiB window is hashed in full while only the window is kept; a symlink is
+// its link text and is never followed; a FIFO is never opened.
+func TestWorktreeBytesWindowSymlinkAndFIFO(t *testing.T) {
 	dir := t.TempDir()
 	regular := filepath.Join(dir, "regular")
-	if err := os.WriteFile(regular, []byte(strings.Repeat("x\n", (16<<20)/2+4)), 0o600); err != nil {
+	body := []byte(strings.Repeat("x\n", (16<<20)/2+4))
+	if err := os.WriteFile(regular, body, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	digest, lines, err := dirtyPathDigest(regular)
-	if err != nil {
-		t.Fatal(err)
+	data, mode, exists, digest, truncated, err := worktreeBytes(context.Background(), dir, "regular")
+	if err != nil || !exists || mode != "100644" {
+		t.Fatalf("regular = %q %v %v", mode, exists, err)
 	}
-	if lines != (16<<20)/2 {
-		t.Fatalf("line count = %d, want capped count %d", lines, (16<<20)/2)
+	if len(data) != 16<<20 || !truncated {
+		t.Fatalf("window = %d bytes, truncated %v; want the 16 MiB window and truncated", len(data), truncated)
 	}
-	want := sha256.Sum256(mustReadFile(t, regular))
+	want := sha256.Sum256(body)
 	if digest != hex.EncodeToString(want[:]) {
-		t.Fatal("regular file digest did not cover complete file")
+		t.Fatal("regular file digest did not cover the complete file")
+	}
+	outside := filepath.Join(t.TempDir(), "big")
+	os.WriteFile(outside, []byte(strings.Repeat("y\n", 5000)), 0o600)
+	if err := os.Symlink(outside, filepath.Join(dir, "link")); err != nil {
+		t.Fatal(err)
+	}
+	data, mode, exists, _, _, err = worktreeBytes(context.Background(), dir, "link")
+	if err != nil || !exists || mode != "120000" || string(data) != outside {
+		t.Fatalf("symlink = %q %q %v %v; want its link text, not the target's bytes", data, mode, exists, err)
 	}
 	fifo := filepath.Join(dir, "fifo")
 	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
@@ -125,15 +138,15 @@ func TestDirtyPathDigestLineCountCapAndSpecialFiles(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		d, n, e := dirtyPathDigest(fifo)
-		if d != "" || n != 1 || e != nil {
-			t.Errorf("FIFO result = %q, %d, %v", d, n, e)
+		d, m, ex, h, _, e := worktreeBytes(context.Background(), dir, "fifo")
+		if d != nil || m != "" || !ex || h != "" || e != nil {
+			t.Errorf("FIFO result = %q %q %v %q %v", d, m, ex, h, e)
 		}
 	}()
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Fatal("dirtyPathDigest opened or blocked on FIFO")
+		t.Fatal("worktreeBytes opened or blocked on a FIFO")
 	}
 }
 

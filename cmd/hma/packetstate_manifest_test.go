@@ -189,7 +189,7 @@ func TestAuditManifestNestedRepoDirty(t *testing.T) {
 	if files, err := buildChangedFileManifest(context.Background(), repo, base, true); err == nil {
 		t.Errorf("manifest accepted a nested repository: %+v", files)
 	}
-	if _, _, merr := measureChange(context.Background(), repo, base, true); merr == nil {
+	if _, _, _, merr := measureChange(context.Background(), repo, base, true); merr == nil {
 		t.Error("measureChange accepted a nested repository")
 	}
 }
@@ -208,7 +208,7 @@ func TestAuditManifestVsMeasureInfoExclude(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, lines, err := measureChange(context.Background(), repo, base, true)
+	n, lines, _, err := measureChange(context.Background(), repo, base, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestAuditBinaryLinesMeasured(t *testing.T) {
 	auditWrite(t, filepath.Join(repo, "big.c"), "\x00\n"+strings.Repeat("int x;\n", 5000))
 	auditGit(t, repo, "add", ".")
 	auditGit(t, repo, "commit", "-qm", "c")
-	n, lines, err := measureChange(context.Background(), repo, base, false)
+	n, lines, _, err := measureChange(context.Background(), repo, base, false)
 	files, merr := buildChangedFileManifest(context.Background(), repo, base, false)
 	t.Logf("A10 measureChange files=%d lines=%d err=%v; manifest=%+v err=%v", n, lines, err, files, merr)
 }
@@ -331,7 +331,7 @@ func TestAuditManifestQuotedPathsCommittedAndDirty(t *testing.T) {
 				t.Errorf("committed=%v omitted exact path %q: %+v", committed, name, files)
 			}
 		}
-		measuredFiles, _, measureErr := measureChange(context.Background(), repo, base, !committed)
+		measuredFiles, _, _, measureErr := measureChange(context.Background(), repo, base, !committed)
 		if measureErr != nil || measuredFiles != len(files) {
 			t.Errorf("committed=%v measure files=%d manifest=%d err=%v", committed, measuredFiles, len(files), measureErr)
 		}
@@ -357,7 +357,7 @@ func TestAuditBinaryLineCountsManifestAndDeleted(t *testing.T) {
 	if len(files) != 1 || !files[0].Binary || files[0].Added < 5001 {
 		t.Fatalf("binary manifest count = %+v", files)
 	}
-	_, lines, err := measureChange(context.Background(), repo, base, false)
+	_, lines, _, err := measureChange(context.Background(), repo, base, false)
 	if err != nil || lines < 5001 {
 		t.Fatalf("binary measure lines=%d err=%v", lines, err)
 	}
@@ -374,7 +374,7 @@ func TestAuditBinaryLineCountsManifestAndDeleted(t *testing.T) {
 	if len(files) != 1 || !files[0].Binary || files[0].Deleted < 5001 || files[0].Status != "deleted" {
 		t.Fatalf("deleted binary manifest = %+v", files)
 	}
-	_, lines, err = measureChange(context.Background(), repo, base, false)
+	_, lines, _, err = measureChange(context.Background(), repo, base, false)
 	if err != nil || lines < 5001 {
 		t.Fatalf("deleted binary measure lines=%d err=%v", lines, err)
 	}

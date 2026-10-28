@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	hoststate "github.com/lennon-li/HMA/internal/host"
+	"github.com/lennon-li/HMA/internal/model"
 	"github.com/lennon-li/HMA/internal/repostate"
 )
 
@@ -60,7 +62,7 @@ func TestD5C9MFileReplacedByDirectory(t *testing.T) {
 			t.Errorf("%s: committed %q, dirty %q", c.Path, c.Status, status[c.Path])
 		}
 	}
-	files, lines, err := measureChange(context.Background(), repo, base, true)
+	files, lines, _, err := measureChange(context.Background(), repo, base, true)
 	if err != nil || files != 3 || lines != 3 {
 		t.Fatalf("measureChange = %d files, %d lines, %v; want 3, 3", files, lines, err)
 	}
@@ -89,7 +91,7 @@ func TestD5C9MLineDiffMemoryBounded(t *testing.T) {
 	}
 }
 
-// F3: the byte window gives a LOWER bound (budget exceeded); the work cap gives
+// F3: the byte window truncates (counts are not a bound; budget exceeded); the work cap gives
 // an UPPER bound that the budget counts as added plus deleted. A fully
 // rewritten 5000-line file is exactly 10000 lines and within a 20000 budget.
 func TestD5C9MWorkCapIsUpperBoundNotExceeded(t *testing.T) {
@@ -110,7 +112,7 @@ func TestD5C9MWorkCapIsUpperBoundNotExceeded(t *testing.T) {
 	if m[0].Added != 5000 || m[0].Deleted != 5000 || !m[0].LinesUpperBound || m[0].LinesTruncated {
 		t.Errorf("entry = %+v, want 5000/5000 upper bound, not truncated", m[0])
 	}
-	_, lines, err := measureChange(context.Background(), repo, base, false)
+	_, lines, _, err := measureChange(context.Background(), repo, base, false)
 	if err != nil || lines != 10000 {
 		t.Errorf("measureChange lines = %d, %v; want 10000", lines, err)
 	}
@@ -135,8 +137,8 @@ func TestD5C9MWorkCapChangesResult(t *testing.T) {
 	}
 }
 
-// A file past the byte window gives a lower bound: the budget fact is exceeded.
-func TestD5C9MByteWindowIsTruncatedLowerBound(t *testing.T) {
+// A file past the byte window is truncated: its counts are not a bound and the budget fact is exceeded.
+func TestD5C9MByteWindowIsTruncated(t *testing.T) {
 	big := bytes.Repeat([]byte("x\n"), 9<<20)
 	c := lineDiffCounts(context.Background(), nil, big)
 	if !c.Truncated {
@@ -186,5 +188,121 @@ func TestD5C9MPacketNamesLineCounting(t *testing.T) {
 	raw, _ := json.Marshal(packetCoreState{})
 	if strings.Contains(string(raw), "line_counts") {
 		t.Errorf("a state without a manifest carries line_counts: %s", raw)
+	}
+}
+
+// Audit d5c11m F3 (narrowed after d5c13l F03): more changed paths than the
+// manifest allows are refused from the path count alone, before the observation
+// reads any per-path bytes. The test covers the committed case; a dirty target
+// still pays the snapshot's own reads first (Gate B code, unchanged). A change just under the
+// limit still succeeds, and the budget measurement (no limit) stays exact.
+func TestD5C11MPathCapRefusesBeforePerPathReads(t *testing.T) {
+	repo := gitRepo(t)
+	auditWrite(t, filepath.Join(repo, "keep"), "k\n")
+	base := d9Commit(t, repo, "base")
+	for i := 0; i < maxObservedEntries+1; i++ {
+		auditWrite(t, filepath.Join(repo, "many", fmt.Sprintf("f%05d", i)), "x\n")
+	}
+	d9Commit(t, repo, "many files")
+	start := time.Now()
+	_, err := observeTarget(context.Background(), repo, base, false)
+	if err == nil || err.Error() != hoststate.ReasonReviewPacketTooLarge {
+		t.Fatalf("observeTarget = %v, want %s", err, hoststate.ReasonReviewPacketTooLarge)
+	}
+	if time.Since(start) > 3*time.Second {
+		t.Errorf("the refusal took %s: per-path bytes were read before the cap applied", time.Since(start))
+	}
+	// The budget measurement has no entry limit and stays exact.
+	files, lines, _, err := measureChange(context.Background(), repo, base, false)
+	if err != nil || files != maxObservedEntries+1 || lines != maxObservedEntries+1 {
+		t.Errorf("measureChange = %d files, %d lines, %v; want %d and %d", files, lines, err, maxObservedEntries+1, maxObservedEntries+1)
+	}
+}
+
+// Audit d5c11m F1: when a side is past the 16 MiB window, the entry is marked
+// lines_truncated and its counts are of the first 16 MiB of each side only, not
+// a bound on the whole change; the budget fact is "exceeded" whatever they are.
+// Fixture: the base has 160 lines of A then 160 lines of B (64 KiB each, 20 MiB
+// in all); the target keeps only the B lines (10 MiB). The true change is
+// 0 added and 160 deleted, but the first 16 MiB of the base is not the whole.
+func TestD5C11MTruncatedCountsAreNotABoundButBudgetIsExceeded(t *testing.T) {
+	repo := gitRepo(t)
+	line := func(c byte) string { return strings.Repeat(string(c), 65535) + "\n" }
+	var base, target strings.Builder
+	for i := 0; i < 160; i++ {
+		base.WriteString(line('A'))
+	}
+	for i := 0; i < 160; i++ {
+		base.WriteString(line('B'))
+		target.WriteString(line('B'))
+	}
+	auditWrite(t, filepath.Join(repo, "f"), base.String())
+	b := d9Commit(t, repo, "base")
+	auditWrite(t, filepath.Join(repo, "f"), target.String())
+	d9Commit(t, repo, "keep B")
+	entries, err := observeTarget(context.Background(), repo, b, false)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("observation = %+v, %v", entries, err)
+	}
+	e := entries[0]
+	if !e.LinesTruncated {
+		t.Fatalf("entry = %+v, want lines_truncated (the base is past the 16 MiB window)", e)
+	}
+	if e.Added == 0 && e.Deleted == 160 {
+		t.Log("the window counts happen to equal the true change here")
+	}
+	_, lines, truncated, err := measureChange(context.Background(), repo, b, false)
+	if err != nil || !truncated {
+		t.Errorf("measureChange = %d lines, truncated %v, %v; want the truncation reported as its own fact", lines, truncated, err)
+	}
+	// The packet documents the semantics: the field comment must not call the
+	// counts a bound.
+	src, rerr := os.ReadFile("review.go")
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	if strings.Contains(string(src), "the counts are a lower bound") || strings.Contains(string(src), "counts are a LOWER bound") {
+		t.Error("a comment still calls the truncated counts a lower bound")
+	}
+}
+
+// Audit d5c11m A1: findings import re-checks the live target after it measured
+// the facts, so they describe the bound target. The check is in the code path;
+// the unit coverage is the existing live-target tests plus this ordering test.
+func TestD5C11MFindingsImportRechecksTargetAfterFacts(t *testing.T) {
+	b, err := os.ReadFile("review.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	i := strings.Index(src, "findingFacts(boundedCtx()")
+	j := strings.Index(src[i:], "requireLiveTarget(history, rr.Review.ReviewDispatchDigest)")
+	if i < 0 || j < 0 {
+		t.Fatal("findings import does not re-check the live target after measuring the facts")
+	}
+}
+
+// Audit d5c13l F04: a truncated measurement exceeds the line budget even when
+// the plan declares the largest integer budget (a numeric sentinel could not).
+func TestD5C13LTruncatedExceedsEvenTheLargestLineBudget(t *testing.T) {
+	maxInt := int(^uint(0) >> 1)
+	for _, tc := range []struct {
+		name      string
+		lines     int
+		truncated bool
+		budget    int
+		want      bool
+	}{
+		{"truncated, huge budget", 5, true, maxInt, true},
+		{"not truncated, huge budget", 5, false, maxInt, false},
+		{"not truncated, over budget", 11, false, 10, true},
+		{"not truncated, within budget", 10, false, 10, false},
+		{"truncated, small budget", 0, true, 10, true},
+	} {
+		facts := hoststate.FindingFacts{BudgetExceeded: map[string]bool{}}
+		budgetFacts(&facts, 1, tc.lines, tc.truncated, model.UnitBudgets{MaxFiles: 10, MaxDiffLines: tc.budget})
+		if got := facts.BudgetExceeded["max_diff_lines"]; got != tc.want {
+			t.Errorf("%s: max_diff_lines exceeded = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

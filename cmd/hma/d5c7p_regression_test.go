@@ -261,7 +261,14 @@ func TestD5C7PInvalidUTF8ManifestPathRefused(t *testing.T) {
 	if _, err := buildChangedFileManifest(context.Background(), repo, base, false); err == nil || err.Error() != hoststate.ReasonReviewPacketPathUnsupported {
 		t.Fatalf("invalid path refusal=%v", err)
 	}
-	if _, _, err := measureChange(context.Background(), repo, base, false); err == nil || err.Error() != hoststate.ReasonReviewPacketPathUnsupported {
+	if _, _, _, err := measureChange(context.Background(), repo, base, false); err == nil || err.Error() != hoststate.ReasonReviewPacketPathUnsupported {
 		t.Fatalf("invalid path budget result=%v", err)
 	}
+}
+
+// lineDiffContext adapts the live lineDiffCounts to the (added, deleted,
+// truncated) shape these tests use; truncated folds both bound flags.
+func lineDiffContext(ctx context.Context, a, b []byte) (added, deleted int, truncated bool) {
+	c := lineDiffCounts(ctx, a, b)
+	return c.Added, c.Deleted, c.Truncated || c.UpperBound
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -142,7 +141,8 @@ type packetFile struct {
 	LinesTruncated bool   `json:"lines_truncated,omitempty"`
 	// LinesUpperBound: the edit-distance work or line cap was hit; added and
 	// deleted are an upper bound (every line of both sides). LinesTruncated:
-	// a side exceeded the 16 MiB window; the counts are a lower bound.
+	// a side exceeded the 16 MiB window; added and deleted count only the first
+	// 16 MiB of each side and are not a bound on the whole change.
 	LinesUpperBound bool `json:"lines_upper_bound,omitempty"`
 }
 
@@ -475,7 +475,7 @@ func runHostReviewPacket(args []string) error {
 }
 
 func validateReviewPacketSize(packet []byte, state packetCoreState) error {
-	if state.Contract != nil && (len(packet) > 2<<20 || len(state.Evidence) > 2000 || len(state.Manifest) > 2000) {
+	if state.Contract != nil && (len(packet) > 2<<20 || len(state.Evidence) > maxObservedEntries || len(state.Manifest) > maxObservedEntries) {
 		return errors.New(hoststate.ReasonReviewPacketTooLarge)
 	}
 	return nil
@@ -651,6 +651,12 @@ func runHostFindingsImport(args []string) error {
 		if err != nil {
 			return err
 		}
+		// The facts were measured from the live repository. Require that the
+		// target is still the one the review bound, so they describe it and not
+		// a state a writer produced during the measurement.
+		if err := requireLiveTarget(history, rr.Review.ReviewDispatchDigest); err != nil {
+			return err
+		}
 		imported, err := hoststate.MapAuditFindings(rep.Findings, facts)
 		if err != nil {
 			return err
@@ -824,21 +830,6 @@ func buildChangedFileManifest(ctx context.Context, root, base string, dirty bool
 		files = append(files, packetFile{Path: e.Path, Status: e.Status, Added: e.Added, Deleted: e.Deleted, SHA256: e.SHA256, OldMode: e.OldMode, NewMode: e.NewMode, Binary: e.Binary, Staged: e.Staged, LinesTruncated: e.LinesTruncated, LinesUpperBound: e.LinesUpperBound})
 	}
 	return files, nil
-}
-
-func exists(path string) bool { _, err := os.Lstat(path); return err == nil }
-
-// countLines counts the lines of b (a final line without a newline counts).
-// It is used by tests; the live code counts through observedCountLines.
-func countLines(b []byte) int {
-	if len(b) == 0 {
-		return 0
-	}
-	n := bytes.Count(b, []byte{'\n'})
-	if b[len(b)-1] != '\n' {
-		n++
-	}
-	return n
 }
 
 // routeApprovalPlanDigest is the accepted plan digest carried by the unit's
