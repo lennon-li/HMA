@@ -193,6 +193,13 @@ func statusPaths(status string) []string {
 // It reads only the paths it is given and writes nothing, so taking the
 // digest never mutates the repository or its object store.
 func worktreeContentDigest(root, head string, paths []string, staged map[string]string) (string, error) {
+	return digestWorktree(context.Background(), root, head, paths, staged, nil, nil)
+}
+
+// digestWorktree is worktreeContentDigest; with a reader every path is read once
+// through it and its Record stored in entries, and a path the changed-path
+// discovery already recorded must read the same again.
+func digestWorktree(ctx context.Context, root, head string, paths []string, staged map[string]string, r WorktreeReader, entries map[string]string) (string, error) {
 	h := sha256.New()
 	// v5 takes its changed-path set from a raw comparison of the worktree
 	// against HEAD (see changedPaths), not from git status. Earlier domains
@@ -213,6 +220,34 @@ func worktreeContentDigest(root, head string, paths []string, staged map[string]
 		// a different artifact.
 		h.Write([]byte("index\x00"))
 		writeFramed(h, []byte(staged[path]))
+		if r != nil {
+			e, err := r.ReadEntry(ctx, path)
+			if err != nil {
+				return "", err
+			}
+			rec := e.Record()
+			if prev, ok := entries[path]; ok && prev != rec {
+				return "", fmt.Errorf("worktree path %s changed while it was captured", path)
+			}
+			entries[path] = rec
+			switch e.Kind {
+			case EntryAbsent:
+				h.Write([]byte("absent\x00"))
+			case EntrySymlink:
+				h.Write([]byte("symlink\x00"))
+				writeFramed(h, e.Data)
+			case EntryRegular:
+				if e.Exec {
+					h.Write([]byte("executable\x00"))
+				} else {
+					h.Write([]byte("regular\x00"))
+				}
+				writeFramed(h, e.Data)
+			default:
+				return "", fmt.Errorf("worktree path %s is neither a regular file nor a symlink", path)
+			}
+			continue
+		}
 		full := filepath.Join(root, filepath.FromSlash(path))
 		fi, err := lstatInTree(root, path)
 		switch {
@@ -259,27 +294,60 @@ func writeFramed(h hash.Hash, data []byte) {
 // section 14: such evidence is admissible only when the record carries the
 // exact worktree-content digest, and it is never revision-reproducible.
 func Snapshot(ctx context.Context, root, baseRevision string, dirtyApproved bool) (State, error) {
+	c, err := capture(ctx, root, baseRevision, dirtyApproved, nil)
+	return c.State, err
+}
+
+// Capture is a Snapshot taken through one WorktreeReader: the changed paths
+// and the identity of every worktree path that was read, all from the same
+// reads that produced the digest. Complete is true; a path absent from Entries
+// was not read.
+type Capture struct {
+	State    State
+	Changed  []string
+	Entries  map[string]string
+	Complete bool
+}
+
+// CaptureTarget is Snapshot with every worktree read going through r. Callers
+// that later read the same bytes compare what they read with Entries, so what
+// they describe is what the digest covers and not a state a writer produced
+// between the reads.
+func CaptureTarget(ctx context.Context, root, baseRevision string, dirtyApproved bool, r WorktreeReader) (Capture, error) {
+	return capture(ctx, root, baseRevision, dirtyApproved, r)
+}
+
+func capture(ctx context.Context, root, baseRevision string, dirtyApproved bool, r WorktreeReader) (Capture, error) {
+	var entries map[string]string
+	if r != nil {
+		entries = map[string]string{}
+	}
 	head, err := Output(ctx, root, "rev-parse", "HEAD")
 	if err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
 	// assume-unchanged and skip-worktree make git status report a changed
 	// tracked file as clean, so a snapshot cannot describe the bytes on disk
 	// while either flag is set.
 	if err := refuseHiddenIndexEntries(ctx, root); err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
-	paths, err := changedPaths(ctx, root, Trim(head))
+	var paths []string
+	if r != nil {
+		paths, err = changedPathsWith(ctx, root, Trim(head), r, entries)
+	} else {
+		paths, err = changedPaths(ctx, root, Trim(head))
+	}
 	if err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
 	dirty := len(paths) > 0
 	if dirty && !dirtyApproved {
-		return State{}, errors.New("dirty worktree policy violation")
+		return Capture{}, errors.New("dirty worktree policy violation")
 	}
 	diff, err := Output(ctx, root, "diff", "--binary", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", baseRevision+".."+Trim(head), "--")
 	if err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
 	sum := sha256.Sum256([]byte(diff))
 	s := State{Head: Trim(head), Diff: hex.EncodeToString(sum[:])}
@@ -287,20 +355,20 @@ func Snapshot(ctx context.Context, root, baseRevision string, dirtyApproved bool
 	// from that one read, so they cannot describe two different indexes.
 	index, err := Output(ctx, root, "ls-files", "--stage", "-z", "--")
 	if err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
 	tree, err := Output(ctx, root, "ls-tree", "-r", "-z", "--full-tree", s.Head)
 	if err != nil {
-		return State{}, err
+		return Capture{}, err
 	}
 	s.Staged = indexDiffersFromTree(index, tree)
 	if dirty {
-		s.Worktree, err = worktreeContentDigest(root, s.Head, paths, stagedEntries(index, paths))
+		s.Worktree, err = digestWorktree(ctx, root, s.Head, paths, stagedEntries(index, paths), r, entries)
 		if err != nil {
-			return State{}, err
+			return Capture{}, err
 		}
 	}
-	return s, nil
+	return Capture{State: s, Changed: paths, Entries: entries, Complete: r != nil}, nil
 }
 
 // VerifyBase reports whether baseRevision names an existing commit in root and

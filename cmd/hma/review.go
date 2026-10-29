@@ -345,10 +345,11 @@ func runHostReviewPacket(args []string) error {
 	}
 	// HMA observes the artifact itself; the host may name the digest it
 	// expects, but never supplies it.
-	snap, err := repostate.Snapshot(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+	captured, err := captureTarget(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
 	if err != nil {
 		return err
 	}
+	snap := captured.State
 	artifact := hoststate.ReviewArtifactDigest(snap.Head, snap.Diff, snap.Worktree)
 	if in.Dispatch.ArtifactDigest != "" && in.Dispatch.ArtifactDigest != artifact {
 		return errors.New(hoststate.ReasonReviewArtifactMismatch)
@@ -399,16 +400,16 @@ func runHostReviewPacket(args []string) error {
 		if reviewPacketBeforeManifestHook != nil {
 			reviewPacketBeforeManifestHook()
 		}
-		state.Manifest, err = buildChangedFileManifest(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+		state.Manifest, err = buildCapturedManifest(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved, &captured)
 		if err != nil {
 			return err
 		}
 		state.LineCounts = "minimal-lcs"
-		second, err := repostate.Snapshot(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+		second, err := captureTarget(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
 		if err != nil {
 			return err
 		}
-		if second.Head != binding.ProducedHead || second.Diff != binding.DiffDigest || second.Worktree != binding.WorktreeDigest {
+		if second.State.Head != binding.ProducedHead || second.State.Diff != binding.DiffDigest || second.State.Worktree != binding.WorktreeDigest {
 			return errors.New(hoststate.ReasonReviewTargetChanged)
 		}
 	}
@@ -638,7 +639,8 @@ func runHostFindingsImport(args []string) error {
 		if rr.CoreHeadAnchor != last.Metadata.HeadAnchor {
 			return errors.New(hoststate.ReasonCoreBindingStale)
 		}
-		if err := requireLiveTarget(history, rr.Review.ReviewDispatchDigest); err != nil {
+		live, err := captureLiveTarget(history, rr.Review.ReviewDispatchDigest)
+		if err != nil {
 			return err
 		}
 		if p := packetFor(history, rr.Review.ReviewDispatchDigest); p == nil {
@@ -647,7 +649,7 @@ func runHostFindingsImport(args []string) error {
 			return err
 		}
 		p := packetFor(history, rr.Review.ReviewDispatchDigest)
-		facts, err := findingFacts(boundedCtx(), storePath, core, rr.Review.UnitID, p, p.WorktreeDigest != "")
+		facts, err := findingFacts(boundedCtx(), storePath, core, rr.Review.UnitID, p, p.WorktreeDigest != "", live)
 		if err != nil {
 			return err
 		}
@@ -730,6 +732,13 @@ func findDispatchDigest(history []hoststate.Record, reviewDispatchID string) str
 // unless head, diff, and worktree still equal the packet's artifact, so a
 // review of a historical target never resolves current findings.
 func requireLiveTarget(history []hoststate.Record, dispatchDigest string) error {
+	_, err := captureLiveTarget(history, dispatchDigest)
+	return err
+}
+
+// captureLiveTarget is requireLiveTarget that also returns the capture, so a
+// measurement taken afterwards can be held to the bytes it covers.
+func captureLiveTarget(history []hoststate.Record, dispatchDigest string) (*repostate.Capture, error) {
 	var p *hoststate.ReviewPacketBinding
 	for _, r := range history {
 		if r.HeadAnchor == dispatchDigest && r.Dispatch != nil {
@@ -737,13 +746,17 @@ func requireLiveTarget(history []hoststate.Record, dispatchDigest string) error 
 		}
 	}
 	if p == nil {
-		return errors.New(hoststate.ReasonReviewMissing)
+		return nil, errors.New(hoststate.ReasonReviewMissing)
 	}
-	snap, err := repostate.Snapshot(context.Background(), p.ProjectRoot, p.BaseRevision, p.WorktreeDigest != "")
-	if err != nil || snap.Head != p.ProducedHead || snap.Diff != p.DiffDigest || snap.Worktree != p.WorktreeDigest {
-		return errors.New(hoststate.ReasonReviewTargetChanged)
+	dirty := p.WorktreeDigest != ""
+	c, err := captureTarget(context.Background(), p.ProjectRoot, p.BaseRevision, dirty)
+	if dirty && err != nil && errors.Is(err, errDirtyObservationUnsupported) {
+		return nil, err
 	}
-	return nil
+	if err != nil || c.State.Head != p.ProducedHead || c.State.Diff != p.DiffDigest || c.State.Worktree != p.WorktreeDigest {
+		return nil, errors.New(hoststate.ReasonReviewTargetChanged)
+	}
+	return &c, nil
 }
 
 // packetFor returns the packet binding of the dispatch record with this
@@ -821,7 +834,13 @@ func boundedCtx() context.Context {
 }
 
 func buildChangedFileManifest(ctx context.Context, root, base string, dirty bool) ([]packetFile, error) {
-	entries, err := observeTarget(ctx, root, base, dirty)
+	return buildCapturedManifest(ctx, root, base, dirty, nil)
+}
+
+// buildCapturedManifest is buildChangedFileManifest with the manifest held to a
+// capture of the target, when there is one.
+func buildCapturedManifest(ctx context.Context, root, base string, dirty bool, capture *repostate.Capture) ([]packetFile, error) {
+	entries, err := observeCaptured(ctx, root, base, dirty, maxObservedEntries, capture)
 	if err != nil {
 		return nil, err
 	}

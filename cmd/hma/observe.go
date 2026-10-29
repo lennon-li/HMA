@@ -34,6 +34,74 @@ func observeTarget(ctx context.Context, root, base string, dirty bool) ([]observ
 	return observeTargetLimit(ctx, root, base, dirty, maxObservedEntries)
 }
 
+// anchoredReader reads worktree paths through openWorktreeEntry: descriptor
+// anchored, never following a link in any component.
+type anchoredReader struct{ root string }
+
+func (a anchoredReader) ReadEntry(ctx context.Context, rel string) (repostate.WorktreeEntry, error) {
+	if errDirtyObservationUnsupported != nil {
+		return repostate.WorktreeEntry{}, errDirtyObservationUnsupported
+	}
+	ent, err := openWorktreeEntry(a.root, rel)
+	if err != nil {
+		return repostate.WorktreeEntry{}, err
+	}
+	switch ent.kind {
+	case entrySymlink:
+		return repostate.WorktreeEntry{Kind: repostate.EntrySymlink, Data: []byte(ent.link)}, nil
+	case entryRegular:
+		data, e := io.ReadAll(ctxReader{ctx, ent.file})
+		closeErr := ent.file.Close()
+		if e != nil {
+			return repostate.WorktreeEntry{}, e
+		}
+		if closeErr != nil {
+			return repostate.WorktreeEntry{}, closeErr
+		}
+		return repostate.WorktreeEntry{Kind: repostate.EntryRegular, Exec: ent.exec, Data: data}, nil
+	case entryDir:
+		return repostate.WorktreeEntry{Kind: repostate.EntryDir}, nil
+	case entrySpecial:
+		return repostate.WorktreeEntry{Kind: repostate.EntrySpecial}, nil
+	}
+	return repostate.WorktreeEntry{}, nil
+}
+
+// captureTarget is repostate.Snapshot for a target whose worktree is read: a
+// dirty target is refused first on a platform without the anchored reader,
+// before any worktree byte is read, and every read is anchored. The returned
+// capture records what was read; observeCaptured compares its own reads to it.
+func captureTarget(ctx context.Context, root, base string, dirty bool) (repostate.Capture, error) {
+	if errDirtyObservationUnsupported != nil {
+		if dirty {
+			return repostate.Capture{}, errDirtyObservationUnsupported
+		}
+		s, err := repostate.Snapshot(ctx, root, base, false)
+		return repostate.Capture{State: s}, err
+	}
+	return repostate.CaptureTarget(ctx, root, base, dirty, anchoredReader{root})
+}
+
+// checkObserved fails unless a worktree read of p is the one the capture took.
+func checkObserved(c *repostate.Capture, p string, exists bool, mode, sum string) error {
+	got := "absent"
+	switch {
+	case exists && mode == "":
+		got = "special"
+	case exists:
+		got = repostate.EntryRecord(mode, sum)
+	}
+	want, ok := c.Entries[p]
+	if !ok {
+		if !c.Complete || got == "absent" {
+			return nil
+		}
+	} else if want == got || (want == "dir" && got == "absent") {
+		return nil
+	}
+	return errors.New(hoststate.ReasonReviewTargetChanged)
+}
+
 // observeTargetLimit is observeTarget with an entry limit: more changed paths
 // than limit refuse before this observation reads any per-path bytes (blob or
 // worktree content). That excludes repostate.ChangedPaths's own, earlier
@@ -41,6 +109,15 @@ func observeTarget(ctx context.Context, root, base string, dirty bool) ([]observ
 // are not bounded by this cap. A limit of 0 means none (the budget
 // measurement must stay exact for a large change).
 func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limit int) ([]observedEntry, error) {
+	return observeCaptured(ctx, root, base, dirty, limit, nil)
+}
+
+// observeCaptured is observeTargetLimit for a dirty target already captured by
+// captureTarget: every worktree read must equal the capture, so the
+// observation describes the captured (bound) bytes. With no capture, the
+// changed paths are discovered through the anchored reader and the tracked
+// reads are held to that discovery.
+func observeCaptured(ctx context.Context, root, base string, dirty bool, limit int, capture *repostate.Capture) ([]observedEntry, error) {
 	headOut, err := repostate.Output(ctx, root, "rev-parse", "HEAD")
 	if err != nil {
 		return nil, err
@@ -72,18 +149,21 @@ func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limi
 	}
 	if dirty {
 		// A platform without the hardened per-entry reader must refuse before
-		// repostate.ChangedPaths ever runs: that call reads every tracked
-		// file's worktree bytes by plain pathname (Gate B, unchanged, and not
-		// anchored), so letting it run first would defeat the Linux-only
-		// restriction below instead of enforcing it.
+		// any worktree byte is read: changed-path discovery would otherwise
+		// read every tracked file by plain pathname.
 		if errDirtyObservationUnsupported != nil {
 			return nil, errDirtyObservationUnsupported
 		}
-		changed, e := repostate.ChangedPaths(ctx, root, head)
-		if e != nil {
-			return nil, e
+		if capture == nil {
+			found, e := repostate.CapturePaths(ctx, root, head, anchoredReader{root})
+			if e != nil {
+				return nil, e
+			}
+			capture = &repostate.Capture{Changed: found.Changed, Entries: found.Entries}
+		} else if capture.State.Head != head {
+			return nil, errors.New(hoststate.ReasonReviewTargetChanged)
 		}
-		for _, p := range changed {
+		for _, p := range capture.Changed {
 			paths[p] = true
 		}
 	}
@@ -132,6 +212,9 @@ func observeTargetLimit(ctx context.Context, root, base string, dirty bool, limi
 			var exists bool
 			target, mode, exists, targetHash, targetTruncated, err = worktreeBytes(ctx, root, p)
 			if err != nil {
+				return nil, err
+			}
+			if err := checkObserved(capture, p, exists, mode, targetHash); err != nil {
 				return nil, err
 			}
 			if !exists {

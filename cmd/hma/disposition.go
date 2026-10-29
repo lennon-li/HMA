@@ -11,6 +11,7 @@ import (
 	"github.com/lennon-li/HMA/internal/evidence"
 	hoststate "github.com/lennon-li/HMA/internal/host"
 	"github.com/lennon-li/HMA/internal/model"
+	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 )
 
@@ -68,7 +69,7 @@ func shellPolicyViolated(c model.Check) bool {
 // findingFacts establishes, from HMA's own state and measurement, which
 // registered kernel rules hold now and which plan budgets are exceeded. It
 // reads no auditor text and runs no auditor command.
-func findingFacts(ctx context.Context, storePath string, core []model.Record, unit string, p *hoststate.ReviewPacketBinding, dirty bool) (hoststate.FindingFacts, error) {
+func findingFacts(ctx context.Context, storePath string, core []model.Record, unit string, p *hoststate.ReviewPacketBinding, dirty bool, capture *repostate.Capture) (hoststate.FindingFacts, error) {
 	facts := hoststate.FindingFacts{RuleHolds: map[string]bool{}, BudgetExceeded: map[string]bool{}}
 	u, err := currentPlanUnit(storePath, core, unit)
 	if err != nil {
@@ -80,7 +81,7 @@ func findingFacts(ctx context.Context, storePath string, core []model.Record, un
 			facts.RuleHolds["no_shell"] = true
 		}
 	}
-	files, lines, truncated, err := measureChange(ctx, p.ProjectRoot, p.BaseRevision, dirty)
+	files, lines, truncated, err := measureCaptured(ctx, p.ProjectRoot, p.BaseRevision, dirty, capture)
 	if err != nil {
 		return facts, err
 	}
@@ -96,7 +97,13 @@ func findingFacts(ctx context.Context, storePath string, core []model.Record, un
 // A rename counts as a deletion and an
 // addition; a merge is measured as the base-to-target tree difference.
 func measureChange(ctx context.Context, root, base string, dirty bool) (files, lines int, truncated bool, err error) {
-	entries, err := observeTargetLimit(ctx, root, base, dirty, 0)
+	return measureCaptured(ctx, root, base, dirty, nil)
+}
+
+// measureCaptured is measureChange with every worktree read held to a capture
+// of the target, when there is one.
+func measureCaptured(ctx context.Context, root, base string, dirty bool, capture *repostate.Capture) (files, lines int, truncated bool, err error) {
+	entries, err := observeCaptured(ctx, root, base, dirty, 0, capture)
 	if err != nil {
 		return 0, 0, false, err
 	}
