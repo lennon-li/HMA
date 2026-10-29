@@ -246,13 +246,13 @@ func TestIndependentFindingsBudgetSwapRestore(t *testing.T) {
 			changed, restored := false, false
 			if mutate {
 				worktreeWalkHook = func(rel string) {
-					if rel == "a" {
+					if rel == "a" && !changed {
 						if err := os.WriteFile(a, []byte("small\n"), 0600); err != nil {
 							t.Fatal(err)
 						}
 						changed = true
 					}
-					if rel == "z" {
+					if rel == "z" && changed && !restored {
 						if err := os.WriteFile(a, original, 0600); err != nil {
 							t.Fatal(err)
 						}
@@ -262,6 +262,9 @@ func TestIndependentFindingsBudgetSwapRestore(t *testing.T) {
 			}
 			defer func() { worktreeWalkHook = nil }()
 			err = cf.importFindings(cf.latestReview(), report, "2026-09-16T12:33:00Z")
+			if mutate && (!changed || !restored) {
+				t.Fatalf("swap/restore hooks did not both run: changed=%v restored=%v", changed, restored)
+			}
 			if err != nil {
 				if !mutate {
 					t.Fatal(err)
@@ -272,6 +275,9 @@ func TestIndependentFindingsBudgetSwapRestore(t *testing.T) {
 			after, err := repostate.Snapshot(context.Background(), cf.root, cf.base, true)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if mutate && before != after {
+				t.Fatal("target was not restored")
 			}
 			got := cf.coreFindings()
 			t.Logf("mutate=%v changed=%v restored=%v snapshots_equal=%v findings=%v", mutate, changed, restored, before == after, got)

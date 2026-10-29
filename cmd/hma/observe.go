@@ -73,11 +73,7 @@ func (a anchoredReader) ReadEntry(ctx context.Context, rel string) (repostate.Wo
 // capture records what was read; observeCaptured compares its own reads to it.
 func captureTarget(ctx context.Context, root, base string, dirty bool) (repostate.Capture, error) {
 	if errDirtyObservationUnsupported != nil {
-		if dirty {
-			return repostate.Capture{}, errDirtyObservationUnsupported
-		}
-		s, err := repostate.Snapshot(ctx, root, base, false)
-		return repostate.Capture{State: s}, err
+		return repostate.Capture{}, errDirtyObservationUnsupported
 	}
 	return repostate.CaptureTarget(ctx, root, base, dirty, anchoredReader{root})
 }

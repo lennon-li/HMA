@@ -1,6 +1,7 @@
 package repostate
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -208,18 +210,18 @@ func changedPathsWith(ctx context.Context, root, head string, r WorktreeReader, 
 			return nil, fmt.Errorf("submodule entry in index is not supported: %q", entry)
 		}
 	}
-	others, err := Output(ctx, root, "ls-files", "--others", "--exclude-per-directory=.gitignore", "-z")
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range strings.Split(others, "\x00") {
-		if p != "" && !tracked[p] {
-			changed[p] = true
-		}
-	}
 	all, err := Output(ctx, root, "ls-files", "--others", "-z")
 	if err != nil {
 		return nil, err
+	}
+	others, err := unignoredPaths(ctx, all, r, entries)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range others {
+		if p != "" && !tracked[p] {
+			changed[p] = true
+		}
 	}
 	for _, p := range strings.Split(all, "\x00") {
 		if p != "" && !tracked[p] && (p == ".gitignore" || strings.HasSuffix(p, "/.gitignore")) {
@@ -242,6 +244,89 @@ func changedPathsWith(ctx context.Context, root, head string, r WorktreeReader, 
 	}
 	sort.Strings(paths)
 	return paths, nil
+}
+
+// unignoredPaths evaluates Git's ignore syntax in a temporary worktree made
+// from reader-captured ignore files. Git never reads live ignore rules.
+func unignoredPaths(ctx context.Context, all string, r WorktreeReader, entries map[string]string) ([]string, error) {
+	if all == "" {
+		return nil, nil
+	}
+	tmp, err := os.MkdirTemp("", "hma-ignore-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmp)
+	// Build a minimal private repository directly. No Git write command runs.
+	for _, d := range []string{".git/objects", ".git/refs"} {
+		if err := os.MkdirAll(filepath.Join(tmp, d), 0700); err != nil {
+			return nil, err
+		}
+	}
+	if err := os.WriteFile(filepath.Join(tmp, ".git", "HEAD"), []byte("ref: refs/heads/unused\n"), 0600); err != nil {
+		return nil, err
+	}
+	paths := strings.Split(all, "\x00")
+	dirs := map[string]bool{"": true}
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		for d := filepath.ToSlash(filepath.Dir(strings.TrimSuffix(p, "/"))); d != "." && d != ""; d = filepath.ToSlash(filepath.Dir(d)) {
+			dirs[d] = true
+		}
+	}
+	ordered := make([]string, 0, len(dirs))
+	for d := range dirs {
+		ordered = append(ordered, d)
+	}
+	sort.Strings(ordered)
+	for _, d := range ordered {
+		path := ".gitignore"
+		if d != "" {
+			path = d + "/.gitignore"
+		}
+		e, err := r.ReadEntry(ctx, path)
+		if err != nil {
+			return nil, err
+		}
+		rec := e.Record()
+		if prev, ok := entries[path]; ok && prev != rec {
+			return nil, fmt.Errorf("worktree path %s changed while it was captured", path)
+		}
+		entries[path] = rec
+		if err := os.MkdirAll(filepath.Join(tmp, filepath.FromSlash(d)), 0700); err != nil {
+			return nil, err
+		}
+		if e.Kind == EntryRegular {
+			if err := os.WriteFile(filepath.Join(tmp, filepath.FromSlash(path)), e.Data, 0600); err != nil {
+				return nil, err
+			}
+		}
+	}
+	cmd := exec.CommandContext(ctx, "git", "-c", "core.excludesFile=/dev/null", "check-ignore", "--no-index", "-z", "--stdin")
+	cmd.Dir = tmp
+	cmd.Env = gitEnv(os.Environ())
+	cmd.Stdin = strings.NewReader(all)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		var exit *exec.ExitError
+		if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+			return nil, fmt.Errorf("evaluate ignore rules: %w", err)
+		}
+	}
+	ignored := map[string]bool{}
+	for _, p := range strings.Split(out.String(), "\x00") {
+		ignored[p] = true
+	}
+	var result []string
+	for _, p := range paths {
+		if p != "" && !ignored[p] {
+			result = append(result, p)
+		}
+	}
+	return result, nil
 }
 
 // worktreeMatchesWith is worktreeMatches (raw.go) over one read from r.

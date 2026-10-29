@@ -24,10 +24,12 @@ func TestObserveCapturedRefusesBytesOutsideTheCapture(t *testing.T) {
 		t.Fatalf("unchanged target: %v", err)
 	}
 	for _, name := range []string{"f", "u"} {
+		original := map[string]string{"f": "two\n", "u": "untracked\n"}[name]
 		auditWrite(t, filepath.Join(repo, name), "transient\n")
 		_, err := observeCaptured(context.Background(), repo, base, true, 0, &c)
 		if err == nil || err.Error() != hoststate.ReasonReviewTargetChanged {
 			t.Errorf("%s changed after capture: error = %v, want %s", name, err, hoststate.ReasonReviewTargetChanged)
 		}
+		auditWrite(t, filepath.Join(repo, name), original)
 	}
 }
