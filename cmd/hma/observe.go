@@ -119,6 +119,9 @@ func observeCaptured(ctx context.Context, root, base string, dirty bool, limit i
 		return nil, err
 	}
 	head := repostate.Trim(headOut)
+	if capture != nil && capture.State.Head != head {
+		return nil, errors.New(hoststate.ReasonReviewTargetChanged)
+	}
 	baseTree, err := listTree(ctx, root, base)
 	if err != nil {
 		return nil, err
@@ -127,9 +130,14 @@ func observeCaptured(ctx context.Context, root, base string, dirty bool, limit i
 	if err != nil {
 		return nil, err
 	}
-	indexOut, err := repostate.Output(ctx, root, "ls-files", "-s", "-z")
-	if err != nil {
-		return nil, err
+	var indexOut string
+	if capture != nil {
+		indexOut = capture.Index
+	} else {
+		indexOut, err = repostate.Output(ctx, root, "ls-files", "-s", "-z")
+		if err != nil {
+			return nil, err
+		}
 	}
 	index := parseIndex(indexOut)
 	paths := map[string]bool{}
@@ -156,8 +164,6 @@ func observeCaptured(ctx context.Context, root, base string, dirty bool, limit i
 				return nil, e
 			}
 			capture = &repostate.Capture{Changed: found.Changed, Entries: found.Entries}
-		} else if capture.State.Head != head {
-			return nil, errors.New(hoststate.ReasonReviewTargetChanged)
 		}
 		for _, p := range capture.Changed {
 			paths[p] = true

@@ -304,7 +304,9 @@ func unignoredPaths(ctx context.Context, all string, r WorktreeReader, entries m
 			}
 		}
 	}
-	cmd := exec.CommandContext(ctx, "git", "-c", "core.excludesFile=/dev/null", "check-ignore", "--no-index", "-z", "--stdin")
+	args := append([]string{}, observationConfig...)
+	args = append(args, "-c", "core.excludesFile=/dev/null", "--git-dir="+filepath.Join(tmp, ".git"), "--work-tree="+tmp, "check-ignore", "--no-index", "-z", "--stdin")
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = tmp
 	cmd.Env = gitEnv(os.Environ())
 	cmd.Stdin = strings.NewReader(all)

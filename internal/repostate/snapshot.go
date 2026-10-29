@@ -306,6 +306,7 @@ type Capture struct {
 	State    State
 	Changed  []string
 	Entries  map[string]string
+	Index    string // NUL-delimited index entries from the digest capture.
 	Complete bool
 }
 
@@ -368,7 +369,7 @@ func capture(ctx context.Context, root, baseRevision string, dirtyApproved bool,
 			return Capture{}, err
 		}
 	}
-	return Capture{State: s, Changed: paths, Entries: entries, Complete: r != nil}, nil
+	return Capture{State: s, Changed: paths, Entries: entries, Index: index, Complete: r != nil}, nil
 }
 
 // VerifyBase reports whether baseRevision names an existing commit in root and
