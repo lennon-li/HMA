@@ -1,0 +1,155 @@
+{
+  "audit_id": "hma-gate-d-d5c20p-final-audit-20261029-ming",
+  "dispatch_id": "hma-gate-d-d5c20p-final-audit-20261029-ming",
+  "date": "2026-10-29T17:26:41Z",
+  "modes": ["code"],
+  "verdict": "PASS",
+  "target": "git:b848a39ade9aa55b8ace6cf5b531bad83289e657",
+  "base": "e65ce7272be758dafa4db523582e144332ad1e29",
+  "branch": "main",
+  "changed_file_count": 7,
+  "changed_paths": [
+    "cmd/hma/d5c20p_followup_test.go",
+    "cmd/hma/d5c20p_index_test.go",
+    "cmd/hma/d5c20p_regression_test.go",
+    "cmd/hma/observe.go",
+    "docs/handoffs/2026-10-22-gate-d-d5c.md",
+    "internal/repostate/paths.go",
+    "internal/repostate/snapshot.go"
+  ],
+  "unit_diff_sha256": "85d242e4a44ec226bdc68c4e3624740c7e1a4b341a7988de642847b72c5bc833",
+  "objective": "Independent code audit of the single commit b848a39 fixing D5C20P-F01..F04 in the D5c review-packet capture mechanism (docs/architecture.md section 14, section 16).",
+  "auditor": {
+    "agent": "Ming",
+    "role": "senior consultant",
+    "provider": "Anthropic",
+    "model": "Claude Opus 5.5",
+    "model_id": "claude-opus-5-5",
+    "access_service": "Claude Code (Claude Agent SDK)",
+    "identity_basis": "self-reported from runtime system prompt; no independent model telemetry"
+  },
+  "implementer": {"worker": "liz", "provider": "OpenAI", "model": "gpt-6.1-terra", "effort": "high"},
+  "independence": {
+    "separated_from_implementer": true,
+    "separation_detail": "Anthropic Claude auditor vs OpenAI gpt-6.1-terra implementer: different provider and model family. Fresh context; no memory of how the commit was produced.",
+    "separated_from_orchestrator": false,
+    "orchestrator_detail": "Commit trailer 'Co-Authored-By: Claude Sonnet 5' and the handoff's Claude orchestrator are Anthropic, the same provider family as this auditor.",
+    "blinding": "partial: read the commit message and the prior audit report /tmp/hma-gate-d-20261029-d5c20p/AUDIT.{md,json} as directed; all probes and mutants were written independently.",
+    "final_acceptance_eligible": "pending_human_ruling",
+    "eligibility_note": "Section 13 cross-family requirement is met relative to the implementer. Whether orchestrator/commit-author family overlap disqualifies this report is Lennon's decision."
+  },
+  "prior_findings_resolution": [
+    {
+      "id": "D5C20P-F01", "severity": "high", "status": "resolved",
+      "fix": "internal/repostate/paths.go:307-309 prefixes the check-ignore argv with a copy of observationConfig (core.ignoreCase=false at internal/repostate/snapshot.go:137) and pins --git-dir/--work-tree to the scratch repository.",
+      "evidence": [
+        "TestMingF01IgnoreCaseInherited: target pass for global-file, GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS, repo-config; 'secret' captured, manifest Added:150; control exact.txt still ignored.",
+        "Parent e65ce72: capture.Changed=[] for global-file, GIT_CONFIG_COUNT, GIT_CONFIG_PARAMETERS (reproduced).",
+        "Retained TestAudit20IgnoreCaseParity, TestAudit20IgnoreCasePacketAndFindings: pass on target, fail on parent.",
+        "Mutant M2 (pin removed): 3 retained tests and 3 probe subtests fail."
+      ]
+    },
+    {
+      "id": "D5C20P-F02", "severity": "high", "status": "resolved",
+      "fix": "cmd/hma/observe.go:122-124 checks capture.State.Head against live HEAD unconditionally, before any tree/blob/index/worktree read; all later reads are by immutable object id.",
+      "evidence": [
+        "TestMingF02CleanHeadSwapBeforeObserve (manifest, measure): target refuses HOST_REVIEW_TARGET_CHANGED; parent accepted other revision (Added:200, lines=201).",
+        "TestMingF02CleanHeadMovedNoRestore: target refuses; parent accepted.",
+        "TestMingF02CleanHeadSwapAfterCheckStaysBound: manifest bound to approved HEAD bytes (Added:3, sha256 of approved body).",
+        "TestMingF02DirtyHeadSwapBeforeObserve: dirty path still refuses.",
+        "Retained TestAudit20CleanCaptureHeadBinding, TestAudit20CleanPacketHeadSwapRestore, TestAudit20FollowupCleanFindingsSwapRestore/swap_restore: pass on target, fail on parent (parent findings=map[]).",
+        "Mutant M1 (check removed): 3 retained tests and 4 probe tests fail."
+      ]
+    },
+    {
+      "id": "D5C20P-F03", "severity": "medium", "status": "resolved",
+      "fix": "repostate.Capture.Index (internal/repostate/snapshot.go:309,372) retains the single ls-files --stage read; cmd/hma/observe.go:133-141 uses it whenever a capture is supplied.",
+      "evidence": [
+        "TestMingF03StagedFromCapturedIndex: target staged flag equals captured value after unstage and after restage; parent reports the later index in both directions; re-capture detects the index change (digestChanged=true).",
+        "Retained TestAudit20IndexMetadataSwapRestore: pass on target, fail on parent.",
+        "Mutant M3 (fresh index): retained test and both probe subtests fail.",
+        "All production callers (review.go:403, review.go:652 via disposition.go:84) supply a non-nil capture; nil-capture wrappers have no non-test callers."
+      ]
+    },
+    {
+      "id": "D5C20P-F04", "severity": "medium", "status": "resolved",
+      "fix": "docs/handoffs/2026-10-22-gate-d-d5c.md now states non-Linux refusal covers clean and dirty targets, packet generation for contract-bound and unbound runs, and live-target checks.",
+      "evidence": [
+        "captureTarget refuses before CaptureTarget regardless of dirty (cmd/hma/observe.go:74-79; cmd/hma/observe_other.go:14).",
+        "Packet path calls captureTarget at cmd/hma/review.go:348 before the contract branch at review.go:399.",
+        "Retained TestAudit20FollowupCleanUnsupported and TestMingF04UnsupportedPlatformBehaviour pass.",
+        "One imprecision recorded as D5C20PF-A01."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D5C20PF-A01",
+      "severity": "low",
+      "disposition": "ADVISORY",
+      "criterion": "section 16: contradictions between claims and evidence (documentation precision)",
+      "location": "docs/handoffs/2026-10-22-gate-d-d5c.md (~line 111); cmd/hma/review.go:751-757",
+      "observation": "The handoff names 'dirty target observation requires Linux' as the live-target refusal for clean and dirty targets; for a clean packet binding captureLiveTarget reports HOST_REVIEW_TARGET_CHANGED instead.",
+      "evidence": [{"source": "ming/logs/probes-target.log", "observation": "TestMingF04UnsupportedPlatformBehaviour: liveClean=HOST_REVIEW_TARGET_CHANGED liveDirty=<platform sentinel>"}],
+      "impact": "Refusal is correct (fail-closed); only the reported reason can mislead a non-Linux operator. Underlying code predates this commit.",
+      "introduced_by_target": false
+    },
+    {
+      "id": "D5C20PF-A02",
+      "severity": "info",
+      "disposition": "ADVISORY",
+      "criterion": "dispatch same-shape sweep",
+      "location": "cmd/hma/review.go:358-364,375",
+      "observation": "ExpectedLaunchWorktree is bound into the packet from a second live LaunchDigests read after the capture; only head is cross-checked; unbound runs have no post-manifest re-capture.",
+      "impact": "Receipt comparison value, not part of the artifact digest; a transient value causes a later receipt mismatch (refusal), not acceptance of a different target.",
+      "introduced_by_target": false
+    }
+  ],
+  "regression_and_scope": {
+    "raw_go_unchanged": true,
+    "raw_go_check": "git diff --quiet e65ce72 b848a39 -- internal/repostate/raw.go exit 0; blob 00c5a701e17971f6d1ee3ab2e84b835b3e305a3c at both commits",
+    "raw_go_sha256": "03a02c9adffab8f04a0fd9f1d4016c62a787f9b28395b0fe7fa9b354e5a702cc",
+    "scope_creep": "none material; explicit --git-dir/--work-tree on scratch check-ignore is in-invocation hardening implied by cmd.Dir=tmp and gitEnv stripping",
+    "new_same_shape_defects": "none found in this commit; with a capture supplied, observeCaptured sources head (checked), trees and blobs (immutable ids), index and changed set (capture), worktree bytes (checked against capture.Entries)"
+  },
+  "commands": [
+    {"cwd": "/home/yeli/repos/HMA", "argv": ["go", "vet", "./..."], "exit": 0, "log": "ming/logs/final-vet.log"},
+    {"cwd": "/home/yeli/repos/HMA", "argv": ["go", "test", "-count=1", "./..."], "exit": 0, "summary": "12/12 packages ok", "log": "ming/logs/final-test.log", "sha256": "f1285a5d22b7794c34cdf83422971d916949646ae3523e70a79ee00452a8ab37"},
+    {"cwd": "/home/yeli/repos/HMA", "argv": ["go", "test", "-race", "-count=1", "./cmd/hma", "./internal/evidence", "./internal/repostate", "./internal/host", "./internal/engine"], "exit": 0, "summary": "5/5 packages ok", "log": "ming/logs/final-race.log", "sha256": "353210ee950dbc9f41d86fe65e51776dbb50d633dcae92902e456e43d9daf7c9"},
+    {"cwd": "/home/yeli/repos/HMA", "argv": ["gofmt", "-l", "cmd/hma/d5c20p_followup_test.go", "cmd/hma/d5c20p_index_test.go", "cmd/hma/d5c20p_regression_test.go", "cmd/hma/observe.go", "internal/repostate/paths.go", "internal/repostate/snapshot.go"], "exit": 0, "output": "", "log": "ming/logs/final-gofmt.log"},
+    {"cwd": "/home/yeli/repos/HMA", "argv": ["GOOS=darwin go build ./...", "GOOS=windows go build ./...", "GOOS=darwin go vet ./cmd/hma"], "exit": 0, "log": "ming/logs/final-cross.log"},
+    {"cwd": "ming/target (clone at b848a39 + probe)", "argv": ["go", "test", "-count=1", "-v", "-run", "TestMing|TestAudit20", "./cmd/hma"], "exit": 0, "log": "ming/logs/probes-target.log", "sha256": "d21433fb1cfa8bc18bc12449d15097aff54a9083235bbdbbb02fae8791d0cf96"},
+    {"cwd": "ming/parent (clone at e65ce72 + retained tests + probe minus c.Index assertion)", "argv": ["go", "test", "-count=1", "-v", "-run", "TestMing|TestAudit20", "./cmd/hma"], "exit": 1, "summary": "F01, F02, F03 reproduce on parent", "log": "ming/logs/probes-parent.log", "sha256": "38719d6dcd1b5ba77d9956b67ed22bee18fd4b0995471703ca14eb8c4c996142"},
+    {"cwd": "ming/m1|m2|m3", "argv": ["go", "test", "-count=1", "-v", "-run", "TestMing|TestAudit20", "./cmd/hma"], "exit": 1, "summary": "each mutant caught by retained tests and probes", "logs": ["ming/logs/mutant-m1.log", "ming/logs/mutant-m2.log", "ming/logs/mutant-m3.log"]}
+  ],
+  "environment": {"go": "go1.27.3 linux/amd64 (~/.local/go/bin; /usr/local/go is go1.11 and was not used)", "git": "2.34.1", "os": "Linux 7.1.1-76070101-generic", "source_head": "b848a39ade9aa55b8ace6cf5b531bad83289e657"},
+  "source_repository_unchanged": true,
+  "source_repository_check": "git status --porcelain empty before and after the authoritative gates",
+  "anomalies": [
+    "Superseded first run in a /tmp clone: scripts/dogfood/hostinput TestSyntheticStoreRefusesNonScratchDir failed because a repository under os.TempDir() violates the test's environment assumption; the same package passes in the project tree. That clone also picked up the probe file mid-run; its logs (ming/logs/{vet,test,race,gofmt}.log) are superseded."
+  ],
+  "limitations": [
+    "Dispatch text reached the auditor compressed; retrieval of the full text was denied by tool permissions.",
+    "Pre-existing partial artifacts from another session in this output directory (gocache, logs, probes, repo, repo-probe, tmp; 10:54-11:00) were not used, modified or deleted.",
+    "Probe file remains untracked in scratch clone ming/target (deletion denied); not in the project repository.",
+    "Jev, host-dogfood.sh and a macOS/Windows runtime were not run; non-Linux behaviour was exercised on Linux by setting errDirtyObservationUnsupported to a sentinel."
+  ],
+  "artifacts": {
+    "probe": {"path": "ming/probes/ming_probe_test.go", "sha256": "e2f4dc3bd44727bfb013946892b6b8a1d67322f216d1c1ef91b32e01582cb448"}
+  },
+  "next_action": {
+    "action": "SUBMIT_D5C_FOR_HUMAN_ACCEPTANCE",
+    "current_outcome": "PASS: F01-F04 resolved; F01-F03 reproduced on the parent and shown fixed; all three fixes mutant-proven; gates green; raw.go unchanged; two ADVISORY notes, no BLOCK.",
+    "rationale": "The code evidence supports acceptance. The remaining question is independence policy: this auditor (Anthropic) is a different provider/model family from the implementer (OpenAI) but the same family as the orchestrator and commit co-author (Claude).",
+    "owner": "Lennon",
+    "agent_route": null,
+    "permission_envelope": "Read this report and decide; this report authorizes no commit, push, branch, release, stage transition or waiver.",
+    "exact_approval_required": "Lennon's explicit statement accepting D5c at b848a39ade9aa55b8ace6cf5b531bad83289e657, stating whether an Anthropic-family auditor satisfies section 13 final-validation independence given the Claude orchestrator.",
+    "stop_and_escalation": [
+      "If the orchestrator-family overlap is ruled disqualifying: BLOCKED (not FAIL) pending an auditor from a third provider family, per section 13.",
+      "If any later audit reproduces an F01-F03 class defect at b848a39: stop.",
+      "If main moves past b848a39 before acceptance: re-audit the delta.",
+      "A01/A02 do not block acceptance; act on them only by separate instruction."
+    ]
+  }
+}

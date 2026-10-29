@@ -1,0 +1,17 @@
+ok  	github.com/lennon-li/HMA/cmd/hma	128.390s
+ok  	github.com/lennon-li/HMA/internal/ci/github	0.005s
+ok  	github.com/lennon-li/HMA/internal/engine	0.126s
+ok  	github.com/lennon-li/HMA/internal/evidence	1.475s
+ok  	github.com/lennon-li/HMA/internal/host	1.717s
+ok  	github.com/lennon-li/HMA/internal/inventory	0.140s
+ok  	github.com/lennon-li/HMA/internal/model	0.025s
+ok  	github.com/lennon-li/HMA/internal/pilot	2.576s
+ok  	github.com/lennon-li/HMA/internal/repostate	4.510s
+ok  	github.com/lennon-li/HMA/internal/store	0.306s
+ok  	github.com/lennon-li/HMA/internal/transition	12.660s
+ok  	github.com/lennon-li/HMA/scripts/dogfood/hostinput	0.259s
+ok  	github.com/lennon-li/HMA/cmd/hma	158.377s
+ok  	github.com/lennon-li/HMA/internal/evidence	4.692s
+ok  	github.com/lennon-li/HMA/internal/repostate	5.944s
+ok  	github.com/lennon-li/HMA/internal/host	3.909s
+ok  	github.com/lennon-li/HMA/internal/engine	1.956s

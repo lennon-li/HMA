@@ -1,0 +1,641 @@
+{
+  "audit_id": "hma-gate-d-audit-20261029-d5c20p",
+  "date": "2026-10-29T13:32:10.308008+00:00",
+  "dispatch_id": "hma-gate-d-audit-20261029-d5c20p",
+  "modes": [
+    "code"
+  ],
+  "verdict": "FAIL",
+  "verdict_schema_mapping": {
+    "independent_audit_skill": "fix-required",
+    "note": "AUDIT.skill.json is identical except for the enum value needed by the skill validator. There is one semantic verdict: FAIL."
+  },
+  "target": "git:e65ce7272be758dafa4db523582e144332ad1e29",
+  "base": "3cacb4c8ab1fae2cb39fae8eadfdc073392baeb9",
+  "branch": "main",
+  "changed_file_count": 26,
+  "unit_diff_sha256": "d9964c7cf2d11df52a310ad5a4c9b1bf1fd84124a8617b9c45709169fbcae454",
+  "objective": "Audit the complete committed Gate D D5c full fixed review packet against architecture \u00a716, \u00a714, \u00a719 and the specified approved gate sources, under the trusted-host concurrent-writer threat model.",
+  "authority_decisions": {
+    "date": "2026-10-22",
+    "actor": "Lennon",
+    "immutable_request": "contract.intent",
+    "diff": "changed-file manifest with size caps",
+    "legacy": "Runs with no bound contract produce unchanged packets. These decisions are accepted, not findings."
+  },
+  "isolation": "partial",
+  "isolation_detail": "Fresh context. No implementer chat or previous audit reports read. Primary artifact comments contain previous-finding descriptions. OpenAI is shared with implementers Jax and Liz. Provider/family separation exists from the Claude orchestrator and Copilot-enterprise Claude implementer, not from every implementer. Final validation independence is not fully met.",
+  "assigned_route": {
+    "worker": "prof",
+    "provider": "OpenAI",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "mode": "review"
+  },
+  "final_acceptance_eligible": false,
+  "phase1_frozen": true,
+  "phase1": {
+    "path": "PHASE1.json",
+    "sha256": "3dc7f666799ce2a3c2b704e9789001e5911a795972adf01ff241a87f7c268ab2",
+    "frozen_at": "2026-10-29T13:16:49.769388+00:00",
+    "unchanged": true,
+    "unblinding": "Read the D5c handoff and the other two changed documents after the phase file and digest were written. No Phase 1 findings were removed or softened."
+  },
+  "requirements": [
+    {
+      "id": "R01",
+      "source": "docs/architecture.md \u00a716; human decision 2026-10-22",
+      "criterion": "Contract intent is the immutable request. Carry approved criterion definitions, non-goals, the full approved plan unit and budgets, base/head and changed-file manifest, evidence references, active waiver terms and policy.",
+      "status": "pass",
+      "evidence_refs": [
+        "cmd/hma/packetstate.go; cmd/hma/review.go"
+      ]
+    },
+    {
+      "id": "R02",
+      "source": "docs/architecture.md \u00a714, \u00a716; Gate C scope \u00a74a",
+      "criterion": "The manifest, digest and budget measurement describe one captured target. Concurrent changes must not substitute other bytes or another revision.",
+      "status": "fail",
+      "evidence_refs": [
+        "TestAudit20CleanCaptureHeadBinding; TestAudit20CleanPacketHeadSwapRestore"
+      ]
+    },
+    {
+      "id": "R03",
+      "source": "docs/architecture.md \u00a714; Gate C scope \u00a74a; Gate B raw snapshot contract",
+      "criterion": "Ignore evaluation uses captured bytes and preserves deterministic raw snapshot semantics; local/global exclusion mechanisms cannot conceal otherwise included paths.",
+      "status": "fail",
+      "evidence_refs": [
+        "TestAudit20IgnoreCaseParity; TestAudit20IgnoreCasePacketAndFindings"
+      ]
+    },
+    {
+      "id": "R04",
+      "source": "docs/architecture.md \u00a714; trusted-host concurrent-writer threat model",
+      "criterion": "Repeated reads of a tracked file or ignore file with disagreeing content fail capture; anchored reads cannot follow swapped parent symlinks.",
+      "status": "pass",
+      "evidence_refs": [
+        "TestAudit20IgnoreCapturedBytes; TestAudit20IndependentPathChecks; existing anchored-reader tests"
+      ]
+    },
+    {
+      "id": "R05",
+      "source": "docs/architecture.md \u00a716; Gate A v3 \u00a74.1; Gate C scope \u00a73",
+      "criterion": "Budget facts are computed by HMA from the packet target. Severity does not create disposition.",
+      "status": "fail",
+      "evidence_refs": [
+        "TestAudit20IgnoreCasePacketAndFindings; TestAudit20CleanCaptureHeadBinding"
+      ]
+    },
+    {
+      "id": "R06",
+      "source": "human decisions 2026-10-22; docs/architecture.md \u00a716",
+      "criterion": "No-bound-contract packets retain the legacy packet content and fields.",
+      "status": "pass",
+      "evidence_refs": [
+        "TestAuditNoContractPacketKeys; static legacy conditional branches"
+      ]
+    },
+    {
+      "id": "R07",
+      "source": "docs/architecture.md \u00a714, \u00a716; approved size-cap interpretation",
+      "criterion": "Bound packet caps refuse explicitly. Truncated line counts stay qualified; line budget is exceeded on byte truncation.",
+      "status": "pass",
+      "evidence_refs": [
+        "existing packet/line-window negative controls; cmd/hma/disposition.go:146"
+      ]
+    },
+    {
+      "id": "R08",
+      "source": "user audit instructions; Gate B invariant",
+      "criterion": "internal/repostate/raw.go remains byte-identical since 3cacb4c.",
+      "status": "pass",
+      "evidence_refs": [
+        "FREEZE_START.json raw_diff_sha256"
+      ]
+    },
+    {
+      "id": "R09",
+      "source": "user regression contract",
+      "criterion": "Use go1.27.3 in isolated copy and run go vet, full suite, and specified race suite. Report skips and bubblewrap.",
+      "status": "pass",
+      "evidence_refs": [
+        "REGRESSION.json; logs/test.log; logs/race.log"
+      ]
+    },
+    {
+      "id": "R10",
+      "source": "docs/architecture.md \u00a713; Gate C scope \u00a74a; user disclosure instruction",
+      "criterion": "Disclose provider and family relationships and separate-context limits; do not claim final-acceptance eligibility.",
+      "status": "pass",
+      "evidence_refs": [
+        "Fresh-context review; partial provider independence disclosed; eligibility is not satisfied"
+      ]
+    },
+    {
+      "id": "R11",
+      "source": "docs/architecture.md \u00a719; user whole-diff scope",
+      "criterion": "Compare changed documentation claims to code after freezing blind code assessment.",
+      "status": "fail",
+      "evidence_refs": [
+        "docs/handoffs/2026-10-22-gate-d-d5c.md:111",
+        "logs/followup.log",
+        "logs/followup-race.log"
+      ]
+    },
+    {
+      "id": "R12",
+      "source": "docs/architecture.md \u00a716; changed_files staged contract in cmd/hma/review.go and D5c handoff",
+      "criterion": "Per-path staged flags describe the same index captured by the bound target digest.",
+      "status": "fail",
+      "evidence_refs": [
+        "cmd/hma/observe.go:130",
+        "logs/index.log",
+        "logs/index-race.log"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D5C20P-F01",
+      "title": "Scratch ignore evaluation inherits case folding and conceals an in-scope file",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "disposition": "BLOCK",
+      "closure_disposition": "blocking",
+      "file_line": "internal/repostate/paths.go:307",
+      "invariant": "Architecture \u00a77.1: correct repository/revision identity and authentic, current, revision-bound evidence. Architecture \u00a714 and \u00a716: describe the captured target and its actual scope.",
+      "diagnosis": "The main snapshot forces core.ignoreCase=false. The new scratch check-ignore process supplies only core.excludesFile=/dev/null and inherits global/environment Git configuration. Under inherited core.ignoreCase=true, a committed SECRET rule ignores the distinct Linux path secret. The unchanged Gate B Snapshot includes secret, but CaptureTarget reports a clean worktree. The manifest and budget measurement omit its 150 lines. Full review-packet, review-import and findings-import succeed and record no budget finding. The writer needs no control over the global configuration; the failing condition is an already configured trusted host.",
+      "evidence": [
+        {
+          "source": "internal/repostate/paths.go:307",
+          "observation": "check-ignore omits the core.ignoreCase=false override present in internal/repostate/snapshot.go:137."
+        },
+        {
+          "source": "logs/probes-final.log; logs/probes-final-race.log",
+          "observation": "TestAudit20IgnoreCaseParity: legacy worktree digest nonempty; captured worktree empty; changed=[]; manifest=[]; measurement=(0,0). TestAudit20IgnoreCasePacketAndFindings: packet_worktree=\"\", secret_in_manifest=false, findings_import_err=nil, findings=map[]."
+        },
+        {
+          "source": "cases/ignorecase-packet.md; cases/ignorecase-findings.json",
+          "observation": "Retained accepted packet omits secret and binds an empty worktree digest. Imported findings are empty."
+        }
+      ],
+      "reproduction": [
+        "Use the isolated audit copy and the preserved probes/audit20_test.go.",
+        "Commit .gitignore containing SECRET. Add an untracked lowercase secret containing 150 lines. Set GIT_CONFIG_GLOBAL to an output-directory fixture containing [core] ignoreCase=true.",
+        "Run go test -count=1 -v -run \"^TestAudit20IgnoreCase(Parity|PacketAndFindings)$\" ./cmd/hma using ENVIRONMENT.json.",
+        "The assertions fail. The end-to-end case uses a synthetic approved contract/plan and receipt fixture with max_diff_lines=100. It invokes real command entry points; it does not contact a model."
+      ],
+      "impact": "A fixed review packet can present an incomplete target and suppress an automatically established WAIVABLE line-budget finding. This is a reproduced binding failure, not a finding derived from severity.",
+      "fix": {
+        "action": "Give scratch check-ignore the same deterministic observation configuration as the snapshot, including core.ignoreCase=false. Explicitly pin its private git directory/worktree so inherited worktree-selection configuration cannot redirect evaluation. Preserve the exclusion of core.excludesFile and info/exclude. Add the end-to-end inherited-configuration regression.",
+        "why": "Captured ignore bytes alone do not fix the meaning of those rules when the Git evaluator uses different configuration.",
+        "verification": [
+          {
+            "method": "Re-run the two independent case-folding tests with and without -race.",
+            "expected": "secret appears in capture and manifest; max_diff_lines is exceeded; clean capture is refused."
+          },
+          {
+            "method": "Re-run the nested-ignore/negation/directory/self-ignore/exclusion matrix.",
+            "expected": "Unchanged rules produce the same target as the Gate B snapshot; global and info exclusions cannot conceal files."
+          }
+        ],
+        "tradeoffs": "Use the smallest Git-process change. Preserve explicitly required safe.directory handling. A larger Git configuration cleanup needs separate justification.",
+        "alternative": "Containment: require and verify effective scratch core.ignoreCase=false at the host. This narrows supported configurations and does not replace the durable code fix.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D5C20P-F02",
+      "title": "Clean observations can use a transient HEAD outside the supplied capture",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "high",
+      "confidence": "observed",
+      "disposition": "BLOCK",
+      "closure_disposition": "blocking",
+      "file_line": "cmd/hma/observe.go:117",
+      "related_locations": [
+        "cmd/hma/observe.go:159",
+        "cmd/hma/review.go:403",
+        "cmd/hma/review.go:412",
+        "cmd/hma/disposition.go:106"
+      ],
+      "invariant": "Architecture \u00a77.1: correct revision identity and current, revision-bound evidence. Architecture \u00a716 and Gate C scope \u00a74a: a review describes the exact bound artifact.",
+      "diagnosis": "observeCaptured resolves live HEAD and loads its tree even when a capture is supplied. Its capture.State.Head comparison runs only inside if dirty. For dirty=false, an A-to-B-to-A HEAD change produces an accepted packet bound to A whose manifest hashes B. The final capture sees A and accepts it. The same function measures finding budgets. A second end-to-end control shows an approved 150-line committed target receiving an empty findings snapshot when measurement temporarily observes a smaller commit.",
+      "evidence": [
+        {
+          "source": "cmd/hma/observe.go:117; cmd/hma/observe.go:146; cmd/hma/observe.go:159",
+          "observation": "Live head is read unconditionally. Equality with supplied capture head is checked only in the dirty branch."
+        },
+        {
+          "source": "logs/probes-final.log; logs/probes-final-race.log",
+          "observation": "TestAudit20CleanCaptureHeadBinding accepts a different head for both manifest and measurement. TestAudit20CleanPacketHeadSwapRestore accepts bound head A with the SHA-256 of B content; captureLiveTarget accepts restored A."
+        },
+        {
+          "source": "logs/followup.log; logs/followup-race.log",
+          "observation": "TestAudit20FollowupCleanFindingsSwapRestore: stable control records U1/HMA-BUDGET-max_diff_lines-<artifact>:WAIVABLE. Scheduled case imports successfully with findings=map[]. Both cases restore the original captured State."
+        },
+        {
+          "source": "cases/head-swap-packet.md",
+          "observation": "Retained accepted packet binds the approved head and contains the manifest hash of the other commit."
+        }
+      ],
+      "reproduction": [
+        "Run go test -count=1 -v -run \"^TestAudit20Clean(CaptureHeadBinding|PacketHeadSwapRestore)$\" ./cmd/hma in the prepared copy.",
+        "The packet test captures clean commit A. The before-manifest hook changes only HEAD to an existing commit B. A deterministic Git wrapper calls /usr/bin/git for all results and restores HEAD to A after the target blob read, before the second capture.",
+        "Run go test -count=1 -v -run \"^TestAudit20FollowupCleanFindingsSwapRestore$\" ./cmd/hma. Its stable and scheduled subtests each own a fresh fixture.",
+        "The import test captures the 150-line approved committed target, moves HEAD only during measurement, and restores it before the final check. It fails because the budget finding disappears."
+      ],
+      "impact": "A reviewer can receive a manifest for another committed revision. HMA can also omit an actual line-budget finding while both surrounding target captures match. The schedule requires a writer able to move a repository ref. It does not change HMA host records or Git command results.",
+      "fix": {
+        "action": "Use capture.State.Head as the immutable head for all supplied captures, clean and dirty. Check a live-head mismatch before tree/blob reads for either mode, and build the committed side from the captured head. Retain the final live-target check. Add deterministic clean A-to-B-to-A packet and findings-import controls.",
+        "why": "Two surrounding snapshots cannot authenticate the bytes or revision read between them. The actual observation must use the same captured revision.",
+        "verification": [
+          {
+            "method": "Run direct manifest/measurement and full packet controls under the A-to-B-to-A schedule.",
+            "expected": "Refuse with HOST_REVIEW_TARGET_CHANGED or produce only the captured A manifest; never accept a B manifest bound to A."
+          },
+          {
+            "method": "Run stable and scheduled committed-budget import controls, with and without -race.",
+            "expected": "The 150-line excess remains WAIVABLE, or the changed target is refused; no empty successful snapshot."
+          },
+          {
+            "method": "Keep existing dirty byte-identity and unsupported-platform controls green.",
+            "expected": "No unsafe legacy read fallback is restored."
+          }
+        ],
+        "tradeoffs": "Pinning immutable object IDs is small and fits the current capture API. Do not treat another before/after snapshot as sufficient containment.",
+        "alternative": "Build the entire manifest from a private materialized copy of the captured commit. This gives stronger isolation but has greater I/O and integration cost.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D5C20P-F03",
+      "title": "Manifest staged flags are taken from a different index read",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "disposition": "ADVISORY",
+      "closure_disposition": "non-blocking",
+      "file_line": "cmd/hma/observe.go:130",
+      "related_locations": [
+        "cmd/hma/observe.go:242",
+        "internal/repostate/snapshot.go:356",
+        "internal/repostate/snapshot.go:371"
+      ],
+      "invariant": "Architecture \u00a716: fixed packet inputs. The implemented changed_files.staged field must describe the target whose worktree digest includes the index.",
+      "diagnosis": "Capture hashes the index entries into the dirty-worktree identity, but does not return that captured index to observation. observeCaptured re-reads ls-files and computes staged from that later index. Resetting a path index entry after capture and restoring it after the observation index read produces an accepted staged=false flag even though both surrounding captures have Staged=true and exactly the same worktree digest.",
+      "evidence": [
+        {
+          "source": "cmd/hma/observe.go:130; internal/repostate/snapshot.go:356",
+          "observation": "Observation and capture read the index separately. Captured Entries identifies worktree entries, not the per-path index state."
+        },
+        {
+          "source": "logs/index.log; logs/index-race.log",
+          "observation": "TestAudit20IndexMetadataSwapRestore: stable manifest Staged=true; accepted manifest Staged=false; before.State==after.State, both State.Staged=true, restored=true."
+        }
+      ],
+      "reproduction": [
+        "Run go test -count=1 -v -run \"^TestAudit20IndexMetadataSwapRestore$\" ./cmd/hma in the prepared copy.",
+        "Stage content for a different a blob, then restore the original on-disk bytes. Capture this dirty target.",
+        "After capture, reset only the index entry to HEAD. Once observation has read that index, restore the captured index entry before the second capture.",
+        "The packet succeeds and its a entry reports staged=false."
+      ],
+      "impact": "The packet misstates staged status. No independent criterion-credit or budget bypass was demonstrated for this metadata-only case. The two high findings independently require FAIL.",
+      "fix": {
+        "action": "Return the relevant per-path index entries from the existing capture index read. Derive supplied-capture manifest staged flags from those entries. Do not resolve the flag from a later live index.",
+        "why": "The current capture binds index bytes but observation has no immutable copy of that metadata.",
+        "verification": [
+          {
+            "method": "Run the deterministic index reset/restore control with and without -race.",
+            "expected": "Either refuse a mismatched index observation or preserve staged=true from the captured index."
+          },
+          {
+            "method": "Run staged-only, staged-delete, staged-rename and dirty-content regressions.",
+            "expected": "Per-path staged flags and artifact identities remain correct."
+          }
+        ],
+        "tradeoffs": "Retaining an index map costs memory proportional to relevant index entries. It avoids another Git process and preserves Gate B raw.go.",
+        "alternative": "Compare the observation index read against a recorded captured index fingerprint and refuse mismatches. This still requires capturing and retaining the fingerprint.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    },
+    {
+      "id": "D5C20P-F04",
+      "title": "The handoff understates the non-Linux review-packet restriction",
+      "kind": "defect",
+      "mode": "code",
+      "severity": "medium",
+      "confidence": "observed",
+      "disposition": "ADVISORY",
+      "closure_disposition": "non-blocking",
+      "file_line": "docs/handoffs/2026-10-22-gate-d-d5c.md:111",
+      "related_locations": [
+        "cmd/hma/observe.go:74",
+        "cmd/hma/observe_other.go:14",
+        "cmd/hma/review.go:348"
+      ],
+      "invariant": "Architecture \u00a719: state limitations and do not convert missing capability into confidence.",
+      "diagnosis": "The handoff says committed targets work everywhere and limits the platform loss to dirty-approved contract-bound packets. captureTarget now returns the unsupported-reader error unconditionally before checking dirty. All review-packet commands use it before checking whether a contract is bound. Clean review-packet and live-target commands therefore also refuse on non-Linux builds. A clean Linux fixture with the non-Linux sentinel reproduces the unconditional refusal; native non-Linux execution was not performed.",
+      "evidence": [
+        {
+          "source": "docs/handoffs/2026-10-22-gate-d-d5c.md:111",
+          "observation": "The document says committed targets work everywhere and describes only a dirty-approved contract-bound loss."
+        },
+        {
+          "source": "cmd/hma/observe.go:74; cmd/hma/observe_other.go:16; cmd/hma/review.go:348",
+          "observation": "The platform guard applies to all captureTarget calls, including clean and legacy packet paths."
+        },
+        {
+          "source": "logs/followup.log; logs/followup-race.log",
+          "observation": "TestAudit20FollowupCleanUnsupported passes: clean_target=true, dirty_approved=false, error=independent clean-platform sentinel."
+        }
+      ],
+      "reproduction": [
+        "Inspect the unconditional captureTarget platform guard and the !linux unsupported-reader assignment.",
+        "Run go test -count=1 -v -run \"^TestAudit20FollowupCleanUnsupported$\" ./cmd/hma in the prepared Linux copy.",
+        "The fixture is clean, but packet generation returns the platform sentinel. Native non-Linux behavior is inferred from the build-tagged assignment."
+      ],
+      "impact": "The handoff gives operators the wrong support boundary. This is a documentation defect. It does not justify restoring unanchored worktree reads.",
+      "fix": {
+        "action": "Update the handoff to distinguish direct committed-object observation from commands that first capture the live worktree. State that review-packet generation and live-target import checks currently require the Linux anchored reader even for clean targets, including no-contract runs. Keep the 16 MiB limitation text qualified.",
+        "why": "The present platform loss is broader than the stated dirty-only limitation.",
+        "verification": [
+          {
+            "method": "Compare the revised platform-support statement to every captureTarget entry point.",
+            "expected": "The document states the actual clean/dirty and bound/unbound command behavior."
+          },
+          {
+            "method": "Retain the clean/dirty unsupported-platform sentinel tests.",
+            "expected": "Commands refuse before reading worktree bytes; no legacy fallback is introduced."
+          }
+        ],
+        "tradeoffs": "Documentation repair only. Restoring cross-platform safe capture is separate implementation work.",
+        "alternative": "If clean cross-platform packets are a new requirement, implement an equally anchored reader for those platforms under a separately approved scope.",
+        "effort": "small",
+        "status": "proposed"
+      }
+    }
+  ],
+  "limitations": [
+    "Provider independence is partial. OpenAI is shared with implementers Jax and Liz. This report does not satisfy the final-audit requirement of provider/model-family separation from every implementer. The FAIL verdict is based on code evidence, not that caveat.",
+    "The auditor route prof / OpenAI / gpt-6.1-sol / high is supplied by the dispatch. Runtime model telemetry was not independently available.",
+    "Initial context includes user-supplied scope pointers and authority decisions. Source test comments describe earlier findings. No earlier audit report or implementer chat was read before freezing Phase 1. The D5c handoff was read only afterward. Files under docs/handoffs/evidence/gate-d/ were not opened for review.",
+    "The outer exec sandbox launcher failed before execution. The approved require_escalated fallback ran the audit. Tests ran on an output-directory repository copy, with GOCACHE and TMPDIR there. This is process/workspace isolation, not a claim of full OS confinement of the test harness. HMA bubblewrap execution itself passed.",
+    "No native macOS or Windows execution was performed. The unsupported-platform path was inspected statically and simulated with the same package guard.",
+    "The eight-second directory-swap regression did not observe an outside read. Its passing result is not a proof of race absence. The separate deterministic retained-parent test provides the stronger bounded evidence.",
+    "The existing Audit18 Git scheduler targets the removed --exclude-per-directory=.gitignore argument. It does not actively mutate the current scratch check-ignore invocation. Independent reader controls cover copied ignore bytes and contradictory repeated reads.",
+    "No production fixes were made or validated. Proposed remedies need implementation and independent verification. The audit did not execute a real model dispatch, publish, commit, push or alter the source repository.",
+    "This report has no supplied HMA packet nonce/binding. It is a scoped manual-dispatch audit artifact, not an imported final approval."
+  ],
+  "regression": [
+    {
+      "name": "vet",
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "start": "2026-10-29T13:09:09.543184+00:00",
+      "end": "2026-10-29T13:09:14.382364+00:00",
+      "exit_code": 0,
+      "log": "logs/vet.log"
+    },
+    {
+      "name": "test",
+      "argv": [
+        "go",
+        "test",
+        "-count=1",
+        "-v",
+        "./..."
+      ],
+      "start": "2026-10-29T13:09:14.382635+00:00",
+      "end": "2026-10-29T13:11:04.892548+00:00",
+      "exit_code": 0,
+      "log": "logs/test.log"
+    },
+    {
+      "name": "race",
+      "argv": [
+        "go",
+        "test",
+        "-count=1",
+        "-race",
+        "-v",
+        "./cmd/hma",
+        "./internal/evidence",
+        "./internal/repostate",
+        "./internal/host",
+        "./internal/engine"
+      ],
+      "start": "2026-10-29T13:11:04.893198+00:00",
+      "end": "2026-10-29T13:13:34.667153+00:00",
+      "exit_code": 0,
+      "log": "logs/race.log"
+    }
+  ],
+  "independent_tests": {
+    "phase1": [
+      {
+        "name": "probes-final",
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestAudit20",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:15:26.204235+00:00",
+        "end": "2026-10-29T13:15:30.501220+00:00",
+        "exit_code": 1,
+        "log": "logs/probes-final.log"
+      },
+      {
+        "name": "probes-final-race",
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "-race",
+          "-run",
+          "^TestAudit20",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:15:30.501466+00:00",
+        "end": "2026-10-29T13:15:37.290515+00:00",
+        "exit_code": 1,
+        "log": "logs/probes-final-race.log"
+      }
+    ],
+    "post_phase1": [
+      {
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestAudit20Followup",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:20:06.336327+00:00",
+        "end": "2026-10-29T13:20:09.717803+00:00",
+        "exit_code": 1,
+        "log": "logs/followup.log"
+      },
+      {
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-race",
+          "-v",
+          "-run",
+          "^TestAudit20Followup",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:21:10.622742+00:00",
+        "end": "2026-10-29T13:21:17.159313+00:00",
+        "exit_code": 1,
+        "log": "logs/followup-race.log"
+      },
+      {
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestAudit20IndexMetadataSwapRestore$",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:23:28.070225+00:00",
+        "end": "2026-10-29T13:23:29.700545+00:00",
+        "exit_code": 1,
+        "log": "logs/index.log"
+      },
+      {
+        "argv": [
+          "go",
+          "test",
+          "-count=1",
+          "-v",
+          "-race",
+          "-run",
+          "^TestAudit20IndexMetadataSwapRestore$",
+          "./cmd/hma"
+        ],
+        "start": "2026-10-29T13:23:29.700865+00:00",
+        "end": "2026-10-29T13:23:33.604277+00:00",
+        "exit_code": 1,
+        "log": "logs/index-race.log"
+      }
+    ],
+    "focused": {
+      "argv": [
+        "go",
+        "test",
+        "-count=2",
+        "-shuffle=20261029",
+        "-v",
+        "-run",
+        "^(TestObserveCapturedRefusesBytesOutsideTheCapture|TestIndependent.*|TestAudit18.*)$",
+        "./cmd/hma"
+      ],
+      "start": "2026-10-29T13:21:09.950150+00:00",
+      "end": "2026-10-29T13:21:38.599740+00:00",
+      "exit_code": 0,
+      "log": "logs/focused-shuffled.log"
+    }
+  },
+  "test_summary": "TEST_SUMMARY.json",
+  "environment": "ENVIRONMENT.json",
+  "complete_logs": true,
+  "log_truncation": false,
+  "source_repository_unchanged": true,
+  "freeze_start": "FREEZE_START.json",
+  "freeze_end": "FREEZE_END.json",
+  "raw_go_sha256": "03a02c9adffab8f04a0fd9f1d4016c62a787f9b28395b0fe7fa9b354e5a702cc",
+  "coverage_manifest": "REVIEW_COVERAGE.json",
+  "reviewed_changed_paths": [
+    "cmd/hma/d5c16p_capture_test.go",
+    "cmd/hma/d5c16p_regression_test.go",
+    "cmd/hma/d5c18l_regression_test.go",
+    "cmd/hma/d5c5p_regression_test.go",
+    "cmd/hma/d5c7p_regression_test.go",
+    "cmd/hma/d5c9m_regression_test.go",
+    "cmd/hma/disposition.go",
+    "cmd/hma/disposition_test.go",
+    "cmd/hma/gatec_review_import_test.go",
+    "cmd/hma/gated_credit_test.go",
+    "cmd/hma/observe.go",
+    "cmd/hma/observe_linux.go",
+    "cmd/hma/observe_linux_test.go",
+    "cmd/hma/observe_other.go",
+    "cmd/hma/observe_test.go",
+    "cmd/hma/packetstate.go",
+    "cmd/hma/packetstate_adversarial_test.go",
+    "cmd/hma/packetstate_manifest_test.go",
+    "cmd/hma/packetstate_test.go",
+    "cmd/hma/review.go",
+    "docs/handoffs/2026-10-16-arch-amendment-draft.md",
+    "docs/handoffs/2026-10-16-arch-amendment-trace.md",
+    "docs/handoffs/2026-10-22-gate-d-d5c.md",
+    "internal/host/host.go",
+    "internal/repostate/paths.go",
+    "internal/repostate/snapshot.go"
+  ],
+  "legacy_paths_assessment": "No review-packet, review-import or findings-import path still calls legacy Snapshot/ChangedPaths for its target worktree capture. captureTarget uses CaptureTarget unconditionally and refuses before worktree reads when the anchored reader is unavailable. Dirty observeCaptured without a supplied capture uses CapturePaths with anchoredReader. Broader repository code still calls legacy Snapshot in transition/apply, CLI transition, CI, pilot, loop evidence and credit. LaunchDigests still asks Git to compute receipt digests. Those are pre-existing separate paths; this report does not assert that all HMA worktree reads are anchored.",
+  "test_quality_assessment": {
+    "capture_test": "Restores each mutated path. The untracked iteration is no longer masked by the earlier tracked mutation.",
+    "regression_tests": "Passed twice in shuffled order. Stable controls substantiate valid operation. The packet swap test now refuses at checkObserved before restoration is reached. The findings budget swap hook now mutates during the initial captureLiveTarget; repeated-read checking refuses before findingFacts measures budgets. Those outcomes validate earlier rejection, not a completed transient measurement schedule. Some mutation branches accept any nonnil error and are weaker in isolation. The outside-directory race test is bounded and non-probative when no race occurs.",
+    "audit18": "Each tracked/untracked/symlink measurement case has a separate fixture. Contradictory second read is actively injected. UnsupportedFalse test asserts no read but does not require an error; separate clean guard control does. The ignore scheduler checks a removed Git argument and no longer actively flips current evaluator rules.",
+    "independent_controls": "Separate tests inject captured-reader disagreement and live ignore-file mutation after capture, compare ignore semantics, reproduce clean HEAD A-to-B-to-A, reproduce findings budget loss, and reproduce index staged-flag drift."
+  },
+  "documentation_assessment": {
+    "memory": "The handoff explicitly distinguishes streamed 16 MiB observation windows from earlier unbounded anchored capture. No remaining whole-capture 16 MiB memory guarantee is claimed.",
+    "platform": "F04: committed review-packet support claim is false.",
+    "target": "The broad claims that views cannot disagree and any intermediate target change is refused are not supported under F01/F02/F03. Repair text with the code.",
+    "amendment": "Draft/trace remain labeled as proposal/provenance, not proof of deployed behavior."
+  },
+  "controlled_unblinding_addendum": {
+    "retained_phase1_findings": [
+      "D5C20P-F01",
+      "D5C20P-F02"
+    ],
+    "added_evidence": "Full findings-import reproduction strengthens F02. Index-metadata reproduction adds F03. Claim-to-code review adds F04. The supplied authority decisions and scope remain unchanged.",
+    "evidence_directory_read": false
+  },
+  "jev": {
+    "available": false,
+    "discovery": "No callable approved Jev tool found in host tool metadata.",
+    "pre_next_step_fallback": "Direct auditor judgment: return the unit for bounded rework. No dispatch or optional implementation work performed."
+  },
+  "opportunities": [],
+  "opportunity_note": "No optional redesign is proposed. Repairs target observed defects only.",
+  "next_action": {
+    "action": "RETURN_D5C_FOR_BOUNDED_REWORK",
+    "recommendation": "Return D5c to the orchestrator with this report. Repair F01 and F02, include F03/F04 in the bounded correction, and retain the independent controls as acceptance checks.",
+    "rationale": "Two reproduced high-severity failures break target binding and suppress budget findings despite green regressions.",
+    "owner": "HMA implementer/orchestrator (Claude Sonnet 5.5), who must select an eligible bounded worker route.",
+    "proposed_route": "Use the existing human-approved D5c implementation route after exact-route hi preflight. Its current worker/provider/model/effort/access telemetry was not supplied to this auditor; do not infer or silently substitute it.",
+    "permission_envelope": "For the implementation owner: bounded repository edits and tests inside valid D5c authority; no commit, push, release or external messages are authorized by this audit. Auditor remains read/execute/test with report writes under the output directory only.",
+    "exact_approval_required": "This audit grants no transition or write approval. If the current unit lacks an active implementation lease, the human must approve the challenge-bound rewind/route transition to IMPLEMENTATION_AUTHORIZATION before repair. Under an active same-route lease, follow its already approved limits.",
+    "stop_conditions": [
+      "Do not advance D5c while F01/F02 remain reproducible.",
+      "Stop if authority, exact route, permission envelope or Gate B raw.go byte identity cannot be verified.",
+      "A final acceptance review still needs an independent route with provider/model-family separation from every implementer. No eligible route may be assumed from this partial-isolation report."
+    ]
+  }
+}
