@@ -32,6 +32,13 @@ must:
 - state uncertainty, failures, omissions, truncation, and unresolved findings;
 - never simplify away a qualification or turn missing evidence into confidence;
 - keep raw logs, manifests, digests, commands, and source references available;
+- answer first; do not restate or echo the request;
+- use one qualifier per claim; do not stack hedges (e.g. "might possibly");
+- use a table, not parallel sentences, when comparing three or more items with shared fields;
+- state a fact once and cross-reference it elsewhere instead of repeating it;
+- narrate method only when it changes what the reader should trust in the result; otherwise name
+  the evidence or command once and stop;
+- prefer an exact figure, path, or digest over an approximate description when one is available;
   and
 - finish with the single next action required by `docs/architecture.md` §18.
 
