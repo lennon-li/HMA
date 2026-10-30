@@ -3,7 +3,8 @@
 **Date:** 2026-10-16
 **Dispatch ID:** hma-arch-amendment-draft-20261016-r2
 **Scope:** normative amendment text for `docs/architecture.md` reflecting Lennon direction D1 and the trusted-host decision T, as designed in `2026-10-15-gate-a-v3.md` through `v7.md` and audited in `audit-r7.json`.
-**Status:** DRAFT amendment text; not yet merged into the architecture document.
+**Status:** MERGED into `docs/architecture.md` on 2026-10-30, commit `e583f4a8cd8345f71146104f9d76d635d4d15dfb`.
+See "Status and acceptance record" at the end of this document.
 
 ## 1. Sections to be inserted or replaced
 
@@ -216,3 +217,35 @@ Retain the remaining text of §22 unchanged.
 6. The checkpoint trigger list is qualitative; the deterministic detector that classifies a change as one of the listed triggers is deferred to implementation.
 7. The `agent-dispatch` receipt field set (D6) and the verify-loop `authority_hook` adapter (D5) live in the Obsidian host layer; their exact integration contracts are out of scope for this architecture amendment.
 
+
+## Status and acceptance record (2026-10-30)
+
+- Merged into `docs/architecture.md` at commit `e583f4a8cd8345f71146104f9d76d635d4d15dfb`. All eight
+  named section edits (§6, §9, §10, §12.4, §14, §16, §20, §22) applied; three insertion points not
+  fully pinned by the draft's literal wording (§9, §16, §22) were resolved by the orchestrator (Ming,
+  Claude Sonnet 5) and independently reviewed.
+- Final independent review: Prof, Codex/OpenAI, GPT-6 family (exact model ID and effort not
+  disclosed by the runtime): PASS. All 78 `[CHANGES §N]` clauses verified verbatim in their target
+  sections; all 51 trace-doc entries covered; no retained wording altered beyond one punctuation
+  character (§20 bullet, period to semicolon, needed to extend the list); all three insertion-point
+  judgment calls assessed as preserving normative meaning; no internal contradiction found; all
+  cross-references (§6, §7.1, §7.2, §5.4, §13, §17) resolve; the heading-level skip under §14/§16
+  confirmed cosmetic; none of the draft's 7 deferred open questions silently resolved. Evidence:
+  `evidence/gate-d/audit-d6-arch-merge-prof.md`, `.json`, `merge-d6-arch.diff`.
+- Independence: genuine provider/model-family separation from the orchestrator (Claude/Anthropic),
+  who both authored this merge and independently re-verified it before dispatch. This is a
+  documentation-transcription audit, not a code-behavior audit; it does not run the Go test suite,
+  race suite, or host dogfood harness, since no executable code changed.
+- Independence exception, accepted by Lennon on 2026-10-30 ("go"): no further review was required
+  beyond the one cross-family audit, consistent with this being a mechanical documentation merge of
+  already-approved, already-audited design text (`audit-r7.json`) rather than a new design decision.
+- Open, unresolved by this merge, by design: the draft's seven deferred open questions (JSON Schema
+  shapes, reservation-hook field derivation, `review_nonce` entropy/rotation, plan-ceiling/envelope
+  mapping, `valid_until` reducer implementation, checkpoint-trigger classifier, D5/D6 host-adapter
+  contracts) remain open. None was silently resolved by the merge; see §25 for the existing deferred-
+  decision list if any of these should be added there later.
+
+## Next action (§18)
+
+No further action named by this amendment. The next architecture-roadmap step per the D5c handoff
+and docs/architecture.md §21 is the CI release gate, not yet started.

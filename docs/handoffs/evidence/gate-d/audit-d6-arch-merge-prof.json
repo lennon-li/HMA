@@ -1,0 +1,160 @@
+{
+  "dispatch_id": "hma-gate-d-d6-arch-merge-audit-20261030-prof",
+  "date": "2026-10-30",
+  "verdict": "PASS",
+  "gate_scope": "Uncommitted eight-section architecture transcription; faithfulness and consistency only",
+  "identity": {
+    "agent": "Codex",
+    "dispatch_alias": "prof",
+    "provider": "OpenAI",
+    "model": "GPT-6-based per host instructions; exact runtime identifier unavailable",
+    "reasoning_effort": "not supplied",
+    "access_service": "hosted Codex tool session; exact profile not independently attested"
+  },
+  "independence": {
+    "fresh_context": true,
+    "editor": "Claude / Anthropic; exact model not supplied",
+    "provider_and_model_family_separation": true,
+    "basis": "Disclosed OpenAI/GPT versus Anthropic/Claude identities; runtime provenance not independently attested",
+    "blind_review": false,
+    "hma_review_import_eligibility_established": false
+  },
+  "jev": "JEV_UNAVAILABLE; direct auditor judgment fallback",
+  "target": {
+    "branch": "main",
+    "head": "0dc529f816fb5f230c16c5c6da8f0ae1fd20107f",
+    "merged_sha256": "5d6b0d29d223c48f429380415f4ea835edb8102f8163872eb4f24eb98741f6fd",
+    "diff_sha256": "bd697d6f43fad918bde3a5fa1620df7254950e994b7aefa53e4381147b338845"
+  },
+  "checks": {
+    "tagged_clauses": 78,
+    "tagged_clause_sections": {
+      "6": 3,
+      "9": 4,
+      "10": 13,
+      "12.4": 28,
+      "14": 12,
+      "16": 14,
+      "20": 1,
+      "22": 3
+    },
+    "all_tagged_clauses_exact_match": true,
+    "full_eight_section_reconstruction_byte_equal": true,
+    "trace_rows": 51,
+    "removed_lines": [
+      "- advisory findings are dispositioned as `ACCEPT`, `PARK`, or `KILL`."
+    ],
+    "punctuation_only_change": true,
+    "cross_references": {
+      "6": {
+        "heading": "## 6. Human approval contract",
+        "merged_line": 170
+      },
+      "7.1": {
+        "heading": "### 7.1 Unwaivable kernel",
+        "merged_line": 219
+      },
+      "7.2": {
+        "heading": "### 7.2 Waivable findings",
+        "merged_line": 233
+      },
+      "5.4": {
+        "heading": "### 5.4 Legal transitions and invalidation",
+        "merged_line": 142
+      },
+      "13": {
+        "heading": "## 13. Risk and validator independence",
+        "merged_line": 557
+      },
+      "17": {
+        "heading": "## 17. Failure, retry, and escalation",
+        "merged_line": 668
+      }
+    },
+    "e65ce72_to_HEAD_architecture_diff_empty": true,
+    "merged_sha256": "5d6b0d29d223c48f429380415f4ea835edb8102f8163872eb4f24eb98741f6fd"
+  },
+  "requirements": [
+    {
+      "question": 1,
+      "status": "PASS",
+      "detail": "78 tagged clauses exact in corresponding sections; 51 trace rows covered"
+    },
+    {
+      "question": 2,
+      "status": "PASS",
+      "detail": "All retained wording unchanged; one punctuation-only list extension"
+    },
+    {
+      "question": 3,
+      "status": "PASS",
+      "detail": "All three insertion choices preserve normative meaning"
+    },
+    {
+      "question": 4,
+      "status": "PASS",
+      "detail": "No material internal contradiction found"
+    },
+    {
+      "question": 5,
+      "status": "PASS",
+      "detail": "All six referenced section numbers exist"
+    },
+    {
+      "question": 6,
+      "status": "PASS",
+      "detail": "Correct nesting in 12.4; heading-level skips in 14/16 cosmetic"
+    },
+    {
+      "question": 7,
+      "status": "PASS",
+      "detail": "No silent resolution of seven deferred questions"
+    }
+  ],
+  "findings": [],
+  "code_terms": "All eight occur in production code at HEAD; grep is not runtime certification",
+  "verification": {
+    "text_comparison": "PASS",
+    "go_tests": "not run; documentation-only scope",
+    "review_of_code_runtime_correctness": "out of scope"
+  },
+  "restoration_record": "RESTORATION.json",
+  "next_action": {
+    "action": "PRESENT_ARCHITECTURE_AUDIT_TO_HUMAN",
+    "owner": "Claude / Anthropic existing orchestrator",
+    "outcome": "PASS; exact amendment preserved; docs/architecture.md restored to HEAD; concurrent AGENTS.md edit preserved",
+    "rationale": "No transcription repair required; applicable human authority remains binding",
+    "route": "Existing orchestrator session; no worker execution required; exact editor model/effort not supplied",
+    "permission_envelope": "Read report and amendment; prepare existing approval packet; no commit/push/release/stage advancement authorized",
+    "exact_approval_required": "None to present report. Use any existing valid exact approval; otherwise obtain the applicable human challenge-bound architecture/stage decision. No challenge supplied.",
+    "stop_escalation_conditions": "Changed amendment or bound input; missing/stale authority; unresolved kernel failure; manual audit must not be treated as authenticated final import"
+  },
+  "restoration": {
+    "utc": "2026-10-30T19:45:31.941367+00:00",
+    "head_before": "0dc529f816fb5f230c16c5c6da8f0ae1fd20107f",
+    "head_after": "0dc529f816fb5f230c16c5c6da8f0ae1fd20107f",
+    "branch": "main",
+    "restored_path": "docs/architecture.md",
+    "restore_method": "Write verified preserved HEAD bytes to this path only; no Git mutation command",
+    "status_after": " M AGENTS.md\n",
+    "whole_worktree_clean": false,
+    "audited_architecture_diff_empty": true,
+    "staged_diff_empty": true,
+    "all_other_343_frozen_files_unchanged": true,
+    "concurrent_AGENTS_edit_preserved_byte_for_byte": true,
+    "concurrent_AGENTS_sha256": "26149cdb01ea3a9439257fe38de3fbb1cd0445dfeb9bf8d6341066d4d9c92875",
+    "restored_file_equals_HEAD": true,
+    "restored_file_sha256": "0bcbca8d744c3546ba1373f12afa2507ab04b7a391ba69b4ae0c80f4a27607ab",
+    "restored_file_mode_unchanged": true,
+    "merged_snapshot_and_patch_preserved": true,
+    "commit_push_history_change_performed": false,
+    "limitation": "Whole-worktree cleanliness is prevented by an unrelated concurrent AGENTS.md edit. The auditor preserved that edit and restored its entire authorized target."
+  },
+  "limitations": [
+    "Exact runtime model ID, effort and independently authenticated service profile unavailable.",
+    "Manual audit has no supplied HMA packet nonce or binding; not authenticated final import.",
+    "Default outer sandbox launcher missing; approved require_escalated execution used.",
+    "Whole worktree remains dirty only because an unrelated concurrent AGENTS.md edit was preserved.",
+    "No runtime conformance tests were run for this documentation transcription."
+  ]
+}
