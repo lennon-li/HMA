@@ -25,7 +25,12 @@ jobs:
       - name: install bubblewrap
         # Several tests (credit sandboxing, host dogfood) require a real bwrap
         # sandbox; without it they fail with "sandbox unavailable: bwrap not found".
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          # Ubuntu 24.04 runners restrict unprivileged user namespaces via AppArmor
+          # by default, which breaks bwrap's own network-namespace/loopback setup
+          # ("bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted").
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: gofmt
         run: |
