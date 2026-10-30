@@ -175,6 +175,7 @@ Every approval is single-use and universally bound to:
 - transition digest;
 - current stage;
 - Proposed target (stage or terminal outcome). Exactly one of `proposed_target_stage` or `proposed_target_outcome` must be non-empty. The transition digest covers the populated target. The additive `proposed_target_outcome` field is omitted when empty, preserving existing approval serialization and digests.
+- `acceptance_contract_digest` when the run uses `hma.acceptance-contract/v1`; omitted when empty. This field is required on the `ACCEPTANCE_CRITERIA -> PLANNING` transition when a contract is in use, and it is carried by every later approval of that run. A transition is refused when the presented contract digest differs from the bound value.
 - repository-identity digest;
 - exact base-revision digest;
 - stage-time digest (predecessor chain head and monotonic sequence);
@@ -283,6 +284,8 @@ Acceptance criteria are co-authored:
 4. Require explicit human approval.
 5. Freeze the approved set for downstream stages.
 
+A run may use a versioned acceptance contract, `hma.acceptance-contract/v1`. The contract binds the approved acceptance criteria, non-goals, risk class, permitted routes, permission envelope, and immutable policy and contract digests. A revision to the contract invalidates affected approvals and evidence, and requires human reauthorization where existing HMA policy demands it. The contract digest is bound to every approval after `ACCEPTANCE_CRITERIA -> PLANNING` as `acceptance_contract_digest` (see §6).
+
 A criteria change rewinds the run to the appropriate earlier stage and
 invalidates affected approvals.
 
@@ -309,6 +312,18 @@ Each plan unit records:
 - dependencies on prior units;
 - stop, rollback, and escalation conditions;
 - explicit non-goals.
+
+The approved plan is encoded as `hma.plan/v1`, a canonical JSON document. Its digest is the existing `accepted_plan_digest`. The document contains the unit fields above plus a required `policy_digest` (digest of the effective kernel→organization→project→task policy projection), per-unit cost, time, and attempt ceilings, and the dependency graph among units.
+
+A unit's lease derives from the unit's latest approved core transition whose target is `IMPLEMENTATION_AUTHORIZATION`. The only legal incoming edges for such a transition are `ROUTE_SELECTION -> IMPLEMENTATION_AUTHORIZATION` and `INDEPENDENT_VALIDATION -> IMPLEMENTATION_AUTHORIZATION` (see §5.4). The host presents the `hma.plan/v1` document; HMA recomputes its digest and requires equality with that approval's `accepted_plan_digest` and that the unit exists in the plan. A host-written lease record only caches this derivation and grants no authority by itself.
+
+The lease is active only while all of the following hold: the core run is not terminal; the unit's projected stage is `IMPLEMENTATION_AUTHORIZATION`; no later approved rewind of the unit, the run, or a dependency has occurred; wall time since approval is below the unit's `max_wall_minutes`; per-unit counters are below the declared ceilings; the current computed policy digest equals the plan's `policy_digest`; and the current contract digest equals the bound `acceptance_contract_digest`. A new lease after an approved rewind belongs to a new generation; spent counters carry forward, and reservations from an earlier generation are not revived.
+
+Each lease generation, reservation, and review dispatch has a `valid_from` (record time) and a `valid_until`. The value is:
+
+    valid_until = min(original_expiry, t_r for every applicable revocation event r)
+
+Applicable revocation events are any core rewind affecting the unit or a dependency, terminal outcome, policy or contract digest change, and the lease wall-time end of the record's generation. The value is computed from the whole chain at import, so ingestion order does not matter; it can only decrease as events are added. A launch at time `t` is authorized only if `valid_from <= t < valid_until`; equality with `valid_until` is unauthorized.
 
 A unit's implementation-authorization approval may bind the exact
 worktree-content digest when the human authorizes work against uncommitted
@@ -456,6 +471,38 @@ Before dispatch, the host also reports and records the worker identity,
 provider, model, reasoning or effort level, access service, runtime, bounded
 task, and permission envelope.
 
+#### Reservation protocol
+
+Before each worker launch, including after resume, the host calls the HMA reservation hook under the host per-run lock. The call supplies the controller run identifier, attempt index, pre-allocated dispatch run identifier, envelope digest, exact route JSON, the last failure signature when applicable, the live repository root, the clone baseline digest, and the ledger namespace digest.
+
+HMA processes the call in this order:
+
+1. **Replay first.** If a reservation exists for (`controller_run_id`, `attempt_index`, `dispatch_run_id`) with the same request digest, HMA returns it unchanged — even if the lease has since ended or counters are exhausted. A matching key with a different request digest is refused (`HOST_RESERVATION_CONFLICT`).
+2. **Admission (first call per controller run).** If no `loop_admission` record exists for this `controller_run_id`, HMA requires an active lease, the envelope's `escalate_to` value to be `"stop"`, the envelope route to equal the lease route, and the envelope's `max_attempts`, `max_minutes`, and spend cap each to be less than or equal to the lease's remaining amounts at this moment. HMA appends a `loop_admission` record binding the controller run identifier and envelope digest. Admission consumes nothing.
+3. **Consumption (each attempt).** HMA requires the admission record with the same envelope digest, an active lease, at least one remaining attempt, and the failure-signature rule from §17. HMA appends one `reservation` record and counts it immediately. Envelope-vs-remaining is not rechecked here.
+4. An unknown launch stays counted, and there is no cancellation path. Counters are per unit and monotonic for the run; a new lease carries the same totals, and spent attempts are never reset.
+
+The hook response contains a `reservation_id` valid only for that `dispatch_run_id` and expiring at lease end. It also contains `launch_eligible`: `true` only when the lease is still active by time, stage, policy, and contract and no ledger run with that `dispatch_run_id` exists yet; otherwise `false`. The host must refuse launch unless `launch_eligible` is `true`.
+
+#### Launch classes and import reconciliation
+
+Every ledger run in the declared namespace for the run's lifetime is classified by exactly one HMA record:
+
+- an implementation launch matches one `reservation`;
+- a review launch matches one `review_dispatch` record that HMA appends when it generates the review packet, binding `review_dispatch_id`, `dispatch_run_id`, packet digest, target, required reviewer independence, and issuing reason.
+
+A ledger run with no matching record, or matching two records, is `UNAUTHORIZED_DISPATCH` and produces a `BLOCK` kernel finding. A `review_dispatch` whose receipt shows write mode (`mode != review`) or whose `dispatch_run_id` also appears in an implementation reservation is unauthorized.
+
+At evidence import HMA scans all ledger runs in the declared namespace from the run's first core record to import time. For each ledger run at time `t`:
+
+- no matching record → `UNAUTHORIZED_DISPATCH` (BLOCK);
+- matching record but `t < valid_from` or `t >= valid_until` → `UNAUTHORIZED_DISPATCH` (BLOCK);
+- matching record and `valid_from <= t < valid_until` → authorized.
+
+A reservation with no matching ledger run stays counted and is listed as `unlaunched`.
+
+For HMA-bound verify-loop runs, the journal envelope digest must equal the `loop_admission` envelope digest, and the journal controller run identifier, live root, clone baseline digest, and ledger namespace must equal the admission's values. Every journal attempt with a `dispatch_run_id` must have a reservation with that identifier; otherwise the import fails and records `UNAUTHORIZED_DISPATCH` (BLOCK).
+
 Every change to source code, tests, executable configuration, build logic, or
 CI behavior requires independent review before it may satisfy a coding
 criterion or support closure. The reviewer must be distinct from the
@@ -545,6 +592,23 @@ An evidence record includes:
 - freshness and integrity result;
 - unavailable evidence, omissions, and deviations.
 
+#### Review import eligibility
+
+HMA generates review packets itself and records each packet's digest before dispatch. The packet contains the target, contract, findings snapshot, bindings, a fresh random 128-bit `review_nonce`, and the `review_dispatch_id`.
+
+A review result imports only when all of the following hold, in addition to the independence requirements in §13:
+
+- the receipt's `packet_sha256` equals the HMA-generated packet digest;
+- the receipt's `head` and `worktree_sha256` equal the bound target;
+- the receipt's `dispatch_run_id` equals the `review_dispatch` record's identifier and is in the declared namespace;
+- the receipt's `mode == review` and the terminal state is `completed` with exit code 0;
+- each imported report file's SHA-256 is in the receipt's `report_files`;
+- the imported report JSON contains `packet_sha256`, `review_dispatch_id`, and `review_nonce` equal to the packet's values;
+- the reviewer provider and model satisfy §13 independence against the implementer reservations for the unit;
+- the receipt's ledger run is not one of the unit's implementation reservations.
+
+The verdict map is total: `pass` maps to APPROVE; `fix-required` maps to REQUEST_CHANGES; `conditional-pass`, `blocked`, `unknown`, `not-evaluated`, missing, or any other value maps to no approval and next action `ESCALATE_TO_HUMAN`.
+
 Evidence from a clean bound revision is revision-reproducible. Evidence captured from a dirty worktree is admissible only when the record includes the exact worktree-content digest; it is not revision-reproducible and may support only the explicitly approved dirty-worktree use. The evidence runner MUST execute an explicit executable and argument vector and MUST NOT invoke a shell. This is a kernel rule.
 
 ## 15. Persistence and portable bundles
@@ -575,6 +639,23 @@ It may evaluate only:
 - safety-kernel compliance;
 - contradictions between claims and evidence;
 - minimal-implementation compliance.
+
+#### Findings snapshot and disposition
+
+Core `finding` records gain an additive `findings_snapshot: true` flag, omitted when false. With the flag, the record's `Findings` list replaces the previous snapshot even when the list is empty. Without the flag, a record with no findings does not change state. An empty snapshot is accepted only from an import bound to an independent review of the exact current target.
+
+Severity never sets disposition. The rules are:
+
+- a kernel (§7.1) violation with reproduction → `BLOCK` (unwaivable);
+- evidence that a contract criterion's check fails → no new finding class; the criterion is not credited (`FAILED`/not verified) and closure is blocked through the criterion itself;
+- measurable plan complexity-budget exceedance → `WAIVABLE` (§7.2);
+- everything else, any severity → `ADVISORY`.
+
+A claimed criterion link must name a criterion identifier in the contract and include a reproducible check; HMA re-runs it. A fabricated or non-reproducing link is recorded as `ADVISORY`.
+
+#### Checkpoint triggers
+
+Mandatory independent validation checkpoints are triggered by: a modified acceptance criterion or permission boundary; high or critical risk changes; public interface or persisted schema or protocol change; irreversible or external effect; security, approval, routing, evidence, or closure logic change; completion of an approved material milestone; and final outcome closure. A path or interface that cannot be classified is a mandatory trigger. Disputed validation uses the high-risk independence rule from §13 (provider and model-family separation).
 
 Each finding must cite the exact criterion or invariant, evidence, material impact, and one disposition:
 
@@ -673,7 +754,8 @@ Closure is allowed when:
 - required CI checks pass;
 - scope and diff are reconciled;
 - known limitations are represented honestly;
-- advisory findings are dispositioned as `ACCEPT`, `PARK`, or `KILL`.
+- advisory findings are dispositioned as `ACCEPT`, `PARK`, or `KILL`;
+- the latest findings snapshot, if any, has been applied and no unresolved `BLOCK` or `WAIVABLE` finding remains.
 
 Once these conditions hold, auditing stops. Potential improvement alone is not a blocker.
 
@@ -722,6 +804,10 @@ The v1 trusted computing base is:
 - explicitly configured trust roots.
 
 A fully hostile local operating system is out of scope for v1.
+
+### Trusted-host assumption
+
+Decision T: for v1 HMA detects accident and drift by the host; it does not prevent a same-UID adversarial host. Host omission of an HMA call is detected at import and blocks closure; it is not prevented at launch time by HMA. Receipts are host-written; under T they are trusted for drift and accident detection only.
 
 ## 23. Implementation constraints
 
