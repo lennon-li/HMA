@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/lennon-li/HMA/internal/engine"
 	"github.com/lennon-li/HMA/internal/model"
 )
 
@@ -74,6 +75,10 @@ const (
 	ReviewEscalate       ReviewVerdict = "ESCALATE"
 )
 
+// CheckpointSchemaV1 is the fixed checkpoint-binding schema value (§3.5a):
+// present only on a packet binding the checkpoint classifier ran for.
+const CheckpointSchemaV1 = "hma.checkpoint/v1"
+
 const (
 	ReasonDecisionMissing              = "HOST_ORCHESTRATION_DECISION_MISSING"
 	ReasonDecisionSupersession         = "HOST_DECISION_SUPERSESSION_INVALID"
@@ -104,6 +109,7 @@ const (
 	ReasonReviewArtifactMismatch       = "HOST_REVIEW_ARTIFACT_MISMATCH"
 	ReasonReviewImportRequired         = "HOST_REVIEW_IMPORT_REQUIRED"
 	ReasonReviewRiskBelowRequired      = "HOST_REVIEW_RISK_BELOW_REQUIRED"
+	ReasonCheckpointReasonTooLow       = "HOST_CHECKPOINT_REASON_TOO_LOW"
 	ReasonReviewReceiptMismatch        = "HOST_REVIEW_RECEIPT_MISMATCH"
 	ReasonReviewReportMismatch         = "HOST_REVIEW_REPORT_MISMATCH"
 	ReasonReviewIsolationInsufficient  = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
@@ -225,6 +231,24 @@ type ReviewPacketBinding struct {
 	// (Gate D, D4): review import reads the receipt only from it, and launch
 	// reconciliation scans it.
 	LedgerNamespace string `json:"ledger_namespace,omitempty"`
+
+	// Checkpoint binding (architecture §12.4 "Checkpoint binding", §16).
+	// HMA writes every field below; the host cannot. Every field is
+	// omitempty, and every field other than CheckpointSchema is interpreted
+	// only when CheckpointSchema is present (validatePacketBinding refuses a
+	// binding that carries any of them without it). A binding without these
+	// fields marshals to the same bytes as before Gate E Phase 4a.
+	CheckpointSchema       string                     `json:"checkpoint_schema,omitempty"`
+	MinimumIssuingReason   IssuingReason              `json:"minimum_issuing_reason,omitempty"`
+	CheckpointTriggers     []string                   `json:"checkpoint_triggers,omitempty"`
+	UnclassifiedPaths      []string                   `json:"unclassified_paths,omitempty"`
+	FamilySeparation       bool                       `json:"family_separation,omitempty"`
+	RiskFloor              model.RouteRiskLevel       `json:"risk_floor,omitempty"`
+	ContractRisk           model.RouteRiskLevel       `json:"contract_risk,omitempty"`
+	BoundContractDigest    string                     `json:"bound_contract_digest,omitempty"`
+	CheckpointPolicyDigest string                     `json:"checkpoint_policy_digest,omitempty"`
+	ManifestDigest         string                     `json:"manifest_digest,omitempty"`
+	CheckpointCovers       *engine.CheckpointBaseline `json:"checkpoint_covers,omitempty"`
 }
 
 // ReviewDispatchTTL bounds how long after HMA generates a review packet the
@@ -471,6 +495,26 @@ func validatePacketBinding(p *ReviewPacketBinding) error {
 	}
 	if _, err := parseTime(p.ValidUntil); err != nil {
 		return errors.New("invalid review packet binding")
+	}
+	checkpointFieldsPresent := p.MinimumIssuingReason != "" || len(p.CheckpointTriggers) > 0 || len(p.UnclassifiedPaths) > 0 ||
+		p.FamilySeparation || p.RiskFloor != "" || p.ContractRisk != "" || p.BoundContractDigest != "" ||
+		p.CheckpointPolicyDigest != "" || p.ManifestDigest != "" || p.CheckpointCovers != nil
+	if p.CheckpointSchema == "" {
+		if checkpointFieldsPresent {
+			return errors.New("invalid review packet binding: checkpoint field without checkpoint_schema")
+		}
+		return nil
+	}
+	if p.CheckpointSchema != CheckpointSchemaV1 {
+		return errors.New("invalid review packet binding: unknown checkpoint_schema")
+	}
+	if p.MinimumIssuingReason != "" && !validIssuingReason(p.MinimumIssuingReason) {
+		return errors.New("invalid review packet binding: invalid minimum_issuing_reason")
+	}
+	// §3.5a: minimum_issuing_reason, risk_floor, and checkpoint_covers are
+	// always present with the schema.
+	if p.MinimumIssuingReason == "" || p.RiskFloor == "" || p.CheckpointCovers == nil {
+		return errors.New("invalid review packet binding: checkpoint schema missing required field")
 	}
 	return nil
 }
@@ -979,7 +1023,8 @@ func EvaluateDispatch(records []Record, d Dispatch, at time.Time) error {
 		return err
 	}
 	strong := d.Risk == model.RouteRiskHigh || d.Risk == model.RouteRiskCritical || d.Disputed || d.FinalValidation ||
-		(d.Packet != nil && d.Packet.IssuingReason == IssueFinal)
+		(d.Packet != nil && d.Packet.IssuingReason == IssueFinal) ||
+		(d.Packet != nil && d.Packet.FamilySeparation)
 	// The reviewer must be independent of every implementation contribution
 	// to the unit, not only the latest one.
 	for _, c := range implementationContributions(records, d.UnitID) {

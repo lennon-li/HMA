@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/lennon-li/HMA/internal/engine"
@@ -40,6 +41,11 @@ type hostReviewPacketInput struct {
 	ContractPath string `json:"contract_path,omitempty"`
 	PolicyPath   string `json:"policy_path,omitempty"`
 	PlanPath     string `json:"plan_path,omitempty"`
+	// CheckpointPolicyPath is the checkpoint-trigger policy document
+	// (architecture §9, §16). Required exactly when the bound contract
+	// carries a checkpoint_policy_digest; with no digest, every changed
+	// path is unclassified and this is ignored.
+	CheckpointPolicyPath string `json:"checkpoint_policy_path,omitempty"`
 	// LedgerDir is the agent-dispatch ledger the reviewer will launch in;
 	// review import reads the receipt only from it, and reconciliation
 	// scans it.
@@ -267,6 +273,33 @@ func packetEvidenceForTarget(core []model.Record, unit string, binding hoststate
 	return evidence
 }
 
+// checkpointPacketHeader renders the §3.5a checkpoint binding fields for the
+// packet header, so a reviewer sees why the review was issued; empty when
+// the classifier did not run (no checkpoint_schema).
+func checkpointPacketHeader(b hoststate.ReviewPacketBinding) string {
+	if b.CheckpointSchema == "" {
+		return ""
+	}
+	covers := ""
+	if b.CheckpointCovers != nil {
+		cb, _ := json.Marshal(b.CheckpointCovers)
+		covers = string(cb)
+	}
+	return fmt.Sprintf(`checkpoint_schema: %s
+minimum_issuing_reason: %s
+checkpoint_triggers: %s
+unclassified_paths: %s
+family_separation: %t
+risk_floor: %s
+contract_risk: %s
+bound_contract_digest: %s
+checkpoint_policy_digest: %s
+manifest_digest: %s
+checkpoint_covers: %s
+`, b.CheckpointSchema, b.MinimumIssuingReason, strings.Join(b.CheckpointTriggers, ","), strings.Join(b.UnclassifiedPaths, ","),
+		b.FamilySeparation, b.RiskFloor, b.ContractRisk, b.BoundContractDigest, b.CheckpointPolicyDigest, b.ManifestDigest, covers)
+}
+
 func buildReviewPacket(in hostReviewPacketInput, binding hoststate.ReviewPacketBinding, state packetCoreState) []byte {
 	stateJSON, _ := json.MarshalIndent(state, "", "  ")
 	return []byte(fmt.Sprintf(`HMA review packet
@@ -282,7 +315,7 @@ produced_head: %s
 diff_digest: %s
 worktree_digest: %s
 valid_until: %s
-
+%s
 Report binding (required): your AUDIT.json must contain a top-level object
 "hma_binding": {"packet_sha256": <SHA-256 hex of this packet file's bytes>,
 "review_dispatch_id": %q, "review_nonce": %q}.
@@ -295,8 +328,136 @@ Task:
 %s
 `, binding.ReviewDispatchID, binding.ReviewNonce, binding.DispatchRunID, in.Dispatch.UnitID, binding.IssuingReason,
 		in.Dispatch.ArtifactDigest, in.Dispatch.ImplementationRecordDigest, binding.BaseRevision, binding.ProducedHead,
-		binding.DiffDigest, binding.WorktreeDigest, binding.ValidUntil,
+		binding.DiffDigest, binding.WorktreeDigest, binding.ValidUntil, checkpointPacketHeader(binding),
 		binding.ReviewDispatchID, binding.ReviewNonce, stateJSON, in.Task))
+}
+
+// issuingLevelRank orders engine.IssuingLevel the same way hoststate's
+// IssuingReason is ordered (per_change < checkpoint < final); the two types
+// share the same underlying string values (internal/engine/checkpoint.go).
+func issuingLevelRank(level engine.IssuingLevel) int {
+	switch level {
+	case engine.IssuingLevelPerChange:
+		return 1
+	case engine.IssuingLevelCheckpoint:
+		return 2
+	case engine.IssuingLevelFinal:
+		return 3
+	default:
+		return 0
+	}
+}
+
+// toChangedPaths projects a packet's changed-file manifest into the
+// classifier's input shape (internal/engine.ChangedPath).
+func toChangedPaths(manifest []packetFile) []engine.ChangedPath {
+	out := make([]engine.ChangedPath, 0, len(manifest))
+	for _, f := range manifest {
+		out = append(out, engine.ChangedPath{Path: f.Path, Status: f.Status, OldMode: f.OldMode, NewMode: f.NewMode, Binary: f.Binary})
+	}
+	return out
+}
+
+// sortedCopy returns a sorted copy of values, so a CheckpointBaseline's
+// permission classes serialize deterministically regardless of a plan's
+// declared order.
+func sortedCopy(values []string) []string {
+	out := append([]string(nil), values...)
+	sort.Strings(out)
+	return out
+}
+
+// loadCheckpointPolicy reads and validates the checkpoint policy document
+// the host names, when the bound contract carries a checkpoint_policy_digest
+// (architecture §9). A contract with no checkpoint_policy_digest returns a
+// nil policy: the classifier then treats every changed path as unclassified
+// (§16).
+func loadCheckpointPolicy(path, digest string) (*model.CheckpointPolicy, error) {
+	if digest == "" {
+		return nil, nil
+	}
+	if path == "" {
+		return nil, errors.New("HOST_REVIEW_PACKET_INPUT_MISSING")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, errors.New("HOST_REVIEW_PACKET_INPUT_MISSING")
+	}
+	policy, got, err := model.ParseCheckpointPolicy(raw)
+	if err != nil || got != digest {
+		return nil, errors.New(hoststate.ReasonPolicyNotCurrent)
+	}
+	return &policy, nil
+}
+
+// firstContractAcceptance returns the acceptance contract digest of the
+// run's first (not latest) approved ACCEPTANCE_CRITERIA -> PLANNING
+// transition, or "" when the run never accepted one. It is the classifier's
+// fallback contract baseline (§3.4 "Baseline") when the unit has no earlier
+// checkpoint-grade review.
+func firstContractAcceptance(core []model.Record) string {
+	for _, r := range core {
+		if r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
+			r.Approval.CurrentStage == model.StageAcceptanceCriteria && r.Approval.ProposedTargetStage == model.StagePlanning {
+			return r.Approval.AcceptanceContractDigest
+		}
+	}
+	return ""
+}
+
+// firstLeasePermissionClasses returns the unit's permission classes in the
+// plan of its first (not latest) lease generation, or nil when none is
+// retained. It is the classifier's fallback permission-class baseline
+// (§3.4 "Baseline") when the unit has no earlier checkpoint-grade review.
+func firstLeasePermissionClasses(storePath string, core []model.Record, unit string) ([]string, error) {
+	for _, r := range core {
+		if engine.IssuesLease(r, unit) {
+			plans, err := loadPlans(storePath, core)
+			if err != nil {
+				return nil, err
+			}
+			plan, ok := plans[r.Approval.AcceptedPlanDigest]
+			if !ok {
+				return nil, nil
+			}
+			for _, u := range plan.Units {
+				if u.ID == unit {
+					return u.PermissionClasses, nil
+				}
+			}
+			return nil, nil
+		}
+	}
+	return nil, nil
+}
+
+// checkpointReviewBaseline derives the unit's checkpoint baseline (§3.4
+// "Baseline"): the engine.CheckpointBaseline recorded as checkpoint_covers
+// on the unit's latest approved review dispatched at level checkpoint or
+// final, or, with no such review, the run's first contract acceptance
+// digest and the unit's permission classes in its first lease generation's
+// plan. The first contract does not fire T1 by itself; any re-acceptance
+// fires T1 until a checkpoint-grade review passes on it.
+func checkpointReviewBaseline(storePath string, history []hoststate.Record, core []model.Record, unit string) (engine.CheckpointBaseline, error) {
+	for i := len(history) - 1; i >= 0; i-- {
+		r := history[i]
+		if r.Kind != hoststate.KindReview || r.Review == nil || r.Review.UnitID != unit || r.Review.Verdict != hoststate.ReviewApprove {
+			continue
+		}
+		p := packetFor(history, r.Review.ReviewDispatchDigest)
+		if p == nil || p.CheckpointSchema == "" || p.CheckpointCovers == nil {
+			continue
+		}
+		if p.IssuingReason != hoststate.IssueCheckpoint && p.IssuingReason != hoststate.IssueFinal {
+			continue
+		}
+		return *p.CheckpointCovers, nil
+	}
+	classes, err := firstLeasePermissionClasses(storePath, core, unit)
+	if err != nil {
+		return engine.CheckpointBaseline{}, err
+	}
+	return engine.CheckpointBaseline{ContractDigest: firstContractAcceptance(core), PermissionClasses: sortedCopy(classes)}, nil
 }
 
 func runHostReviewPacket(args []string) error {
@@ -396,6 +557,29 @@ func runHostReviewPacket(args []string) error {
 	if err != nil {
 		return err
 	}
+	// decision is the checkpoint classifier's output (architecture §16),
+	// computed below only for a contract-bound run (§12.4 "Checkpoint
+	// level, review risk, and checkpoint binding" applies to contract-bound
+	// runs only); its zero value is never read otherwise. The checkpoint
+	// policy and the classifier's baseline (which may read a retained plan,
+	// checkpointReviewBaseline) are read here, in the same single read phase
+	// as corePacketStateWithPlan's contract/plan/route-policy reads and
+	// before reviewPacketBeforeManifestHook's injection point: re-reading
+	// either from disk after that point would reopen the D5c TOCTOU class
+	// corePacketStateWithPlan already closes (TestD5C5PBoundInputSwapsAfterParse).
+	var decision engine.CheckpointDecision
+	var checkpointPolicy *model.CheckpointPolicy
+	var checkpointBaseline engine.CheckpointBaseline
+	if state.Contract != nil {
+		checkpointPolicy, err = loadCheckpointPolicy(in.CheckpointPolicyPath, state.Contract.CheckpointPolicyDigest)
+		if err != nil {
+			return err
+		}
+		checkpointBaseline, err = checkpointReviewBaseline(*storePath, history, core, in.Dispatch.UnitID)
+		if err != nil {
+			return err
+		}
+	}
 	if state.Contract != nil {
 		if reviewPacketBeforeManifestHook != nil {
 			reviewPacketBeforeManifestHook()
@@ -412,6 +596,33 @@ func runHostReviewPacket(args []string) error {
 		if second.State.Head != binding.ProducedHead || second.State.Diff != binding.DiffDigest || second.State.Worktree != binding.WorktreeDigest {
 			return errors.New(hoststate.ReasonReviewTargetChanged)
 		}
+
+		current := engine.CheckpointBaseline{ContractDigest: state.Contract.Digest, PermissionClasses: sortedCopy(state.Unit.PermissionClasses)}
+		decision = engine.ClassifyCheckpoint(engine.CheckpointInput{
+			Contract: &state.Contract.AcceptanceContract, Policy: checkpointPolicy, Unit: state.Unit.PlanUnit,
+			Baseline: checkpointBaseline, Current: current, Manifest: toChangedPaths(state.Manifest),
+			Stage: engine.ProjectStageState(core).CurrentStage, HostRisk: in.Dispatch.Risk, Disputed: in.Dispatch.Disputed,
+		})
+		// §3.5 E0 step 2: HMA refuses rather than silently raising the
+		// host's declared reason.
+		if issuingLevelRank(engine.IssuingLevel(in.IssuingReason)) < issuingLevelRank(decision.Level) {
+			return fmt.Errorf("%s: minimum issuing reason is %s", hoststate.ReasonCheckpointReasonTooLow, decision.Level)
+		}
+		triggers := make([]string, 0, len(decision.Triggers))
+		for _, tr := range decision.Triggers {
+			triggers = append(triggers, string(tr))
+		}
+		binding.CheckpointSchema = hoststate.CheckpointSchemaV1
+		binding.MinimumIssuingReason = hoststate.IssuingReason(decision.Level)
+		binding.CheckpointTriggers = triggers
+		binding.UnclassifiedPaths = decision.UnclassifiedPaths
+		binding.FamilySeparation = decision.FamilySeparation
+		binding.RiskFloor = decision.RiskFloor
+		binding.ContractRisk = state.Contract.Risk
+		binding.BoundContractDigest = state.Contract.Digest
+		binding.CheckpointPolicyDigest = decision.PolicyDigest
+		binding.ManifestDigest = decision.ManifestDigest
+		binding.CheckpointCovers = &current
 	}
 	// Checked before the packet file is written, and again under the locks.
 	if err := requireApprovedRepository(history, core, in.RunID, in.Dispatch.UnitID, &binding); err != nil {
@@ -449,11 +660,13 @@ func runHostReviewPacket(args []string) error {
 		if core[len(core)-1].Metadata.HeadAnchor != state.CoreHeadAnchor {
 			return errors.New(hoststate.ReasonCoreBindingStale)
 		}
-		// G-R: a host cannot dispatch a review risk below the bound
-		// contract's human-confirmed risk. state.Contract was already proved
-		// equal to the bound contract digest (corePacketStateWithPlan); the
-		// head check above proves the core has not moved since.
-		if state.Contract != nil && riskRank(in.Dispatch.Risk) < riskRank(state.Contract.Risk) {
+		// G-R: a host cannot dispatch a review risk below the required
+		// review risk, max(contract risk, checkpoint risk floor)
+		// (decision.RequiredRisk, §3.5 E0 step 4). state.Contract was
+		// already proved equal to the bound contract digest
+		// (corePacketStateWithPlan); the head check above proves the core
+		// has not moved since.
+		if state.Contract != nil && riskRank(in.Dispatch.Risk) < riskRank(decision.RequiredRisk) {
 			return errors.New(hoststate.ReasonReviewRiskBelowRequired)
 		}
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Route.RouteApprovalDigest); err != nil {
