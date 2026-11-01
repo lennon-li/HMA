@@ -7,6 +7,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/lennon-li/HMA/internal/engine"
 	hoststate "github.com/lennon-li/HMA/internal/host"
@@ -14,6 +15,17 @@ import (
 	"github.com/lennon-li/HMA/internal/repostate"
 	"github.com/lennon-li/HMA/internal/store"
 	"github.com/lennon-li/HMA/internal/transition"
+)
+
+// The checkpoint gate's refusal reasons (architecture section 16 "Checkpoint
+// and final gates", E2). They are defined here, not in internal/host, because
+// Gate E Phase 4b is scoped to cmd/hma/transition.go only; a later phase
+// that touches internal/host may consolidate them there alongside the other
+// HOST_* reasons.
+const (
+	reasonCheckpointReviewMissing     = "HOST_CHECKPOINT_REVIEW_MISSING"
+	reasonCheckpointTriggersUncovered = "HOST_CHECKPOINT_TRIGGERS_UNCOVERED"
+	reasonCheckpointReviewStale       = "HOST_CHECKPOINT_REVIEW_STALE"
 )
 
 // transitionGateHook is a test seam, nil in production: it runs after the
@@ -29,17 +41,29 @@ func requireHostTransitionGate(storePath string, in transition.Input) error {
 	if err != nil {
 		return err
 	}
-	return requireHostTransitionGateIn(storePath, in, history)
+	return requireHostTransitionGateIn(storePath, in, history, "", "")
 }
 
 // requireHostTransitionGateIn is requireHostTransitionGate against an already
 // loaded host history, for a caller that holds the host run lock.
-func requireHostTransitionGateIn(storePath string, in transition.Input, history []hoststate.Record) error {
+// contractPath and checkpointPolicyPath are host-supplied inputs read only at
+// the checkpoint gate (architecture section 16, E2); every other caller,
+// including requireHostTransitionGate's external callers, passes "", "".
+func requireHostTransitionGateIn(storePath string, in transition.Input, history []hoststate.Record, contractPath, checkpointPolicyPath string) error {
 	from := in.ExpectedApproval.CurrentStage
 	to := in.ExpectedApproval.ProposedTargetStage
+	checkpointEdge := from == model.StageIndependentValidation && to == model.StageReleaseAndClosure
 	if !((from == model.StageImplementationAuthorization && to == model.StageImplementationReview) ||
-		(from == model.StageImplementationReview && to == model.StageVerification)) {
+		(from == model.StageImplementationReview && to == model.StageVerification) ||
+		checkpointEdge) {
 		return nil
+	}
+	if checkpointEdge {
+		// The checkpoint edge's own UnitID/run-open requirements are
+		// conditional on the run being contract-bound (Decision D10): see
+		// requireCheckpointGate. The two edges below are inherently always
+		// per-unit transitions, so they keep their unconditional requirement.
+		return requireCheckpointGate(storePath, in, history, contractPath, checkpointPolicyPath)
 	}
 	if in.ExpectedApproval.UnitID == "" {
 		return errors.New("HOST_UNIT_ID_REQUIRED")
@@ -118,6 +142,201 @@ func requireHostTransitionGateIn(storePath string, in transition.Input, history 
 		}
 	}
 	return errors.New(hoststate.ReasonReviewMissing)
+}
+
+// requireCheckpointGate implements architecture section 16 "Checkpoint and
+// final gates", E2: on INDEPENDENT_VALIDATION -> RELEASE_AND_CLOSURE, a
+// contract-bound unit on which any gate-time trigger fires must show a
+// qualifying checkpoint-grade review. It does not apply to a non-contract
+// run (Decision D10), and it requires nothing new when no trigger fires
+// (Decision D8 (1)): the per-change gate (E1) and the other existing gates
+// are unaffected either way. Unlike the other two gated edges, it does not
+// call requireReconciledLaunches: the architecture's E2 requirements list
+// does not name it, since unreconciled-launch checking is an E1 (per-change
+// review) concern with no named analogue at the IV exit.
+//
+// contractPath and checkpointPolicyPath are optional host inputs (hma
+// transition --contract/--checkpoint-policy); they are read only once the
+// run is known to be contract-bound.
+func requireCheckpointGate(storePath string, in transition.Input, history []hoststate.Record, contractPath, checkpointPolicyPath string) error {
+	unit := in.ExpectedApproval.UnitID
+	core, err := store.New(storePath).Load(in.RunID)
+	if err != nil {
+		return err
+	}
+	if engine.BoundContractDigest(core) == "" {
+		// A non-contract run gets nothing new from this edge: no UnitID
+		// requirement, no open-run requirement, no review requirement
+		// (Decision D10). At HEAD before Gate E, this edge matched nothing
+		// and returned nil immediately for every caller; this preserves
+		// that exactly.
+		return nil
+	}
+	if unit == "" {
+		return errors.New("HOST_UNIT_ID_REQUIRED")
+	}
+	if err := requireCoreRunOpen(storePath, in.RunID); err != nil {
+		return err
+	}
+
+	root, err := filepath.Abs(in.RepositoryRoot)
+	if err == nil {
+		root, err = filepath.EvalSymlinks(root)
+	}
+	if err != nil {
+		return err
+	}
+	// HMA's own changed-path manifest between the approved base and the
+	// live worktree/head, exactly as runHostReviewPacket (cmd/hma/review.go)
+	// captures it at packet issuance, recomputed here at gate time.
+	manifest, err := buildChangedFileManifest(boundedCtx(), root, in.BaseRevision, in.DirtyWorktreeApproved)
+	if err != nil {
+		return err
+	}
+
+	// corePacketState reads and proves the live bound contract and the
+	// unit's current plan unit, the same way packet issuance does; its
+	// Evidence/Waivers output is unused here.
+	state, err := corePacketState(storePath, core, in.RunID, unit, contractPath, in.PolicyPath, "", hoststate.ReviewPacketBinding{})
+	if err != nil {
+		return err
+	}
+	if state.Contract == nil || state.Unit == nil {
+		return errors.New("HOST_REVIEW_PACKET_INPUT_MISSING")
+	}
+	checkpointPolicy, err := loadCheckpointPolicy(checkpointPolicyPath, state.Contract.CheckpointPolicyDigest)
+	if err != nil {
+		return err
+	}
+	baseline, err := checkpointReviewBaseline(storePath, history, core, unit)
+	if err != nil {
+		return err
+	}
+	current := engine.CheckpointBaseline{ContractDigest: state.Contract.Digest, PermissionClasses: sortedCopy(state.Unit.PlanUnit.PermissionClasses)}
+	decision := engine.ClassifyCheckpoint(engine.CheckpointInput{
+		Contract: &state.Contract.AcceptanceContract, Policy: checkpointPolicy, Unit: state.Unit.PlanUnit,
+		Baseline: baseline, Current: current, Manifest: toChangedPaths(manifest), Stage: model.StageIndependentValidation,
+	})
+	if len(decision.Triggers) == 0 {
+		return nil
+	}
+
+	// A BLOCK finding, or a WAIVABLE one without an active human waiver,
+	// keeps the unit in review; this is the same requirement E1 enforces,
+	// applied here because E2 otherwise adds no gate at all when untriggered.
+	if err := requireFindingsResolved(storePath, in.RunID, unit); err != nil {
+		return err
+	}
+
+	// The unit's latest imported review must satisfy every bullet below; an
+	// earlier qualifying review superseded by a later, non-qualifying one
+	// does not count (the same "latest review" rule AnswersLatestReviewDispatch
+	// applies at E1).
+	var latestReview *hoststate.Record
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].Kind == hoststate.KindReview && history[i].Review != nil && history[i].Review.UnitID == unit {
+			latestReview = &history[i]
+			break
+		}
+	}
+	if latestReview == nil || !hoststate.AnswersLatestReviewDispatch(history, *latestReview.Review) {
+		return errors.New(reasonCheckpointReviewMissing)
+	}
+	review := latestReview.Review
+	if review.Verdict != hoststate.ReviewApprove || review.Isolation != "isolated" {
+		return errors.New(reasonCheckpointReviewMissing)
+	}
+	packet := packetFor(history, review.ReviewDispatchDigest)
+	if packet == nil || packet.CheckpointSchema == "" ||
+		(packet.IssuingReason != hoststate.IssueCheckpoint && packet.IssuingReason != hoststate.IssueFinal) {
+		return errors.New(reasonCheckpointReviewMissing)
+	}
+
+	// The review must have been dispatched after the unit's approved
+	// VERIFICATION -> INDEPENDENT_VALIDATION transition, so an earlier
+	// per-change review cannot stand in for the stage audit.
+	var dispatchRecord *hoststate.Record
+	for i := range history {
+		if history[i].Kind == hoststate.KindDispatch && history[i].HeadAnchor == review.ReviewDispatchDigest {
+			dispatchRecord = &history[i]
+			break
+		}
+	}
+	if dispatchRecord == nil {
+		return errors.New(reasonCheckpointReviewMissing)
+	}
+	ivApprovalIndex := -1
+	for i, r := range core {
+		if r.Kind == model.KindStageTransition && r.Control == model.ControlApproved && r.Approval != nil &&
+			r.Approval.UnitID == unit && r.Approval.CurrentStage == model.StageVerification && r.Approval.ProposedTargetStage == model.StageIndependentValidation {
+			ivApprovalIndex = i
+		}
+	}
+	dispatchIndex := coreRecordIndex(core, dispatchRecord.CoreHeadAnchor)
+	if ivApprovalIndex < 0 || dispatchIndex < 0 || dispatchIndex < ivApprovalIndex {
+		return errors.New(reasonCheckpointReviewMissing)
+	}
+
+	// The review's findings snapshot must already be in the core chain
+	// (the same rule E1 applies at :116-124 above).
+	currentCoreHead, err := coreHead(storePath, in.RunID)
+	if err != nil {
+		return err
+	}
+	if latestReview.CoreHeadAnchor != currentCoreHead {
+		if err := requireOnlyOwnSnapshotsSince(storePath, in.RunID, latestReview.CoreHeadAnchor, latestReview.HeadAnchor); err != nil {
+			return err
+		}
+	} else if review.ReportDigest != "" {
+		return errors.New(hoststate.ReasonFindingsSnapshotMissing)
+	}
+
+	// Recorded checkpoint_triggers must be a superset of the gate-time
+	// triggers, and checkpoint_policy_digest must equal the current one.
+	recordedTriggers := make(map[string]bool, len(packet.CheckpointTriggers))
+	for _, tr := range packet.CheckpointTriggers {
+		recordedTriggers[tr] = true
+	}
+	for _, tr := range decision.Triggers {
+		if !recordedTriggers[string(tr)] {
+			return errors.New(reasonCheckpointTriggersUncovered)
+		}
+	}
+	if packet.CheckpointPolicyDigest != decision.PolicyDigest {
+		return errors.New(reasonCheckpointTriggersUncovered)
+	}
+
+	// Recorded bound_contract_digest must equal the digest bound at gate
+	// time, and the review's dispatch risk must reach the gate-time
+	// required review risk; either staling the review.
+	if packet.BoundContractDigest != state.Contract.Digest {
+		return errors.New(reasonCheckpointReviewStale)
+	}
+	if riskRank(dispatchRecord.Dispatch.Risk) < riskRank(decision.RequiredRisk) {
+		return errors.New(reasonCheckpointReviewStale)
+	}
+
+	// The review must name the exact artifact this transition records (the
+	// same rule E1 applies at :125-136 above).
+	a := in.ExpectedApproval
+	if a.WorktreeDigest != "" && a.WorktreeDigest != in.ExpectedWorktreeDigest {
+		return errors.New(hoststate.ReasonReviewArtifactMismatch)
+	}
+	if review.ArtifactDigest != hoststate.ReviewArtifactDigest(a.ProducedHeadDigest, a.DiffDigest, in.ExpectedWorktreeDigest) {
+		return errors.New(hoststate.ReasonReviewArtifactMismatch)
+	}
+	return nil
+}
+
+// coreRecordIndex returns the index in core of the record whose head anchor
+// is headAnchor, or -1 when none matches.
+func coreRecordIndex(core []model.Record, headAnchor string) int {
+	for i, r := range core {
+		if r.Metadata.HeadAnchor == headAnchor {
+			return i
+		}
+	}
+	return -1
 }
 
 // requireApprovedHostRoute binds the host's active route claim to a real,
@@ -262,6 +481,8 @@ func runTransition(args []string) error {
 	fs := flag.NewFlagSet("transition", flag.ContinueOnError)
 	inputPath := fs.String("input", "", "host input file containing one approved stage, classification, or supported outcome")
 	storePath := fs.String("store", "", "host store directory")
+	contractPath := fs.String("contract", "", "bound acceptance contract document; required at the checkpoint gate (INDEPENDENT_VALIDATION -> RELEASE_AND_CLOSURE) on a contract-bound run")
+	checkpointPolicyPath := fs.String("checkpoint-policy", "", "checkpoint-trigger policy document; required at the checkpoint gate when the bound contract carries a checkpoint_policy_digest")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -298,7 +519,7 @@ func runTransition(args []string) error {
 		return errors.New("missing host input")
 	}
 	err = hoststate.NewStore(*storePath).WithRunLock(in.RunID, func(history []hoststate.Record) error {
-		if err := requireHostTransitionGateIn(*storePath, in, history); err != nil {
+		if err := requireHostTransitionGateIn(*storePath, in, history, *contractPath, *checkpointPolicyPath); err != nil {
 			return err
 		}
 		if o := in.ExpectedApproval.ProposedTargetOutcome; o == model.OutcomeVerifiedSuccess || o == model.OutcomeVerifiedWithWaivers {
