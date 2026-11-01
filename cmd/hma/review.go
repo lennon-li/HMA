@@ -449,6 +449,13 @@ func runHostReviewPacket(args []string) error {
 		if core[len(core)-1].Metadata.HeadAnchor != state.CoreHeadAnchor {
 			return errors.New(hoststate.ReasonCoreBindingStale)
 		}
+		// G-R: a host cannot dispatch a review risk below the bound
+		// contract's human-confirmed risk. state.Contract was already proved
+		// equal to the bound contract digest (corePacketStateWithPlan); the
+		// head check above proves the core has not moved since.
+		if state.Contract != nil && riskRank(in.Dispatch.Risk) < riskRank(state.Contract.Risk) {
+			return errors.New(hoststate.ReasonReviewRiskBelowRequired)
+		}
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Route.RouteApprovalDigest); err != nil {
 			return err
 		}
@@ -473,6 +480,25 @@ func runHostReviewPacket(args []string) error {
 		hostResult: result, PacketPath: *out, PacketSHA256: in.Dispatch.ReviewPacketDigest,
 		ReviewDispatchID: binding.ReviewDispatchID, DispatchRunID: binding.DispatchRunID,
 	})
+}
+
+// riskRank orders model.RouteRiskLevel the same way the route-coherence
+// check does (internal/engine/route_coherence.go's routeRiskRank): low <
+// medium < high < critical. An unrecognized value ranks lowest so it never
+// satisfies a required risk.
+func riskRank(risk model.RouteRiskLevel) int {
+	switch risk {
+	case model.RouteRiskLow:
+		return 1
+	case model.RouteRiskMedium:
+		return 2
+	case model.RouteRiskHigh:
+		return 3
+	case model.RouteRiskCritical:
+		return 4
+	default:
+		return 0
+	}
 }
 
 func validateReviewPacketSize(packet []byte, state packetCoreState) error {

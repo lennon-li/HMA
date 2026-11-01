@@ -245,6 +245,11 @@ func runHostDispatch(args []string) error {
 		return errors.New(hoststate.ReasonReviewImportRequired)
 	}
 	result, err := appendHostRecord(storePath, in.hostEnvelope, hoststate.KindDispatch, nil, nil, &in.Dispatch, nil, nil, func(history []hoststate.Record, core []model.Record) error {
+		// G-R, second caller: a contract-bound run's reviews must carry HMA's
+		// own risk provenance, which only review-packet attaches.
+		if in.Dispatch.Role == hoststate.RoleReview && engine.BoundContractDigest(core) != "" {
+			return errors.New(hoststate.ReasonReviewImportRequired)
+		}
 		if err := validateRouteApprovalClaimIn(core, in.RunID, in.Dispatch.UnitID, in.Dispatch.Route.RouteApprovalDigest); err != nil {
 			return err
 		}

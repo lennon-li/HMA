@@ -103,6 +103,7 @@ const (
 	ReasonCoreRunTerminal              = "HOST_CORE_RUN_TERMINAL"
 	ReasonReviewArtifactMismatch       = "HOST_REVIEW_ARTIFACT_MISMATCH"
 	ReasonReviewImportRequired         = "HOST_REVIEW_IMPORT_REQUIRED"
+	ReasonReviewRiskBelowRequired      = "HOST_REVIEW_RISK_BELOW_REQUIRED"
 	ReasonReviewReceiptMismatch        = "HOST_REVIEW_RECEIPT_MISMATCH"
 	ReasonReviewReportMismatch         = "HOST_REVIEW_REPORT_MISMATCH"
 	ReasonReviewIsolationInsufficient  = "HOST_REVIEW_ISOLATION_INSUFFICIENT"
