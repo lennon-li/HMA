@@ -64,6 +64,14 @@ type AcceptanceContract struct {
 	PermittedRoutes    []string            `json:"permitted_routes"`
 	PermissionEnvelope []string            `json:"permission_envelope"`
 	PolicyDigest       string              `json:"policy_digest"`
+
+	// CheckpointPolicyDigest is optional (architecture §9). Absent means the
+	// run has no checkpoint policy, so every changed path is unclassified
+	// (§16). omitempty drops the key when zero, so a contract without it
+	// keeps its existing digest; a present empty string or null is refused
+	// by refuseExplicitZero below, so absence is the only encoding of "no
+	// policy".
+	CheckpointPolicyDigest string `json:"checkpoint_policy_digest,omitempty"`
 }
 
 // RouteGrant is the host's projection of the route selected for a unit: its
@@ -114,6 +122,13 @@ type PlanUnit struct {
 	RollbackConditions      []string    `json:"rollback_conditions"`
 	EscalationConditions    []string    `json:"escalation_conditions"`
 	NonGoals                []string    `json:"non_goals"`
+
+	// MaterialMilestone is optional (architecture §10). Absent means false.
+	// omitempty drops the key when false, so a plan without it keeps its
+	// existing digest; a present false or null is refused by
+	// refuseExplicitZero below, so absence is the only encoding of "not a
+	// milestone".
+	MaterialMilestone bool `json:"material_milestone,omitempty"`
 }
 
 // Plan is hma.plan/v1.
@@ -144,6 +159,11 @@ func ParseAcceptanceContract(raw []byte) (AcceptanceContract, string, error) {
 	if err := decodeCanonicalInput(raw, &c); err != nil {
 		return c, "", err
 	}
+	if err := refuseExplicitZero(raw, []explicitZeroField{
+		{path: []string{"checkpoint_policy_digest"}, zero: isZeroString},
+	}); err != nil {
+		return c, "", err
+	}
 	if err := ValidateAcceptanceContract(c); err != nil {
 		return c, "", err
 	}
@@ -156,6 +176,11 @@ func ParseAcceptanceContract(raw []byte) (AcceptanceContract, string, error) {
 func ParsePlan(raw []byte) (Plan, string, error) {
 	var p Plan
 	if err := decodeCanonicalInput(raw, &p); err != nil {
+		return p, "", err
+	}
+	if err := refuseExplicitZero(raw, []explicitZeroField{
+		{path: []string{"units", "[]", "material_milestone"}, zero: isZeroFalse},
+	}); err != nil {
 		return p, "", err
 	}
 	if err := ValidatePlan(p); err != nil {
@@ -262,6 +287,91 @@ func requireAllKeys(raw []byte, v any) error {
 		return nil
 	}
 	return walk("$", doc, typed)
+}
+
+// explicitZeroField names one optional field's raw-document path for
+// refuseExplicitZero below. path is a sequence of object keys; a "[]"
+// element iterates every element of the array found at that point (used for
+// a field inside each unit of a plan's units list).
+type explicitZeroField struct {
+	path []string
+	zero func(v any) bool
+}
+
+// isZeroString reports whether a raw-decoded JSON value is an optional
+// string field's zero encoding: a JSON null or an empty string.
+func isZeroString(v any) bool {
+	if v == nil {
+		return true
+	}
+	s, ok := v.(string)
+	return ok && s == ""
+}
+
+// isZeroFalse reports whether a raw-decoded JSON value is an optional bool
+// field's zero encoding: a JSON null or false.
+func isZeroFalse(v any) bool {
+	if v == nil {
+		return true
+	}
+	b, ok := v.(bool)
+	return ok && !b
+}
+
+// refuseExplicitZero refuses a document that sets an optional (omitempty)
+// field to its zero value instead of omitting the key.
+//
+// requireAllKeys cannot catch this: it walks the keys the *typed* value
+// re-marshals, and omitempty drops a zero-valued field from that
+// re-marshaling, so the walk never looks for the key in the raw document.
+// Both an absent key and an explicit zero value therefore decode to the
+// same Go zero value with no error from the normal decode path, even though
+// the design gives absence and explicit-zero different meanings (§9, §10).
+// This function inspects the raw document directly, independent of
+// requireAllKeys, to tell the two apart: it refuses only when the key is
+// present and its JSON value is the field's zero encoding. An absent key is
+// not inspected here and is left to decode as the zero value, unchanged.
+func refuseExplicitZero(raw []byte, fields []explicitZeroField) error {
+	var doc any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return invalid("%v", err)
+	}
+	for _, f := range fields {
+		if err := walkExplicitZero(doc, f.path, f.zero); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func walkExplicitZero(v any, path []string, zero func(any) bool) error {
+	if len(path) == 0 {
+		if zero(v) {
+			return invalid("optional field may not be set to its zero value; omit the key instead")
+		}
+		return nil
+	}
+	if path[0] == "[]" {
+		arr, ok := v.([]any)
+		if !ok {
+			return nil // not shaped as an array; the normal decode already refuses or will refuse this
+		}
+		for _, elem := range arr {
+			if err := walkExplicitZero(elem, path[1:], zero); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil // not shaped as an object; the normal decode already refuses or will refuse this
+	}
+	sub, present := m[path[0]]
+	if !present {
+		return nil
+	}
+	return walkExplicitZero(sub, path[1:], zero)
 }
 
 // checkSurrogates refuses a \u escape that is a lone or misordered UTF-16
