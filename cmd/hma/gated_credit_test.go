@@ -44,11 +44,22 @@ func newCreditFixtureC2(t *testing.T, exe string, c2 model.CriterionDisposition)
 	return newCreditFixtureArgs(t, exe, []string{}, c2)
 }
 
-// newCreditFixtureArgs is newCreditFixtureC2 with the check's argv.
+// newCreditFixtureArgs is newCreditFixtureC2 with the check's argv. Its
+// packet is issued at level final, so a credited PASSED criterion satisfies
+// the final gate (E3) by default; TestCreditRefusals' non-isolated-approve
+// case is refused at import instead of at credit for this reason.
+// newCreditFixtureReason is the same fixture at a chosen issuing_reason, for
+// tests that need a per_change- or checkpoint-level credit specifically (G-F,
+// E3).
 func newCreditFixtureArgs(t *testing.T, exe string, argv []string, c2 model.CriterionDisposition) *creditFixture {
 	t.Helper()
+	return newCreditFixtureReason(t, hoststate.IssueFinal, exe, argv, c2)
+}
+
+func newCreditFixtureReason(t *testing.T, reason hoststate.IssuingReason, exe string, argv []string, c2 model.CriterionDisposition) *creditFixture {
+	t.Helper()
 	cf := &creditFixture{}
-	cf.reviewFixture = newReviewFixtureSeeded(t, hoststate.IssuePerChange, false, func(f *reviewFixture) {
+	cf.reviewFixture = newReviewFixtureSeeded(t, reason, false, func(f *reviewFixture) {
 		if creditRepoSetup != nil {
 			creditRepoSetup(f)
 		}
@@ -297,7 +308,17 @@ func TestCreditRefusals(t *testing.T) {
 			r["requirements"] = []any{map[string]any{"id": "C1", "status": "pass", "evidence_refs": []any{"e1"}}}
 		})
 		g.receipt(r, nil)
-		if err := g.importReport(r); err != nil {
+		err := g.importReport(r)
+		if tc.isolation != "isolated" {
+			// Under this fixture's final-level packet (E3), a non-isolated
+			// APPROVE is refused at import itself (HOST_REVIEW_ISOLATION_
+			// INSUFFICIENT), before credit is ever attempted.
+			if err == nil {
+				t.Fatalf("%v: non-isolated approve imported", tc)
+			}
+			continue
+		}
+		if err != nil {
 			t.Fatalf("import %v: %v", tc, err)
 		}
 		if _, err := g.credit(r); err == nil {
@@ -914,5 +935,29 @@ func TestCreditRefusedWithObjectReadingConfig(t *testing.T) {
 	gitIn(t, cf.root, "config", "--unset", "core.multiPackIndex")
 	if _, err := cf.credit(report); err != nil {
 		t.Fatalf("control with a plain config: %v", err)
+	}
+}
+
+// Phil's F1 (audit-gate-e-impl-phase4c-e3-phil.md): credit.go:117's own
+// rv.Isolation != "isolated" refusal lost its only exercise when
+// newCreditFixtureArgs' default moved to final, where import itself now
+// refuses a partial-isolation APPROVE before credit ever runs. At per_change
+// level, FinalValidation is unset and the issuing reason is not final, so
+// review_import.go:230's isolation check does not fire: the APPROVE imports,
+// and credit.go:117 is the first (and only) place that refuses it.
+func TestCreditRefusesNonIsolatedApproveAtPerChangeLevel(t *testing.T) {
+	cf := newCreditFixtureReason(t, hoststate.IssuePerChange, "true", []string{}, model.CriterionPending)
+	report := cf.report("pass", "partial", func(r map[string]any) {
+		r["requirements"] = []any{map[string]any{"id": "C1", "status": "pass", "evidence_refs": []any{"e1"}}}
+	})
+	cf.receipt(report, nil)
+	if err := cf.importReport(report); err != nil {
+		t.Fatalf("import of a partial-isolation APPROVE at per_change level: %v", err)
+	}
+	if _, err := cf.credit(report); err == nil {
+		t.Fatal("credit granted for a non-isolated approve")
+	}
+	if cf.criteria()["C1"] == model.CriterionPassed {
+		t.Fatal("criterion credited despite a non-isolated review")
 	}
 }

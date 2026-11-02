@@ -28,6 +28,13 @@ const (
 	reasonCheckpointReviewStale       = "HOST_CHECKPOINT_REVIEW_STALE"
 )
 
+// reasonContractRequiredForSuccessClaim is the final gate's (E3, architecture
+// section 16/20, Decision D10) refusal when a non-contract run attempts a
+// success-claiming terminal outcome. It is defined here, not in
+// internal/host, for the same reason as the three reasons above: Gate E's
+// implementation phases are scoped to cmd/hma.
+const reasonContractRequiredForSuccessClaim = "HOST_CONTRACT_REQUIRED_FOR_SUCCESS_CLAIM"
+
 // transitionGateHook is a test seam, nil in production: it runs after the
 // host gate passes and before the core append.
 var transitionGateHook func()
@@ -522,7 +529,16 @@ func runTransition(args []string) error {
 		if err := requireHostTransitionGateIn(*storePath, in, history, *contractPath, *checkpointPolicyPath); err != nil {
 			return err
 		}
-		if o := in.ExpectedApproval.ProposedTargetOutcome; o == model.OutcomeVerifiedSuccess || o == model.OutcomeVerifiedWithWaivers {
+		if o := in.ExpectedApproval.ProposedTargetOutcome; o == model.OutcomeVerifiedSuccess || o == model.OutcomeVerifiedWithWaivers || o == model.OutcomePartial {
+			// Decision D10 / architecture section 20: a success-claiming
+			// outcome requires a contract-bound run.
+			core, err := store.New(*storePath).Load(in.RunID)
+			if err != nil {
+				return err
+			}
+			if engine.BoundContractDigest(core) == "" {
+				return errors.New(reasonContractRequiredForSuccessClaim)
+			}
 			// The closure artifact is what HMA observes now in the
 			// transition's repository at its base.
 			snap, err := repostate.Snapshot(context.Background(), in.RepositoryRoot, in.BaseRevision, in.DirtyWorktreeApproved)
@@ -534,10 +550,6 @@ func runTransition(args []string) error {
 				return err
 			}
 			if o == model.OutcomeVerifiedSuccess {
-				core, err := store.New(*storePath).Load(in.RunID)
-				if err != nil {
-					return err
-				}
 				if len(engine.ProjectResolutionState(core).ActiveWaivers) > 0 {
 					return errors.New(hoststate.ReasonFindingsUnresolved)
 				}

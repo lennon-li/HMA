@@ -52,7 +52,18 @@ func TestTransitionCLIPhaseA1(t *testing.T) {
 				ExpectedApproval: a, Approval: a, ApprovalNow: now, ApprovalMaxAgeSeconds: 300}
 			input := filepath.Join(t.TempDir(), "input.json")
 			writeJSON(t, input, in)
-			if err := run([]string{"transition", "--input", input, "--store", dir}); err != nil {
+			err = run([]string{"transition", "--input", input, "--store", dir})
+			if outcome == model.OutcomePartial {
+				// Decision D10 (architecture section 20): a success-claiming
+				// outcome requires a contract-bound run. This run binds none,
+				// so PARTIAL is refused even though it has no PASSED
+				// criterion to credit (the vacuous-credit gap D10 closes).
+				if err == nil || err.Error() != reasonContractRequiredForSuccessClaim {
+					t.Fatalf("non-contract PARTIAL = %v, want %s", err, reasonContractRequiredForSuccessClaim)
+				}
+				return
+			}
+			if err != nil {
 				t.Fatal(err)
 			}
 			records, err = store.New(dir).Load("run")

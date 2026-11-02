@@ -24,6 +24,13 @@ import (
 // before the worktree is observed again.
 var creditCheckHook func()
 
+// reasonFinalAuditMissing is the final gate's (E3, architecture section
+// 16/20) refusal when a review a credit relies on is not a final-level
+// audit of the currently bound contract. Defined here, not in internal/host,
+// for the same reason as transition.go's own new checkpoint-gate reasons:
+// Gate E's implementation phases are scoped to cmd/hma.
+const reasonFinalAuditMissing = "HOST_FINAL_AUDIT_MISSING"
+
 type hostCreditInput struct {
 	hostEnvelope
 	// ReviewRecord is the host head anchor of the unit's latest imported
@@ -513,8 +520,15 @@ func requireIndependentCredit(storePath, runID, artifact string, history []hosts
 		if cr.credit.ContractDigest != contract || cr.credit.IssuerHeadAnchor != issuer || cr.credit.ArtifactDigest != artifact {
 			return refused
 		}
-		if _, err := hoststate.RequireLatestImportedReview(history, cr.credit.ReviewRecord); err != nil {
+		reviewRecord, err := hoststate.RequireLatestImportedReview(history, cr.credit.ReviewRecord)
+		if err != nil {
 			return refused
+		}
+		// Final gate (E3): the review a credit relies on must be a
+		// final-level audit, dispatched under the currently bound contract.
+		packet := packetFor(history, reviewRecord.Review.ReviewDispatchDigest)
+		if packet == nil || packet.CheckpointSchema == "" || packet.IssuingReason != hoststate.IssueFinal || packet.BoundContractDigest != contract {
+			return errors.New(reasonFinalAuditMissing)
 		}
 	}
 	return nil
