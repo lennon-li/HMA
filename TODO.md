@@ -2,6 +2,78 @@
 
 This file tracks implementation work that has not yet been folded into the normative architecture contract. `docs/architecture.md` remains the product-contract source of truth.
 
+## MVP dogfood (2026-11-03): `cmd/hmarun` + a real end-to-end run
+
+`cmd/hmarun` (new this session) wraps the real `hma` binary and real
+`agent-dispatch` so a human does not hand-author `hma.acceptance-contract/v1`/
+`hma.plan/v1` JSON or hand-compute digests/bindings. One real, non-synthetic
+dogfood run exercised it end to end against real dispatch. Full evidence:
+`docs/handoffs/evidence/mvp/dogfood-run-2026-11-03.md`; friction accounting:
+`docs/handoffs/2026-11-03-mvp-friction-report.md`; usage:
+`docs/mvp-usage-guide.md`.
+
+### MVP blockers
+
+- [x] None currently open. The one blocker the dogfood run found
+  (`HOST_UNAUTHORIZED_DISPATCH` on every real-dispatch run — preflight and
+  implementer-dispatch runs shared the reviewer's reconciled ledger
+  namespace) is fixed in `cmd/hmarun/run.go`
+  (`unreconciledDispatchStateDir()`), regression-tested, and independently
+  reviewed (`docs/handoffs/evidence/mvp/audit-hmarun-ledger-isolation-fix-phil.md`,
+  PASS).
+
+### Improvements from dogfooding
+
+- [ ] **No path for a headless worker to deliver its own commit under a
+  global `"ask"` git-commit policy.** `~/.claude/settings.json`'s
+  `Bash(git commit:*)`/`Bash(git push:*)` under `"ask"` denies every
+  headless `agent-dispatch` worker's commit, deterministically, with no
+  working override (a project-local `settings.local.json` `allow` cannot
+  override a user-level `ask` rule, and also pollutes the worktree). This
+  blocked every real implementer dispatch in the 2026-11-03 run. Needs a
+  real decision, not a code fix: either a supported, narrowly-scoped way
+  for a human to pre-authorize a specific bounded dispatch's commit (so
+  the delivery step is a first-class, recorded part of the flow instead of
+  an ad hoc manual commit standing in for it), or an explicit, documented
+  expectation that a human always completes this one step by hand.
+- [ ] **`stepWorkerDispatch`'s one bounded retry cannot distinguish a
+  fixable failure from a repeating infrastructure/permission denial.**
+  The 2026-11-03 run spent real dispatch cost retrying an identical,
+  predictable `git commit` denial six times across three resumes before
+  the actual blocker was understood. Consider detecting "the retry failed
+  for the identical reason" and escalating immediately instead of
+  consuming the one retry on a failure class no retry can fix.
+- [ ] **`resolveRepositoryIdentity`'s prompt behaves differently from every
+  other checkpoint.** It accepts an empty answer to keep its default (the
+  repo path); every other checkpoint (`confirm()`) requires a typed
+  non-empty answer. Piping one approver string to a supervised batch of
+  checkpoints — the natural operating pattern — silently overrides this
+  default too. Low-risk (a label, not used for file resolution) but worth
+  fixing for consistency.
+- [ ] **Run a second real dogfood run to a genuine terminal `PARTIAL`.**
+  The 2026-11-03 run's own review packet has the pre-fix ledger namespace
+  baked into its hashed bytes, so the `HOST_UNAUTHORIZED_DISPATCH` fix
+  cannot retroactively unblock it. A fresh run (new repo, new run id) would
+  exercise the fix against real dispatch end to end — deferred, not
+  blocking, since the fix itself is already independently reviewed and
+  regression-tested against the exact mechanism.
+- [ ] **Steps 1-4 of the sequence (accept-criteria through decision) are a
+  plausible, low-risk consolidation candidate** for a run whose
+  contract/plan were just produced by `hmarun init` in the same sitting —
+  not implemented now; see the friction report.
+
+### Deferred (already tracked elsewhere, unchanged by this work)
+
+- [ ] `VERIFIED_SUCCESS`/`VERIFIED_WITH_WAIVERS` closure implementation —
+  out of scope for this MVP; `PARTIAL` is the real ceiling (see Phase A1
+  outcomes, `internal/engine/stage_state.go`).
+- [ ] Jev decision-provider integration — see "Post-MVP — learned
+  decision-provider integration" below, unchanged.
+- [ ] Multi-host/client-neutral adapters — see "P2 — host adapters" below,
+  unchanged.
+- [ ] Routing regression in CI, client-adapter boundary — see "Reverse-
+  skill-inspired routing hardening" below, unchanged.
+
 ## Interactive orchestration and independent review
 
 These tasks implement `docs/architecture.md` §12.4. They belong to the host
