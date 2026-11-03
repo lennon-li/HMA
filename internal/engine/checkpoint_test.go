@@ -504,8 +504,12 @@ func TestCheckpointDeterministic(t *testing.T) {
 
 		rnd.Shuffle(len(shuffledManifest), func(i, j int) { shuffledManifest[i], shuffledManifest[j] = shuffledManifest[j], shuffledManifest[i] })
 		rnd.Shuffle(len(shuffledRules), func(i, j int) { shuffledRules[i], shuffledRules[j] = shuffledRules[j], shuffledRules[i] })
-		rnd.Shuffle(len(shuffledBaselineClasses), func(i, j int) { shuffledBaselineClasses[i], shuffledBaselineClasses[j] = shuffledBaselineClasses[j], shuffledBaselineClasses[i] })
-		rnd.Shuffle(len(shuffledCurrentClasses), func(i, j int) { shuffledCurrentClasses[i], shuffledCurrentClasses[j] = shuffledCurrentClasses[j], shuffledCurrentClasses[i] })
+		rnd.Shuffle(len(shuffledBaselineClasses), func(i, j int) {
+			shuffledBaselineClasses[i], shuffledBaselineClasses[j] = shuffledBaselineClasses[j], shuffledBaselineClasses[i]
+		})
+		rnd.Shuffle(len(shuffledCurrentClasses), func(i, j int) {
+			shuffledCurrentClasses[i], shuffledCurrentClasses[j] = shuffledCurrentClasses[j], shuffledCurrentClasses[i]
+		})
 
 		shuffled := in
 		shuffled.Manifest = shuffledManifest
