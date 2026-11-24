@@ -50,7 +50,7 @@ import (
 	"github.com/lennon-li/HMA/internal/transition"
 )
 
-const runUsage = "usage: hmarun run --store <dir> --repo <dir> --run_id <id> --contract <file> --plan <file> [--unit <id>] [--hma-bin <path>] [--auto-approve]"
+const runUsage = "usage: hmarun run --store <dir> --repo <dir> --run_id <id> --contract <file> --plan <file> [--unit <id>] [--hma-bin <path>] [--routes <file>] [--auto-approve]"
 
 // autoApproveApprover is the fixed, clearly-labeled synthetic approver
 // `--auto-approve` substitutes for every human checkpoint. It is never used
@@ -174,9 +174,10 @@ type bindRepositoryInput struct {
 type runConfig struct {
 	storeDir, repoRoot, runID, unit, contractPath, planPath, hmaBin string
 	// agentDispatchBin is the path to the agent-dispatch launcher used for
-	// every real preflight, worker, and review dispatch (see
-	// dispatchConfigFor). Ignored when stubDispatch is set.
+	// every real preflight, worker, and review dispatch using the runner's
+	// routes. Ignored when stubDispatch is set.
 	agentDispatchBin string
+	routesPath       string
 	// stubDispatch switches issuePreflight, the worker step, and the
 	// reviewer step back to the original local stand-ins (STUB POINT 1/2 in
 	// the package doc), with no process spawned and no agentDispatchBin
@@ -194,6 +195,7 @@ type runConfig struct {
 // exactly where the chain actually is.
 type runner struct {
 	cfg                runConfig
+	dispatchConfigs    map[hoststate.DispatchRole]dispatchAgentConfig
 	p                  *prompter
 	stdout             io.Writer
 	contract           model.AcceptanceContract
@@ -222,6 +224,7 @@ func runRun(args []string, stdin io.Reader, stdout io.Writer) error {
 	planPath := fs.String("plan", "", "hma.plan/v1 document, as written by `hmarun init`")
 	hmaBin := fs.String("hma-bin", "", "path to the compiled hma binary (default: look up \"hma\" on PATH)")
 	agentDispatchBin := fs.String("agent-dispatch-bin", "", "path to the agent-dispatch launcher used for real preflight/worker/review dispatch (default: look up \"agent-dispatch\" on PATH; ignored with --stub-dispatch)")
+	routesPath := fs.String("routes", "", "JSON file containing implementation and review routes (ignored with --stub-dispatch)")
 	stubDispatch := fs.Bool("stub-dispatch", false, "use the local stub preflight/worker/reviewer instead of a real agent-dispatch call (fast, deterministic, no process spawned; real dispatch is the default)")
 	autoApprove := fs.Bool("auto-approve", false, "answer every human checkpoint with a fixed synthetic approver (test only; never the default)")
 	if err := fs.Parse(args); err != nil {
@@ -234,7 +237,7 @@ func runRun(args []string, stdin io.Reader, stdout io.Writer) error {
 	cfg := runConfig{
 		storeDir: *storeDir, repoRoot: *repoRoot, runID: *runID, unit: *unit,
 		contractPath: *contractPath, planPath: *planPath, hmaBin: *hmaBin,
-		agentDispatchBin: *agentDispatchBin, stubDispatch: *stubDispatch, autoApprove: *autoApprove,
+		agentDispatchBin: *agentDispatchBin, routesPath: *routesPath, stubDispatch: *stubDispatch, autoApprove: *autoApprove,
 	}
 	r, err := newRunner(cfg, stdin, stdout)
 	if err != nil {
@@ -260,6 +263,14 @@ func newRunner(cfg runConfig, stdin io.Reader, stdout io.Writer) (*runner, error
 			cfg.agentDispatchBin = path
 		} else {
 			return nil, errors.New("hmarun run: no --agent-dispatch-bin given and \"agent-dispatch\" is not on PATH; install it, or pass --stub-dispatch for the local stand-in")
+		}
+	}
+	dispatchConfigs := defaultDispatchConfigs()
+	if !cfg.stubDispatch && cfg.routesPath != "" {
+		var err error
+		dispatchConfigs, err = loadRoutes(cfg.routesPath)
+		if err != nil {
+			return nil, err
 		}
 	}
 	contractRaw, err := os.ReadFile(cfg.contractPath)
@@ -312,7 +323,7 @@ func newRunner(cfg runConfig, stdin io.Reader, stdout io.Writer) (*runner, error
 	}
 
 	r := &runner{
-		cfg: cfg, p: newPrompter(stdin, stdout), stdout: stdout,
+		cfg: cfg, dispatchConfigs: dispatchConfigs, p: newPrompter(stdin, stdout), stdout: stdout,
 		contract: contract, contractDigest: contractDigest, contractRaw: contractRaw,
 		plan: plan, planDigest: planDigest, artifactsDir: artifactsDir,
 	}
@@ -320,7 +331,7 @@ func newRunner(cfg runConfig, stdin io.Reader, stdout io.Writer) (*runner, error
 		r.impl = hmarunRoute("hmarun-stub-implementer", "stub-provider-a", "stub-family-a", "stub-model-a", "stub-model-family-a", "medium", false)
 		r.reviewer = hmarunRoute("hmarun-stub-reviewer", "stub-provider-b", "stub-family-b", "stub-model-b", "stub-model-family-b", "medium", true)
 	} else {
-		implCfg, reviewCfg := dispatchConfigFor[hoststate.RoleImplementation], dispatchConfigFor[hoststate.RoleReview]
+		implCfg, reviewCfg := r.dispatchConfigs[hoststate.RoleImplementation], r.dispatchConfigs[hoststate.RoleReview]
 		r.impl = hmarunRoute(implCfg.Agent, implCfg.Provider, implCfg.ProviderFamily, implCfg.Model, implCfg.ModelFamily, implCfg.Effort, false)
 		r.reviewer = hmarunRoute(reviewCfg.Agent, reviewCfg.Provider, reviewCfg.ProviderFamily, reviewCfg.Model, reviewCfg.ModelFamily, reviewCfg.Effort, true)
 	}
@@ -403,10 +414,10 @@ type dispatchAgentConfig struct {
 }
 
 // dispatchConfigFor is hmarun's one named mapping from dispatch role to the
-// real agent-dispatch identity it dispatches: IMPLEMENTATION -> ming,
+// default agent-dispatch identity it dispatches: IMPLEMENTATION -> ming,
 // REVIEW -> phil, the same two agents used for every Ming/Phil dispatch this
 // session (see the dispatch report). Changing who implements or reviews
-// later means changing this map; nothing else in this file names an agent,
+// by default means changing this map; nothing else in this file names an agent,
 // model, provider, or effort as a literal.
 // Model, Provider and ProviderFamily were all wrong here before a live
 // smoke test against the real agent-dispatch tool caught it (see the
@@ -882,7 +893,7 @@ func (r *runner) findLatestValidPreflight(role hoststate.DispatchRole) (string, 
 // issuePreflight is STUB POINT 1 in --stub-dispatch mode: it always reports
 // AVAILABLE with a fixed, clearly-labeled placeholder response digest, never
 // a real agent-dispatch "hi". Otherwise it runs one real `agent-dispatch
-// <agent> --prompt "hi"` (the agent named by dispatchConfigFor[role]) and
+// <agent> --prompt "hi"` (the agent named by the runner’s route for role) and
 // classifies the real result (see classifyPreflightOutput).
 //
 // The host record is always written with the real observed status, never
@@ -898,7 +909,7 @@ func (r *runner) issuePreflight(ctx context.Context, role hoststate.DispatchRole
 		fmt.Fprintf(r.stdout, "STUB: not a real preflight response (role=%s)\n", role)
 		status, digest = hoststate.PreflightAvailable, stubPreflightResponseDigest
 	} else {
-		cfg := dispatchConfigFor[role]
+		cfg := r.dispatchConfigs[role]
 		runID, err := r.freshDispatchRunID(fmt.Sprintf("preflight-%s", role))
 		if err != nil {
 			return err
@@ -931,7 +942,7 @@ func (r *runner) issuePreflight(ctx context.Context, role hoststate.DispatchRole
 	}
 	if status != hoststate.PreflightAvailable {
 		r.summary.blockedUnrecoverable++
-		agent := dispatchConfigFor[role].Agent
+		agent := r.dispatchConfigs[role].Agent
 		return fmt.Errorf(
 			"agent-dispatch preflight for role %s came back %s (agent %s), not AVAILABLE; hmarun run stops here "+
 				"rather than dispatching against a dead agent. The real status has been recorded in the host chain. "+
@@ -1386,7 +1397,7 @@ func (r *runner) stepWorkerDispatch(ctx context.Context) error {
 		return fmt.Errorf("unit %q not found in plan", r.cfg.unit)
 	}
 
-	cfg := dispatchConfigFor[hoststate.RoleImplementation]
+	cfg := r.dispatchConfigs[hoststate.RoleImplementation]
 	const maxAttempts = 2 // one real attempt, one bounded retry; see the doc comment above.
 	var priorFailureContext string
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
@@ -1947,7 +1958,7 @@ func (r *runner) stepReviewerDispatch(ctx context.Context) error {
 		return nil
 	}
 
-	cfg := dispatchConfigFor[hoststate.RoleReview]
+	cfg := r.dispatchConfigs[hoststate.RoleReview]
 	args := withModelFlag([]string{cfg.Agent, "--review"}, cfg.Model)
 	args = append(args, "--effort", cfg.Effort, "--run-id", binding.DispatchRunID, "--prompt-file", r.reviewPacketPath(),
 		// agent-run-ledger only lists a file in the receipt's report_files

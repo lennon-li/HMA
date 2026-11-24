@@ -153,3 +153,25 @@ criteria that did pass are credited for real, from the real imported
 review, and the ones that didn't stay honestly `PENDING` — not silently
 dropped, not fabricated as passed. `VERIFIED_SUCCESS`/`WITH_WAIVERS` closure
 is out of scope for this MVP; `PARTIAL` is the real, evidenced ceiling.
+
+### Configuring dispatch routes
+
+Pass `--routes ./routes.json` to select the implementation and review routes.
+Without this flag, hmarun uses its built-in defaults. The flag is ignored with
+`--stub-dispatch`. For example:
+
+A resumed run must pass the same routes file. The kernel rejects a different
+file's routes as `HOST_ROUTE_MISMATCH`.
+
+```json
+{
+  "schema": "hmarun.routes/v1",
+  "implementation": {"agent":"jax", "model":"gpt-6.1-terra", "provider":"openai", "provider_family":"openai", "model_family":"gpt-family", "effort":"medium"},
+  "review": {"agent":"ming", "model":"claude-opus-5-5", "provider":"anthropic", "provider_family":"anthropic", "model_family":"claude-family", "effort":"medium"}
+}
+```
+
+Every field is required. Agent names must be dispatch names, not paths. The
+provider must match the provider in the dispatch receipt. For a strong review,
+the kernel requires the provider and model families to differ from the
+implementation route. Route configuration does not grant approval.
